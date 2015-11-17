@@ -125,8 +125,10 @@
 
 (defmethod vizard :line
   [config data-vals]
-  (let [{:keys [mark-type group-key time? legend? color]
-         :or {group-key "col"
+  (let [{:keys [mark-type x y g time? legend? color]
+         :or {x "x"
+              y "y"
+              g "col"
               time? false
               legend? true
               color "category20"}} config
@@ -135,29 +137,31 @@
            [(mk-data mark-type data-vals)]
            :axes (axes [:x "x"] [:y "y"])
            :marks (group-mark
-                   (from data-name [:facet :groupby [group-key]])
+                   (from data-name [:facet :groupby [g]])
                    :marks (marks [:line
-                                  :properties (properties :enter [[:x :scale "x" :field "x"]
-                                                                  [:y :scale "y" :field "y"]
-                                                                  [:stroke :scale "color" :field group-key]
+                                  :properties (properties :enter [[:x :scale "x" :field x]
+                                                                  [:y :scale "y" :field y]
+                                                                  [:stroke :scale "color" :field g]
                                                                   [:strokeWidth :value 2]])]))
            :scales (scales [:x :width
                             :type (if time? "time" "linear")
-                            :domain {:data data-name :field "x"}]
+                            :domain {:data data-name :field x}]
                            [:y :height
                             :nice true
-                            :domain {:data data-name :field "y"}]
+                            :domain {:data data-name :field y}]
                            [:color color
                             :type "ordinal"
-                            :domain {:data data-name :field group-key}]))]
+                            :domain {:data data-name :field g}]))]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))
 
 (defmethod vizard :scatter
   [config data-vals]
-  (let [{:keys [mark-type group-key time? legend? color]
-         :or {group-key "col"
+  (let [{:keys [mark-type x y g time? legend? color]
+         :or {x "x"
+              y "y"
+              g "col"
               time? false
               legend? true
               color "category20"}} config
@@ -166,66 +170,68 @@
            [(mk-data mark-type data-vals)]
            :axes (axes [:x "x"] [:y "y"])
            :marks (group-mark
-                   (from data-name [:facet :groupby [group-key]])
+                   (from data-name [:facet :groupby [g]])
                    :marks (marks [:symbol
-                                  :properties (properties :enter [[:x :scale "x" :field "x"]
-                                                                  [:y :scale "y" :field "y"]
+                                  :properties (properties :enter [[:x :scale "x" :field x]
+                                                                  [:y :scale "y" :field y]
                                                                   [:size :value 100]
-                                                                  [:fill :scale "color" :field group-key]])]))
+                                                                  [:fill :scale "color" :field g]])]))
            :scales (scales [:x :width
                             :type (if time? "time" "linear")
-                            :domain {:data data-name :field "x"}]
+                            :domain {:data data-name :field x}]
                            [:y :height
                             :nice true
-                            :domain {:data data-name :field "sum_y"}]
+                            :domain {:data data-name :field y}]
                            [:color color
                             :type "ordinal"
-                            :domain {:data data-name :field group-key}]))]
+                            :domain {:data data-name :field g}]))]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))
 
 (defmethod vizard :bar
   [config data-vals]
-  (let [{:keys [mark-type group-key legend? color]
-         :or {group-key "col"
+  (let [{:keys [mark-type x y g legend? color]
+         :or {x "x"
+              y "y"
+              g "col"
               legend? true
               color "category20"}} config
         data-name mark-type
         v (vega
-     [(mk-data data-name data-vals)
-      {:name "stats"
-       :source (name data-name)
-       ;; TODO: make this not ugly
-       :transform (transforms [:aggregate
-                               :groupby ["x"]
-                               :summarize [{:field "y" :ops ["sum"]}]])}]
-     :axes (axes [:x "x"] [:y "y"])
-     :marks (marks [:rect
-                    :from (from data-name [:stack :groupby ["x"] :sortby [group-key] :field "y"])
-                    :properties (properties :enter [[:x :scale "x" :field "x"]
-                                                    [:width :scale "x" :band true :offset -1]
-                                                    [:y :scale "y" :field "layout_start"]
-                                                    [:y2 :scale "y" :field "layout_end"]
-                                                    [:fill :scale "color" :field group-key]]
-                                            :update [[:fillOpacity :value 1.0]]
-                                            :hover [[:fillOpacity :value 0.5]])])
-     :scales (scales [:x :width :type "ordinal"
-                      :domain {:data data-name :field "x"}]
-                     [:y :height :type "linear" :nice true
-                      :domain {:data "stats" :field "sum_y"}]
-                     [:color color
-                      :type "ordinal"
-                      :domain {:data data-name :field group-key}])
-     :padding "auto")]
+           [(mk-data data-name data-vals)
+            {:name "stats"
+             :source (name data-name)
+             ;; TODO: make this not ugly
+             :transform (transforms [:aggregate
+                                     :groupby [x]
+                                     :summarize [{:field y :ops ["sum"]}]])}]
+           :axes (axes [:x "x"] [:y "y"])
+           :marks (marks [:rect
+                          :from (from data-name [:stack :groupby [x] :sortby [g] :field y])
+                          :properties (properties :enter [[:x :scale "x" :field x]
+                                                          [:width :scale "x" :band true :offset -1]
+                                                          [:y :scale "y" :field "layout_start"]
+                                                          [:y2 :scale "y" :field "layout_end"]
+                                                          [:fill :scale "color" :field g]])])
+           :scales (scales [:x :width :type "ordinal"
+                            :domain {:data data-name :field x}]
+                           [:y :height :type "linear" :nice true
+                            :domain {:data "stats" :field (str "sum_" y)}]
+                           [:color color
+                            :type "ordinal"
+                            :domain {:data data-name :field g}])
+           :padding "auto")]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))
 
 (defmethod vizard :area
   [config data-vals]
-  (let [{:keys [mark-type group-key time? legend? color]
-         :or {group-key "col"
+  (let [{:keys [mark-type x y g time? legend? color]
+         :or {x "x"
+              y "y"
+              g "col"
               time? false
               legend? true
               color "category20"}} config
@@ -236,29 +242,30 @@
              :source (name data-name)
              ;; TODO: make this not ugly
              :transform (transforms [:aggregate
-                                     :groupby ["x"]
-                                     :summarize [{:field "y" :ops ["sum"]}]])}]
+                                     :groupby [x]
+                                     :summarize [{:field y :ops ["sum"]}]])}]
            :axes (axes [:x "x"] [:y "y"])
            :marks (group-mark
                    (from data-name
-                         [:stack :groupby ["x"] :sortby [group-key] :field "y"]
-                         [:facet :groupby [group-key]])
+                         [:stack :groupby [x] :sortby [g] :field y]
+                         [:facet :groupby [g]])
                    :marks (marks [:area
-                                  :properties (properties :enter [[:x :scale "x" :field "x"]
+                                  :properties (properties :enter [[:x :scale "x" :field x]
                                                                   [:y :scale "y" :field "layout_start"]
                                                                   [:y2 :scale "y" :field "layout_end"]
                                                                   [:interpolate :value "monotone"]
-                                                                  [:fill :scale "color" :field group-key]])]))
+                                                                  [:fill :scale "color" :field g]
+                                                                  [:font :value "Helvetica Neue"]])]))
            :scales (scales [:x :width
                             :type (if time? "time" "linear")
                             :zero false
-                            :domain {:data data-name :field "x"}]
+                            :domain {:data data-name :field x}]
                            [:y :height
                             :nice true
-                            :domain {:data "stats" :field "sum_y"}]
+                            :domain {:data "stats" :field (str "sum_" y)}]
                            [:color color
                             :type "ordinal"
-                            :domain {:data data-name :field group-key}]))]
+                            :domain {:data data-name :field g}]))]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))
