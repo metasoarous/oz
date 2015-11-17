@@ -69,7 +69,7 @@
 (defmulti event-msg-handler :id)
 
 (defn event-msg-handler* [{:as ev-msg :keys [id ?data event]}]
-  (debugf "Event: %s" event)
+  (tracef "Event: %s" event)
   (event-msg-handler ev-msg))
 
 (do
@@ -77,7 +77,7 @@
     [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
     (let [session (:session ring-req)
           uid (:uid session)]
-      (debugf "Unhandled event: %s" event)
+      (tracef "Unhandled event: %s" event)
       (when ?reply-fn
         (?reply-fn {:umatched-event-as-echoed-from-from-server event})))))
 
