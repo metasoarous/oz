@@ -73,7 +73,7 @@
    (clj->js spec)
    (fn [chart]
      (try
-       (.update (chart #js {:el elem :renderer "svg"}))
+       (.update (chart #js {:el elem :renderer "canvas"}))
        (catch js/Error e
          (.log js/console e))))))
 
