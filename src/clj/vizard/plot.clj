@@ -88,6 +88,15 @@
   (let [opts (apply hash-map args)]
     [(merge {:type :group :from from} opts)]))
 
+;; data
+
+(defn d [name & args]
+  (let [opts (apply hash-map args)]
+    (assoc opts :name name)))
+
+(defn data [& ds]
+  (vec (map (partial apply d) ds)))
+
 ;; TODO: legends
 
 ;; top-level options
@@ -109,14 +118,15 @@
   [v width height]
   (assoc v :viewport [width height]))
 
+;; TODO: make this like scales and transforms
 (defn mk-data [aname values]
   {:name (name aname)
    :values values})
 
 (defn vega
-  [data & args]
+  [& args]
   (let [opts (apply hash-map args)]
-    (merge {:data data :height 500 :width 960} opts)))
+    (merge {:height 500 :width 960} opts)))
 
 ;; plots
 
@@ -134,7 +144,7 @@
               color "category20"}} config
         data-name mark-type
         v (vega
-           [(mk-data mark-type data-vals)]
+           :data (data [data-name :values data-vals])
            :axes (axes [:x "x"] [:y "y"])
            :marks (group-mark
                    (from data-name [:facet :groupby [g]])
@@ -167,7 +177,7 @@
               color "category20"}} config
         data-name mark-type
         v (vega
-           [(mk-data mark-type data-vals)]
+           :data (data [data-name :values data-vals])
            :axes (axes [:x "x"] [:y "y"])
            :marks (group-mark
                    (from data-name [:facet :groupby [g]])
@@ -199,13 +209,12 @@
               color "category20"}} config
         data-name mark-type
         v (vega
-           [(mk-data data-name data-vals)
-            {:name "stats"
-             :source (name data-name)
-             ;; TODO: make this not ugly
-             :transform (transforms [:aggregate
-                                     :groupby [x]
-                                     :summarize [{:field y :ops ["sum"]}]])}]
+           :data (data [data-name :values data-vals]
+                       [:stats
+                        :source data-name
+                        :transform (transforms [:aggregate
+                                                :groupby [x]
+                                                :summarize [{:field y :ops ["sum"]}]])])
            :axes (axes [:x "x"] [:y "y"])
            :marks (marks [:rect
                           :from (from data-name [:stack :groupby [x] :sortby [g] :field y])
@@ -237,13 +246,12 @@
               color "category20"}} config
         data-name mark-type
         v (vega
-           [(mk-data mark-type data-vals)
-            {:name "stats"
-             :source (name data-name)
-             ;; TODO: make this not ugly
-             :transform (transforms [:aggregate
-                                     :groupby [x]
-                                     :summarize [{:field y :ops ["sum"]}]])}]
+           :data (data [data-name :values data-vals]
+                       [:stats
+                        :source data-name
+                        :transform (transforms [:aggregate
+                                                :groupby [x]
+                                                :summarize [{:field y :ops ["sum"]}]])])
            :axes (axes [:x "x"] [:y "y"])
            :marks (group-mark
                    (from data-name

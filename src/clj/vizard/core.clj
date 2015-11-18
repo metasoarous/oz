@@ -17,5 +17,5 @@
 (comment
   (letfn [(group-data [& names]
             (apply concat (for [n names]
-                            (map-indexed (fn [i x] {:x i :y x :col n}) (take 100 (repeatedly #(rand-int 100)))))))]
-    (plot! (p/vizard {:mark-type :area} (group-data "foo" "bar" "baz" "poot")))))
+                            (map-indexed (fn [i x] {:foo i :bar x :biz n}) (take 20 (repeatedly #(rand-int 100)))))))]
+    (plot! (p/vizard {:mark-type :area :x :foo :y :bar :g :biz :color "category20b" :legend? false} (group-data "foo" "bar" "baz" "poot")))))
