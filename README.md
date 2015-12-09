@@ -19,6 +19,8 @@ In a repl:
 ``` clojure
 (require '[vizard [core :refer :all] [plot :as plot])
 
+(start-plot-server!)
+
 (letfn [(group-data [& names]
             (apply concat (for [n names]
                             (map-indexed (fn [i x] {:foo i :bar x :biz n}) (take 20 (repeatedly #(rand-int 100)))))))]
