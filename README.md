@@ -1,39 +1,41 @@
 # vizard
 
-FIXME: Write a one-line description of your library/project.
+Magic Visualization
 
 ## Overview
 
-FIXME: Write a paragraph about the library/project and highlight its goals.
+vizard is a tiny client/server library meant to enable REPL-based data visualization in the browser (mostly) painless.
 
-## Setup
+## Usage
 
-To get an interactive development environment run:
+Add vizard to your leiningen project dependencies
 
-    lein figwheel
+``` clojure
+[yieldbot/vizard "0.1.0-SNAPSHOT"]
+```
 
-and open your browser at [localhost:3449](http://localhost:3449/).
-This will auto compile and send all changes to the browser without the
-need to reload. After the compilation process is complete, you will
-get a Browser Connected REPL. An easy way to try it is:
+In a repl:
 
-    (js/alert "Am I connected?")
+``` clojure
+(require '[vizard [core :refer :all] [plot :as plot])
 
-and you should see an alert in the browser window.
+(letfn [(group-data [& names]
+            (apply concat (for [n names]
+                            (map-indexed (fn [i x] {:foo i :bar x :biz n}) (take 20 (repeatedly #(rand-int 100)))))))]
+    (plot! (p/vizard {:mark-type :area :x :foo :y :bar :g :biz :color "category20b" :legend? false} (group-data "foo" "bar" "baz" "poot"))))
+```
 
-To clean all compiled files:
+## Local Development
 
-    lein clean
+First, start up figwheel
+``` sh
+lein figwheel
+```
 
-To create a production build run:
-
-    lein cljsbuild once min
-
-And open your browser in `resources/public/index.html`. You will not
-get live reloading, nor a REPL. 
+Next, start a normal CIDER or other nrepl client and connect as you would normally.
 
 ## License
 
-Copyright © 2014 FIXME
+Copyright © 2015 Yieldbot, Inc.
 
 Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.

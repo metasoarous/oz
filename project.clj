@@ -1,6 +1,6 @@
 (defproject yieldbot/vizard "0.1.0-SNAPSHOT"
-  :description "FIXME: write this!"
-  :url "http://example.com/FIXME"
+  :description "Magic Visualization"
+  :url "http://github.com/yieldbot/vizard"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
