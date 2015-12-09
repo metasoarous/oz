@@ -4,7 +4,7 @@ Magic Visualization
 
 ## Overview
 
-vizard is a tiny client/server library meant to enable REPL-based data visualization in the browser (mostly) painless.
+vizard is a tiny client/server library meant to enable REPL-based data visualization in the browser.
 
 ## Usage
 
@@ -27,20 +27,20 @@ In a repl:
                     (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
 
     (plot! (p/vizard {:mark-type :bar
-                    :encoding {:x {:field :x :scale :ordinal}
-                               :y {:field :y :scale :linear}
-                               :g {:field :col}}
-                    :color "category20b"
-                    :legend? true}
-                   (group-data "foo" "bar" "baz" "poot")))
+                      :encoding {:x {:field :x :scale :ordinal}
+                                 :y {:field :y :scale :linear}
+                                 :g {:field :col}}
+                      :color "category20b"
+                      :legend? true}
+                     (group-data "foo" "bar" "baz" "poot")))
 
     (plot! (p/vizard {:mark-type :line
-                    :encoding {:x {:field :x :scale :linear}
-                               :y {:field :y :scale :linear}
-                               :g {:field :col}}
-                    :color "category20b"
-                    :legend? true}
-                    (group-data "foo" "bar" "baz" "poot")))
+                      :encoding {:x {:field :x :scale :linear}
+                                 :y {:field :y :scale :linear}
+                                 :g {:field :col}}
+                      :color "category20b"
+                      :legend? true}
+                      (group-data "foo" "bar" "baz" "poot")))
 ```
 
 ## Local Development
