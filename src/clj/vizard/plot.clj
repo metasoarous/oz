@@ -1,4 +1,5 @@
 (ns vizard.plot
+  (:refer-clojure :exclude [conj])
   (:require [cheshire.core :as json]
             [com.rpl.specter :as s]))
 
@@ -127,31 +128,45 @@
 
 (defn x-scale [encoding]
   (or
-   (first (s/select [:x :scale] encoding))
-   "linear"))
+   (keyword (first (s/select [:x :scale] encoding)))
+   :linear))
 
 (defn x-field [encoding]
   (or
-   (first (s/select [:x :field] encoding))
-   "x"))
+   (keyword (first (s/select [:x :field] encoding)))
+   :x))
 
 (defn y-scale [encoding]
   (or
-   (first (s/select [:y :scale] encoding))
-   "linear"))
+   (keyword (first (s/select [:y :scale] encoding)))
+   :linear))
 
 (defn y-field [encoding]
   (or
-   (first (s/select [:y :field] encoding))
-   "y"))
+   (keyword (first (s/select [:y :field] encoding)))
+   :y))
 
 (defn group-field [encoding]
   (or
-   (first (s/select [:g :field] encoding))
-   "col"))
+   (keyword (first (s/select [:g :field] encoding)))
+   :col))
 
 (defn time? [encoding d]
   (concat d (when (= (x-scale encoding) "time") [:format {:parse {(x-field encoding) "date"}}])))
+
+;; update stuff
+
+(defn update-data [aname key val spec]
+  (s/setval [:data s/ALL #(= (keyword (:name %)) aname) key] val spec))
+
+(defn update-scale [aname key val spec]
+  (s/setval [:scales s/ALL #(= (keyword (:name %)) aname) key] val spec))
+
+(defn update-axis [atype key val spec]
+  (s/setval [:axes s/ALL #(= (keyword (:type %)) atype) key] val spec))
+
+(defn conj [key val spec]
+  (s/setval [key s/END] [val] spec))
 
 ;; plots
 
@@ -173,7 +188,7 @@
         g (group-field encoding)
         data-name mark-type
         v (vega
-           :data (data (time? encoding [data-name :values data-vals]))
+           :data (data [data-name :values data-vals])
            :axes (axes [:x "x"] [:y "y"])
            :marks (group-mark
                    (from data-name [:facet :groupby [g]])
@@ -191,7 +206,14 @@
                             :domain {:data data-name :field y}]
                            [:color color
                             :type "ordinal"
-                            :domain {:data data-name :field g}]))]
+                            :domain {:data data-name :field g}]))
+        v (if (= (x-scale encoding) :time)
+            (->> v
+                 (update-data data-name
+                              :format {:parse {(x-field encoding) "date"}})
+                 (update-scale :x
+                               :format {:parse {(x-field encoding) "date"}}))
+            v)]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))
@@ -211,7 +233,7 @@
         g (group-field encoding)
         data-name mark-type
         v (vega
-           :data (data (time? encoding [data-name :values data-vals]))
+           :data (data [data-name :values data-vals])
            :axes (axes [:x "x"] [:y "y"])
            :marks (group-mark
                    (from data-name [:facet :groupby [g]])
@@ -229,7 +251,68 @@
                             :domain {:data data-name :field y}]
                            [:color color
                             :type "ordinal"
-                            :domain {:data data-name :field g}]))]
+                            :domain {:data data-name :field g}]))
+        v (if (= (x-scale encoding) :time)
+            (->> v
+                 (update-data data-name
+                              :format {:parse {(x-field encoding) "date"}})
+                 (update-scale :x
+                               :format {:parse {(x-field encoding) "date"}}))
+            v)]
+    (if legend?
+      (assoc v :legends (legends [:fill "color"]))
+      v)))
+
+(defmethod vizard :area
+  [config data-vals]
+  (let [{:keys [mark-type legend? color encoding]
+         :or {legend? true
+              color "category20"
+              encoding {:x {:field "x" :scale "linear"}
+                        :y {:field "y" :scale "linear"}
+                        :g {:field "col"}}}} config
+        x (x-field encoding)
+        y (y-field encoding)
+        xscale (x-scale encoding)
+        yscale (y-scale encoding)
+        g (group-field encoding)
+        data-name mark-type
+        v (vega
+           :data (data [data-name :values data-vals]
+                       [:stats
+                        :source data-name
+                        :transform (transforms [:aggregate
+                                                :groupby [x]
+                                                :summarize [{:field y :ops ["sum"]}]])])
+           :axes (axes [:x "x"] [:y "y"])
+           :marks (group-mark
+                   (from data-name
+                         [:stack :groupby [x] :sortby [g] :field y]
+                         [:facet :groupby [g]])
+                   :marks (marks [:area
+                                  :properties (properties :enter [[:x :scale "x" :field x]
+                                                                  [:y :scale "y" :field "layout_start"]
+                                                                  [:y2 :scale "y" :field "layout_end"]
+                                                                  [:interpolate :value "monotone"]
+                                                                  [:fill :scale "color" :field g]])]))
+           :scales (scales [:x :width
+                            :type xscale
+                            :zero false
+                            :domain {:data data-name :field x}]
+                           [:y :height
+                            :type yscale
+                            :nice true
+                            :domain {:data "stats" :field (str "sum_" (name y))}]
+                           [:color color
+                            :type "ordinal"
+                            :domain {:data data-name :field g}]))
+        v (if (= (x-scale encoding) :time)
+            (->> v
+                 (update-data data-name
+                              :format {:parse {(x-field encoding) "date"}})
+                 (update-scale :x
+                               :format {:parse {(x-field encoding) "date"}}))
+            v)]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))
@@ -269,58 +352,11 @@
                            [:y :height
                             :type yscale
                             :nice true
-                            :domain {:data "stats" :field (str "sum_" y)}]
+                            :domain {:data "stats" :field (str "sum_" (name y))}]
                            [:color color
                             :type "ordinal"
                             :domain {:data data-name :field g}])
            :padding "auto")]
-    (if legend?
-      (assoc v :legends (legends [:fill "color"]))
-      v)))
-
-(defmethod vizard :area
-  [config data-vals]
-  (let [{:keys [mark-type legend? color encoding]
-         :or {legend? true
-              color "category20"
-              encoding {:x {:field "x" :scale "linear"}
-                        :y {:field "y" :scale "linear"}
-                        :g {:field "col"}}}} config
-        x (x-field encoding)
-        y (y-field encoding)
-        xscale (x-scale encoding)
-        yscale (y-scale encoding)
-        g (group-field encoding)
-        data-name mark-type
-        v (vega
-           :data (data (time? encoding [data-name :values data-vals])
-                       [:stats
-                        :source data-name
-                        :transform (transforms [:aggregate
-                                                :groupby [x]
-                                                :summarize [{:field y :ops ["sum"]}]])])
-           :axes (axes [:x "x"] [:y "y"])
-           :marks (group-mark
-                   (from data-name
-                         [:stack :groupby [x] :sortby [g] :field y]
-                         [:facet :groupby [g]])
-                   :marks (marks [:area
-                                  :properties (properties :enter [[:x :scale "x" :field x]
-                                                                  [:y :scale "y" :field "layout_start"]
-                                                                  [:y2 :scale "y" :field "layout_end"]
-                                                                  [:interpolate :value "monotone"]
-                                                                  [:fill :scale "color" :field g]])]))
-           :scales (scales [:x :width
-                            :type xscale
-                            :zero false
-                            :domain {:data data-name :field x}]
-                           [:y :height
-                            :type yscale
-                            :nice true
-                            :domain {:data "stats" :field (str "sum_" y)}]
-                           [:color color
-                            :type "ordinal"
-                            :domain {:data data-name :field g}]))]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))

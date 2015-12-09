@@ -1,6 +1,5 @@
 (ns vizard.core
   (:require [vizard.server :as server]
-            [vizard.vega :as vega]
             [vizard.plot :as p]
             [org.httpkit.client :as client]
             [cheshire.core :as json]))
@@ -15,7 +14,20 @@
   spec)
 
 (comment
-  (letfn [(group-data [& names]
-            (apply concat (for [n names]
-                            (map-indexed (fn [i x] {:foo i :bar x :biz n}) (take 20 (repeatedly #(rand-int 100)))))))]
-    (plot! (p/vizard {:mark-type :area :x :foo :y :bar :g :biz :color "category20b" :legend? false} (group-data "foo" "bar" "baz" "poot")))))
+  (defn group-data [& names]
+    (apply concat (for [n names]
+                    (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
+  (plot! (p/vizard {:mark-type :bar
+                    :encoding {:x {:field :x :scale :ordinal}
+                               :y {:field :y :scale :linear}
+                               :g {:field :col}}
+                    :color "category20b"
+                    :legend? true}
+                   (group-data "foo" "bar" "baz" "poot")))
+  (plot! (p/vizard {:mark-type :line
+                    :encoding {:x {:field :x :scale :linear}
+                               :y {:field :y :scale :linear}
+                               :g {:field :col}}
+                    :color "category20b"
+                    :legend? true}
+                   (group-data "foo" "bar" "baz" "poot"))))

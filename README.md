@@ -17,14 +17,30 @@ Add vizard to your leiningen project dependencies
 In a repl:
 
 ``` clojure
-(require '[vizard [core :refer :all] [plot :as plot])
 
-(start-plot-server!)
+    (require '[vizard [core :refer :all] [plot :as plot])
 
-(letfn [(group-data [& names]
-            (apply concat (for [n names]
-                            (map-indexed (fn [i x] {:foo i :bar x :biz n}) (take 20 (repeatedly #(rand-int 100)))))))]
-    (plot! (p/vizard {:mark-type :area :x :foo :y :bar :g :biz :color "category20b" :legend? false} (group-data "foo" "bar" "baz" "poot"))))
+    (start-plot-server!)
+
+    (defn group-data [& names]
+        (apply concat (for [n names]
+                    (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
+
+    (plot! (p/vizard {:mark-type :bar
+                    :encoding {:x {:field :x :scale :ordinal}
+                               :y {:field :y :scale :linear}
+                               :g {:field :col}}
+                    :color "category20b"
+                    :legend? true}
+                   (group-data "foo" "bar" "baz" "poot")))
+
+    (plot! (p/vizard {:mark-type :line
+                    :encoding {:x {:field :x :scale :linear}
+                               :y {:field :y :scale :linear}
+                               :g {:field :col}}
+                    :color "category20b"
+                    :legend? true}
+                    (group-data "foo" "bar" "baz" "poot")))
 ```
 
 ## Local Development
