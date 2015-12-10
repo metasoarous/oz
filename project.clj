@@ -8,7 +8,7 @@
                  [org.clojure/clojurescript "1.7.122"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [cheshire "5.5.0"]
-                 [com.taoensso/sente "1.7.0-RC1"]
+                 [com.taoensso/sente "1.7.0"]
                  [com.taoensso/timbre "4.1.2"]
                  [http-kit "2.1.19"]
                  [ring "1.4.0"]

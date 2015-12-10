@@ -24,24 +24,41 @@ In a repl:
 
     (defn group-data [& names]
         (apply concat (for [n names]
-                    (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
-
-    (plot! (p/vizard {:mark-type :bar
-                      :encoding {:x {:field :x :scale :ordinal}
-                                 :y {:field :y :scale :linear}
-                                 :g {:field :col}}
-                      :color "category20b"
-                      :legend? true}
-                     (group-data "foo" "bar" "baz" "poot")))
-
-    (plot! (p/vizard {:mark-type :line
-                      :encoding {:x {:field :x :scale :linear}
-                                 :y {:field :y :scale :linear}
-                                 :g {:field :col}}
-                      :color "category20b"
-                      :legend? true}
-                      (group-data "foo" "bar" "baz" "poot")))
+        (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
 ```
+
+Now send some plots off. Here is a stacked bar plot:
+
+``` clojure
+(plot! (plot/vizard {:mark-type :bar
+                         :encoding {:x {:field :x :scale :ordinal}
+                                    :y {:field :y :scale :linear}
+                                    :g {:field :col}}
+                         :color "category20b"
+                         :legend? true}
+                        (group-data "foo" "bar" "baz" "poot")))
+
+```
+
+Which should look something like this in when rendered in the browser:
+
+![bar](doc/bar.png)
+
+Here's a multiple series line plot:
+
+``` clojure
+(plot! (plot/vizard {:mark-type :line
+                         :encoding {:x {:field :x :scale :linear}
+                                    :y {:field :y :scale :linear}
+                                    :g {:field :col}}
+                         :color "category20b"
+                         :legend? true}
+                         (group-data "foo" "bar" "baz" "poot")))
+```
+
+Which should look about like this:
+
+![line](doc/line.png)
 
 ## Local Development
 
