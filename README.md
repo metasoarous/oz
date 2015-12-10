@@ -31,12 +31,12 @@ Now send some plots off. Here is a stacked bar plot:
 
 ``` clojure
 (plot! (plot/vizard {:mark-type :bar
-                         :encoding {:x {:field :x :scale :ordinal}
-                                    :y {:field :y :scale :linear}
-                                    :g {:field :col}}
-                         :color "category20b"
-                         :legend? true}
-                        (group-data "foo" "bar" "baz" "poot")))
+                     :encoding {:x {:field :x :scale :ordinal}
+                                :y {:field :y :scale :linear}
+                                :g {:field :col}}
+                     :color "category20b"
+                     :legend? true}
+                    (group-data "foo" "bar" "baz" "poot")))
 
 ```
 
@@ -48,12 +48,12 @@ Here's a multiple series line plot:
 
 ``` clojure
 (plot! (plot/vizard {:mark-type :line
-                         :encoding {:x {:field :x :scale :linear}
-                                    :y {:field :y :scale :linear}
-                                    :g {:field :col}}
-                         :color "category20b"
-                         :legend? true}
-                         (group-data "foo" "bar" "baz" "poot")))
+                     :encoding {:x {:field :x :scale :linear}
+                                :y {:field :y :scale :linear}
+                                :g {:field :col}}
+                     :color "category20b"
+                     :legend? true}
+                    (group-data "foo" "bar" "baz" "poot")))
 ```
 
 Which should look about like this:
