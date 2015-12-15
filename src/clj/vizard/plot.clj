@@ -154,6 +154,13 @@
 (defn time? [encoding d]
   (concat d (when (= (x-scale encoding) "time") [:format {:parse {(x-field encoding) "date"}}])))
 
+(defn x-label [encoding]
+  (keyword (first (s/select [:x :label] encoding))))
+
+(defn y-label [encoding]
+  (keyword (first (s/select [:y :label] encoding))))
+
+
 ;; update stuff
 
 (defn update-data [aname key val spec]
@@ -186,10 +193,12 @@
         xscale (x-scale encoding)
         yscale (y-scale encoding)
         g (group-field encoding)
+        xlabel (x-label encoding)
+        ylabel (y-label encoding)
         data-name mark-type
         v (vega
            :data (data [data-name :values data-vals])
-           :axes (axes [:x "x"] [:y "y"])
+           :axes (axes [:x "x" :title xlabel] [:y "y" :title ylabel])
            :marks (group-mark
                    (from data-name [:facet :groupby [g]])
                    :marks (marks [:line
@@ -231,10 +240,12 @@
         xscale (x-scale encoding)
         yscale (y-scale encoding)
         g (group-field encoding)
+        xlabel (x-label encoding)
+        ylabel (y-label encoding)
         data-name mark-type
         v (vega
            :data (data [data-name :values data-vals])
-           :axes (axes [:x "x"] [:y "y"])
+           :axes (axes [:x "x" :title xlabel] [:y "y" :title ylabel])
            :marks (group-mark
                    (from data-name [:facet :groupby [g]])
                    :marks (marks [:symbol
@@ -276,6 +287,8 @@
         xscale (x-scale encoding)
         yscale (y-scale encoding)
         g (group-field encoding)
+        xlabel (x-label encoding)
+        ylabel (y-label encoding)
         data-name mark-type
         v (vega
            :data (data [data-name :values data-vals]
@@ -284,7 +297,7 @@
                         :transform (transforms [:aggregate
                                                 :groupby [x]
                                                 :summarize [{:field y :ops ["sum"]}]])])
-           :axes (axes [:x "x"] [:y "y"])
+           :axes (axes [:x "x" :title xlabel] [:y "y" :title ylabel])
            :marks (group-mark
                    (from data-name
                          [:stack :groupby [x] :sortby [g] :field y]
@@ -330,6 +343,8 @@
         xscale (x-scale encoding)
         yscale (y-scale encoding)
         g (group-field encoding)
+        xlabel (x-label encoding)
+        ylabel (y-label encoding)
         data-name mark-type
         v (vega
            :data (data [data-name :values data-vals]
@@ -338,7 +353,7 @@
                         :transform (transforms [:aggregate
                                                 :groupby [x]
                                                 :summarize [{:field y :ops ["sum"]}]])])
-           :axes (axes [:x "x"] [:y "y"])
+           :axes (axes [:x "x" :title xlabel] [:y "y" :title ylabel])
            :marks (marks [:rect
                           :from (from data-name [:stack :groupby [x] :sortby [g] :field y])
                           :properties (properties :enter [[:x :scale "x" :field x]
