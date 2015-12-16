@@ -25,8 +25,8 @@
             [lein-figwheel "0.4.1"]]
   :source-paths ["src/clj"]
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
-  :cljsbuild {
-              :builds [{:id "dev"
+  :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
+  :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
                         :figwheel {:on-jsload "vizard.core/on-js-reload"}
                         :compiler {:main vizard.core
@@ -39,7 +39,8 @@
                         :compiler {:output-to "resources/public/js/compiled/vizard.js"
                                    :main vizard.core
                                    :optimizations :whitespace
-                                   :pretty-print false}}]}
+                                   :pretty-print false}
+                        :jar true}]}
   :figwheel {
              ;; :http-server-root "public" ;; default and assumes "resources"
              ;; :server-port 3449 ;; default
