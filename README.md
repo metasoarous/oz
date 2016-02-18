@@ -77,6 +77,10 @@ Here is a heatmap plot:
 
 ```
 
+It looks like this:
+
+![heatmap](doc/heatmap.png)
+
 ## Local Development
 
 First, start up figwheel
