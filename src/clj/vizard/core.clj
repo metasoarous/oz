@@ -30,4 +30,16 @@
                                :g {:field :col}}
                     :color "category20b"
                     :legend? true}
-                   (group-data "foo" "bar" "baz" "poot"))))
+                   (group-data "foo" "bar" "baz" "poot")))
+
+  (defn heat-data [w h]
+    (for [x (range w)
+          y (range h)]
+      {:x x :y y :z (rand)}))
+
+  (plot! (p/vizard {:mark-type :heatmap
+                    :encoding {:x {:field :x :scale :ordinal}
+                               :y {:field :y :scale :ordinal}
+                               :z {:field :z}}
+                    :legend? true}
+                   (heat-data 20 20))))

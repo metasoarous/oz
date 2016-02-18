@@ -1,7 +1,8 @@
 (ns vizard.plot
   (:refer-clojure :exclude [conj])
   (:require [cheshire.core :as json]
-            [com.rpl.specter :as s]))
+            [com.rpl.specter :as s]
+            [vizard.histogram :as h]))
 
 ;; scales
 
@@ -145,6 +146,11 @@
   (or
    (keyword (first (s/select [:y :field] encoding)))
    :y))
+
+(defn z-field [encoding]
+  (or
+   (keyword (first (s/select [:z :field] encoding)))
+   :z))
 
 (defn group-field [encoding]
   (or
@@ -374,4 +380,62 @@
            :padding "auto")]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
+      v)))
+
+(defmethod vizard :heatmap
+  [config data-vals]
+  (let [hist (h/uniform (map :z data-vals) 10)
+        {:keys [xmin xmax]} hist
+        edges (map double (h/edges hist))
+        xmedian (nth edges 5)
+        {:keys [mark-type legend? color encoding]
+         :or {legend? true
+              color "category20"
+              encoding {:x {:field "x" :scale "ordinal"}
+                        :y {:field "y" :scale "linear"}
+                        :z {:field "z"}
+                        :g {:field "col"}}}} config
+        x (x-field encoding)
+        y (y-field encoding)
+        z (z-field encoding)
+        xscale (x-scale encoding)
+        yscale (y-scale encoding)
+        g (group-field encoding)
+        xlabel (x-label encoding)
+        ylabel (y-label encoding)
+        data-name mark-type
+        v (vega
+           :data (data [data-name :values data-vals])
+           :axes (axes [:x "x" :title xlabel] [:y "y" :title ylabel])
+           :marks (marks [:rect
+                          :from (from data-name)
+                          :properties (properties :enter [[:x :scale "x" :field x]
+                                                          [:width :scale "x" :band true]
+                                                          [:y :scale "y" :field y]
+                                                          [:height :scale "y" :band true]
+                                                          [:fill :scale "color" :field z]])])
+           :scales (scales [:x :width
+                            :type xscale
+                            :domain {:data data-name :field x}]
+                           [:y :height
+                            :type yscale
+                            :nice true
+                            :domain {:data data-name :field y}]
+                           [:color ["#313695"
+                                    "#4575b4"
+                                    "#74add1"
+                                    "#abd9e9"
+                                    "#e0f3f8"
+                                    "#ffffbf"
+                                    "#fee090"
+                                    "#fdae61"
+                                    "#f46d43"
+                                    "#d73027"
+                                    "#a50026"]
+                            :type "linear"
+                            :domain (vec edges)
+                            :zero false])
+           :padding "auto")]
+    (if legend?
+      (assoc v :legends (legends [:fill "color" :values [xmin xmedian xmax]]))
       v)))
