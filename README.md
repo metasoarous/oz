@@ -68,11 +68,11 @@ Which should look about like this:
 Here is a heatmap plot:
 
 ``` clojure
-(plot! (p/vizard {:mark-type :heatmap
-                    :encoding {:x {:field :x :scale :ordinal}
-                               :y {:field :y :scale :ordinal}
-                               :z {:field :z}}
-                    :legend? true}
+(plot! (plot/vizard {:mark-type :heatmap
+                     :encoding {:x {:field :x :scale :ordinal}
+                                :y {:field :y :scale :ordinal}
+                                :z {:field :z}}
+                     :legend? true}
                    (heat-data 20 20)))
 
 ```
