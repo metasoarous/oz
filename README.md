@@ -11,7 +11,7 @@ vizard is a tiny client/server library meant to enable REPL-based data visualiza
 Add vizard to your leiningen project dependencies
 
 ``` clojure
-[yieldbot/vizard "0.1.0"]
+[yieldbot/vizard "0.1.1"]
 ```
 
 In a repl:
@@ -25,6 +25,11 @@ In a repl:
     (defn group-data [& names]
         (apply concat (for [n names]
         (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
+
+    (defn heat-data [w h]
+        (for [x (range w)
+              y (range h)]
+            {:x x :y y :z (rand)}))
 ```
 
 Now send some plots off. Here is a stacked bar plot:
@@ -59,6 +64,18 @@ Here's a multiple series line plot:
 Which should look about like this:
 
 ![line](doc/line.png)
+
+Here is a heatmap plot:
+
+``` clojure
+(plot! (p/vizard {:mark-type :heatmap
+                    :encoding {:x {:field :x :scale :ordinal}
+                               :y {:field :y :scale :ordinal}
+                               :z {:field :z}}
+                    :legend? true}
+                   (heat-data 20 20)))
+
+```
 
 ## Local Development
 
