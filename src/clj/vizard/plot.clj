@@ -461,6 +461,10 @@
         xlabel (x-label encoding)
         ylabel (y-label encoding)
         data-name mark-type
+        hist (h/uniform (map :z data-vals) 10)
+        {:keys [xmin xmax]} hist
+        edges (map double (h/edges hist))
+        xmedian (nth edges 5)
         v (vega
            :data (data [data-name :values data-vals])
            :axes (axes [:x "x" :title xlabel] [:y "y" :title ylabel])
@@ -478,17 +482,7 @@
                             :type yscale
                             :nice true
                             :domain {:data data-name :field y}]
-                           [:color ["#313695"
-                                    "#4575b4"
-                                    "#74add1"
-                                    "#abd9e9"
-                                    "#e0f3f8"
-                                    "#ffffbf"
-                                    "#fee090"
-                                    "#fdae61"
-                                    "#f46d43"
-                                    "#d73027"
-                                    "#a50026"]
+                           [:color (colors "RdYlBu")
                             :type "linear"
                             :domain (vec edges)
                             :zero false])
