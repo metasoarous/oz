@@ -388,17 +388,68 @@
       (assoc v :legends (legends [:fill "color"]))
       v)))
 
+(defmethod vizard :grouped-bar
+  [config data-vals]
+  (let [{:keys [mark-type legend? color encoding]
+         :or {legend? true
+              color "category20"
+              encoding {:x {:field "x" :scale "linear"}
+                        :y {:field "y" :scale "linear"}
+                        :g {:field "col"}}}} config
+        x (x-field encoding)
+        y (y-field encoding)
+        xscale (x-scale encoding)
+        yscale (y-scale encoding)
+        g (group-field encoding)
+        xlabel (x-label encoding)
+        ylabel (y-label encoding)
+        data-name mark-type
+        v (vega
+           :data (data [data-name :values data-vals])
+           :axes (axes [:x "x" :title xlabel] [:y "y" :title ylabel])
+           :marks (group-mark
+                   (from data-name
+                         [:facet :groupby [x]])
+                   :properties (properties :enter [[:x :scale "x" :field "key"]
+                                                   [:width :scale "x" :band true]])
+                   :marks (marks [:rect
+                                  :properties (properties :enter [[:x :scale "pos" :field g]
+                                                                  [:y :scale "y" :field y]
+                                                                  [:y2 :scale "y" :value 0]
+                                                                  [:width :scale "pos" :band true]
+                                                                  [:fill :scale "color" :field g]])])
+                   :scales (scales [:pos :width
+                                    :type "ordinal"
+                                    :domain {:data data-name :field g}]))
+           :scales (scales [:x :width
+                            :type xscale
+                            :padding 0.2
+                            :domain {:data data-name :field x}]
+                           [:y :height
+                            :type yscale
+                            :nice true
+                            :domain {:data data-name :field y}]
+                           [:color (colors color)
+                            :type "ordinal"
+                            :domain {:data data-name :field g}]))
+        v (if (= (x-scale encoding) :time)
+            (->> v
+                 (update-data data-name
+                              :format {:parse {(x-field encoding) "date"}})
+                 (update-scale :x
+                               :format {:parse {(x-field encoding) "date"}}))
+            v)]
+    (if legend?
+      (assoc v :legends (legends [:fill "color"]))
+      v)))
+
 (defmethod vizard :heatmap
   [config data-vals]
-  (let [hist (h/uniform (map :z data-vals) 10)
-        {:keys [xmin xmax]} hist
-        edges (map double (h/edges hist))
-        xmedian (nth edges 5)
-        {:keys [mark-type legend? color encoding]
+  (let [{:keys [mark-type legend? color encoding]
          :or {legend? true
               color "category20"
               encoding {:x {:field "x" :scale "ordinal"}
-                        :y {:field "y" :scale "linear"}
+                        :y {:field "y" :scale "ordinal"}
                         :z {:field "z"}
                         :g {:field "col"}}}} config
         x (x-field encoding)
