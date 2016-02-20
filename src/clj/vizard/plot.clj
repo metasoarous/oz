@@ -2,7 +2,13 @@
   (:refer-clojure :exclude [conj])
   (:require [cheshire.core :as json]
             [com.rpl.specter :as s]
-            [vizard.histogram :as h]))
+            [vizard.histogram :as h]
+            [vizard.colors :refer [brews]]))
+
+;; colors
+
+(defn colors [name]
+  (get brews name name))
 
 ;; scales
 
@@ -219,7 +225,7 @@
                             :type yscale
                             :nice true
                             :domain {:data data-name :field y}]
-                           [:color color
+                           [:color (colors color)
                             :type "ordinal"
                             :domain {:data data-name :field g}]))
         v (if (= (x-scale encoding) :time)
@@ -266,7 +272,7 @@
                             :type yscale
                             :nice true
                             :domain {:data data-name :field y}]
-                           [:color color
+                           [:color (colors color)
                             :type "ordinal"
                             :domain {:data data-name :field g}]))
         v (if (= (x-scale encoding) :time)
@@ -316,13 +322,13 @@
                                                                   [:fill :scale "color" :field g]])]))
            :scales (scales [:x :width
                             :type xscale
-                            :zero false
+                            :points true
                             :domain {:data data-name :field x}]
                            [:y :height
                             :type yscale
                             :nice true
                             :domain {:data "stats" :field (str "sum_" (name y))}]
-                           [:color color
+                           [:color (colors color)
                             :type "ordinal"
                             :domain {:data data-name :field g}]))
         v (if (= (x-scale encoding) :time)
@@ -374,7 +380,7 @@
                             :type yscale
                             :nice true
                             :domain {:data "stats" :field (str "sum_" (name y))}]
-                           [:color color
+                           [:color (colors color)
                             :type "ordinal"
                             :domain {:data data-name :field g}])
            :padding "auto")]
