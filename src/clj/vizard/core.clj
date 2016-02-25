@@ -4,14 +4,26 @@
             [org.httpkit.client :as client]
             [cheshire.core :as json]))
 
-(def start-plot-server! server/start!)
+(def ^{:doc "start the vizard plot server on localhost:10666 by default."}
+  start-plot-server! server/start!)
 
-(defn plot! [spec & {:keys [host port]
-                     :or {port (:port @server/web-server_ 10666)
-                          host "localhost"}}]
+(defn plot!
+  "Take a vizard clojure map `spec` and POST it to a vizard
+  server running at `:host` and `:port` to be rendered."
+  [spec & {:keys [host port]
+           :or {port (:port @server/web-server_ 10666)
+                host "localhost"}}]
   (client/post (str "http://" host ":" port "/spec")
                {:body (json/generate-string spec)})
   spec)
+
+(defn to-json
+  "Take a vizard clojure map `spec` and convert it to json for debugging
+  or usage in the vega editor.
+
+  Ex. `(println (to-json spec))`"
+  [spec]
+  (json/generate-string spec))
 
 (comment
   (defn group-data [& names]
