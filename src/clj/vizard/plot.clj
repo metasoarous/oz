@@ -227,14 +227,7 @@
                             :domain {:data data-name :field y}]
                            [:color (colors color)
                             :type "ordinal"
-                            :domain {:data data-name :field g}]))
-        v (if (= (x-scale encoding) :time)
-            (->> v
-                 (update-data data-name
-                              :format {:parse {(x-field encoding) "date"}})
-                 (update-scale :x
-                               :format {:parse {(x-field encoding) "date"}}))
-            v)]
+                            :domain {:data data-name :field g}]))]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))
@@ -274,14 +267,7 @@
                             :domain {:data data-name :field y}]
                            [:color (colors color)
                             :type "ordinal"
-                            :domain {:data data-name :field g}]))
-        v (if (= (x-scale encoding) :time)
-            (->> v
-                 (update-data data-name
-                              :format {:parse {(x-field encoding) "date"}})
-                 (update-scale :x
-                               :format {:parse {(x-field encoding) "date"}}))
-            v)]
+                            :domain {:data data-name :field g}]))]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))
@@ -330,14 +316,7 @@
                             :domain {:data "stats" :field (str "sum_" (name y))}]
                            [:color (colors color)
                             :type "ordinal"
-                            :domain {:data data-name :field g}]))
-        v (if (= (x-scale encoding) :time)
-            (->> v
-                 (update-data data-name
-                              :format {:parse {(x-field encoding) "date"}})
-                 (update-scale :x
-                               :format {:parse {(x-field encoding) "date"}}))
-            v)]
+                            :domain {:data data-name :field g}]))]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))
@@ -431,14 +410,7 @@
                             :domain {:data data-name :field y}]
                            [:color (colors color)
                             :type "ordinal"
-                            :domain {:data data-name :field g}]))
-        v (if (= (x-scale encoding) :time)
-            (->> v
-                 (update-data data-name
-                              :format {:parse {(x-field encoding) "date"}})
-                 (update-scale :x
-                               :format {:parse {(x-field encoding) "date"}}))
-            v)]
+                            :domain {:data data-name :field g}]))]
     (if legend?
       (assoc v :legends (legends [:fill "color"]))
       v)))
