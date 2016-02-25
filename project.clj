@@ -26,7 +26,7 @@
   :source-paths ["src/clj"]
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
   :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
-  :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}D
+  :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
                         :figwheel {:on-jsload "vizard.core/on-js-reload"}
