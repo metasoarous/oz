@@ -1,4 +1,4 @@
-(defproject yieldbot/vizard "0.1.4-SNAPSHOT"
+(defproject yieldbot/vizard "0.1.4"
   :description "Magic Visualization"
   :url "http://github.com/yieldbot/vizard"
   :license {:name "Eclipse Public License"
@@ -26,7 +26,7 @@
   :source-paths ["src/clj"]
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
   :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
-  :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}
+  :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}D
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
                         :figwheel {:on-jsload "vizard.core/on-js-reload"}
