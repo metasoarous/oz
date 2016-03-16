@@ -454,7 +454,7 @@
                             :type yscale
                             :nice true
                             :domain {:data data-name :field y}]
-                           [:color (colors "RdYlBu")
+                           [:color (reverse (colors "RdYlBu"))
                             :type "linear"
                             :domain (vec edges)
                             :zero false])
