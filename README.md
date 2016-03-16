@@ -11,7 +11,7 @@ vizard is a tiny client/server library meant to enable REPL-based data visualiza
 Add vizard to your leiningen project dependencies
 
 ``` clojure
-[yieldbot/vizard "0.1.4"]
+[yieldbot/vizard "0.1.5"]
 ```
 
 In a repl:
