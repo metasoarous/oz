@@ -8,14 +8,16 @@
             [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
             [taoensso.sente :as sente :refer (cb-success?)]
             [taoensso.sente.packers.transit :as sente-transit]
-            [cljsjs.vega])
+            [cljsjs.vega]
+            [cljsjs.vega-lite])
   (:require-macros
    [cljs.core.async.macros :as asyncm :refer (go go-loop)]))
 
 (enable-console-print!)
 
 (defonce app-state (atom {:text "Hail Satan!"
-                          :spec {}}))
+                          :spec nil
+                          :vl-spec nil}))
 
 (def packer (sente-transit/get-flexi-packer :edn))
 
@@ -46,9 +48,15 @@
 
   (defmethod event-msg-handler :chsk/recv
     [{:as ev-msg :keys [?data]}]
-    (let [[id msg] ?data]
+    (let [[id msg] ?data
+          compile-vl-spec (fn [vl-spec]
+                            (try
+                              (.-spec (js/vl.compile (clj->js vl-spec)))
+                              (catch js/Error e
+                                (.log js/console e))))]
       (case id
         :vizard/spec (swap! app-state assoc :spec msg)
+        :vizard/vl-spec (swap! app-state assoc :spec (compile-vl-spec msg) :vl-spec msg)
         :default (debugf "Push event from server: %s" ?data))))
 
   (defmethod event-msg-handler :chsk/handshake
@@ -69,20 +77,21 @@
   (start-router!))
 
 (defn parse-vega-spec [spec elem]
-  (js/vg.parse.spec
-   (clj->js spec)
-   (fn [chart]
-     (try
-       (.update (chart #js {:el elem :renderer "canvas"}))
-       (catch js/Error e
-         (.log js/console e))))))
+  (when spec
+    (js/vg.parse.spec
+     spec
+     (fn [chart]
+       (try
+         (.update (chart #js {:el elem :renderer "canvas"}))
+         (catch js/Error e
+           (.log js/console e)))))))
 
 (defcomponent application [data owner]
   (did-mount [_]
-             (println (:spec data))
+             (println (:vl-spec data))
              (parse-vega-spec (:spec data) (om/get-node owner "vega")))
   (did-update [_ _ _]
-              (println (:spec data))
+              (println (:vl-spec data))
               (parse-vega-spec (:spec data) (om/get-node owner "vega")))
   (render [_]
           (dom/span {:ref "vega"} "")))

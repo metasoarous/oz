@@ -7,6 +7,16 @@
 (def ^{:doc "start the vizard plot server on localhost:10666 by default."}
   start-plot-server! server/start!)
 
+(defn p!
+  "Take a vega-lite clojure map `spec` and POST it to a vizard
+  server running at `:host` and `:port` to be rendered."
+  [spec & {:keys [host port]
+           :or {port (:port @server/web-server_ 10666)
+                host "localhost"}}]
+  (client/post (str "http://" host ":" port "/vl-spec")
+               {:body (json/generate-string spec)})
+  spec)
+
 (defn plot!
   "Take a vizard clojure map `spec` and POST it to a vizard
   server running at `:host` and `:port` to be rendered."
@@ -18,7 +28,7 @@
   spec)
 
 (defn to-json
-  "Take a vizard clojure map `spec` and convert it to json for debugging
+  "Take a vizard or vega-lite clojure map `spec` and convert it to json for debugging
   or usage in the vega editor.
 
   Ex. `(println (to-json spec))`"

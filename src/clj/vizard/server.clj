@@ -54,6 +54,10 @@
         (doseq [uid (:any @connected-uids)]
           (chsk-send! uid [:vizard/spec (json/parse-string (slurp (:body req)))]))
         {:status 200})
+  (POST "/vl-spec" req
+        (doseq [uid (:any @connected-uids)]
+          (chsk-send! uid [:vizard/vl-spec (json/parse-string (slurp (:body req)))]))
+        {:status 200})
   (GET  "/chsk" req (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
   (route/resources "/")
