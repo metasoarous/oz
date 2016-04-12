@@ -12,7 +12,7 @@
                  [com.taoensso/timbre "4.3.1"]
                  [http-kit "2.2.0-alpha1"]
                  [ring "1.4.0"]
-                 [ring/ring-defaults "0.1.5"]
+                 [ring/ring-defaults "0.2.0"]
                  [compojure "1.4.0"]
                  [com.cognitect/transit-clj  "0.8.285"]
                  [sablono "0.3.6"]
