@@ -11,14 +11,14 @@ vizard is a tiny client/server library meant to enable REPL-based data visualiza
 Add vizard to your leiningen project dependencies
 
 ``` clojure
-[yieldbot/vizard "0.1.5"]
+[yieldbot/vizard "0.1.6-SNAPSHOT"]
 ```
 
 In a repl:
 
 ``` clojure
 
-    (require '[vizard [core :refer :all] [plot :as plot]])
+    (require '[vizard [core :refer :all] [plot :as plot] [lite :as lite])
 
     (start-plot-server!)
 
@@ -35,51 +35,40 @@ In a repl:
 Now send some plots off. Here is a stacked bar plot:
 
 ``` clojure
-(plot! (plot/vizard {:mark-type :bar
-                     :encoding {:x {:field :x :scale :ordinal}
-                                :y {:field :y :scale :linear}
-                                :g {:field :col}}
-                     :color "category20b"
-                     :legend? true}
-                    (group-data "foo" "bar" "baz" "poot")))
+  (def stacked-bar (p! (lite/lite {:mark "bar"
+                                   :encoding {:x {:field "x"
+                                                  :type "ordinal"}
+                                              :y {:aggregate "sum"
+                                                  :field "y"
+                                                  :type "quantitative"}
+                                              :color {:field "col"
+                                                      :type "nominal"
+                                                      :scale {:range "category20b"}}}}
+                                  (group-data "foo" "bar" "baz" "buh" "bunk" "dunk"))))
 
 ```
 
 Which should look something like this in when rendered in the browser:
 
-![bar](doc/bar.png)
+![bar](doc/bar-lite.png)
 
 Here's a multiple series line plot:
 
 ``` clojure
-(plot! (plot/vizard {:mark-type :line
-                     :encoding {:x {:field :x :scale :linear}
-                                :y {:field :y :scale :linear}
-                                :g {:field :col}}
-                     :color "category20b"
-                     :legend? true}
-                    (group-data "foo" "bar" "baz" "poot")))
+  (def multi-line (p! (lite/lite {:mark "line"
+                                  :encoding {:x {:field "x"
+                                                 :type "ordinal"}
+                                             :y {:field "y"
+                                                 :type "quantitative"}
+                                             :color {:field "col"
+                                                     :type "nominal"
+                                                     :scale {:range "category20b"}}}}
+                                 (group-data "foo" "bar" "baz" "buh" "bunk" "dunk"))))
 ```
 
 Which should look about like this:
 
-![line](doc/line.png)
-
-Here is a heatmap plot:
-
-``` clojure
-(plot! (plot/vizard {:mark-type :heatmap
-                     :encoding {:x {:field :x :scale :ordinal}
-                                :y {:field :y :scale :ordinal}
-                                :z {:field :z}}
-                     :legend? true}
-                   (heat-data 20 20)))
-
-```
-
-It looks like this:
-
-![heatmap](doc/heatmap.png)
+![line](doc/line-lite.png)
 
 ## Local Development
 
