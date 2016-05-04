@@ -1,7 +1,4 @@
 node {
-  
-  stage 'TEST'
-  sh 'echo ok'
 
   stage 'Build'
   checkout scm
