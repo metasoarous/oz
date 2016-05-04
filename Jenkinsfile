@@ -1,8 +1,8 @@
 node {
 
   stage 'Build'
+  checkout scm
   sh '''
-    checkout scm
     lein test
     lein jar
   '''
