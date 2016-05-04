@@ -1,5 +1,4 @@
 node {
-  def utils = load 'utils.groovy'
 
   stage 'Build'
   sh '''
@@ -13,7 +12,7 @@ node {
   '''
 
   stage 'Publish'
-  utils.setPackageVars('clojure', 'vizard/project.clj')
+  slsSetPackageVars('clojure', 'vizard/project.clj')
   sh '''
     # not implemented yet
     echo "jfrog rt u $PACKAGE_NAME/target/$PACKAGE_NAME-$PACKAGE_VERSION.jar yieldbot-clojure/$PACKAGE_NAME/$PACKAGE_VERSION/ --url=https://artifactory.yb0t.cc/artifactory --dry-run"
@@ -23,4 +22,5 @@ node {
   sh '''
     # not implemented yet
   '''
+
 }
