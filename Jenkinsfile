@@ -1,6 +1,6 @@
 node {
   
-  stage TEST
+  stage 'TEST'
   sh 'echo ok'
 
   stage 'Build'
