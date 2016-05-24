@@ -18,7 +18,7 @@ In a repl:
 
 ``` clojure
 
-    (require '[vizard [core :refer :all] [plot :as plot] [lite :as lite])
+    (require '[vizard [core :refer :all] [plot :as plot] [lite :as lite]])
 
     (start-plot-server!)
 
