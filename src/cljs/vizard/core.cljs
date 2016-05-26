@@ -55,7 +55,7 @@
                               (catch js/Error e
                                 (.log js/console e))))]
       (case id
-        :vizard/spec (swap! app-state assoc :spec msg)
+        :vizard/spec (swap! app-state assoc :spec (clj->js msg))
         :vizard/vl-spec (swap! app-state assoc :spec (compile-vl-spec msg) :vl-spec msg)
         :default (debugf "Push event from server: %s" ?data))))
 
