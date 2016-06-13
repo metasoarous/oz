@@ -1,8 +1,9 @@
 (ns vizard.core
   (:require [vizard.server :as server]
             [vizard.plot :as p]
-            [org.httpkit.client :as client]
-            [cheshire.core :as json]))
+            [aleph.http :as aleph]
+            [cheshire.core :as json]
+            [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]))
 
 (def ^{:doc "start the vizard plot server on localhost:10666 by default."}
   start-plot-server! server/start!)
@@ -13,7 +14,7 @@
   [spec & {:keys [host port]
            :or {port (:port @server/web-server_ 10666)
                 host "localhost"}}]
-  (client/post (str "http://" host ":" port "/vl-spec")
+  @(aleph/post (str "http://" host ":" port "/vl-spec")
                {:body (json/generate-string spec)})
   spec)
 
@@ -23,9 +24,10 @@
   [spec & {:keys [host port]
            :or {port (:port @server/web-server_ 10666)
                 host "localhost"}}]
-  (client/post (str "http://" host ":" port "/spec")
-               {:body (json/generate-string spec)})
-  spec)
+  (let [resp (-> @(aleph/post (str "http://" host ":" port "/spec")
+                           {:body (json/generate-string spec)}))]
+    (debugf "server response: %s" resp)
+    spec))
 
 (defn to-json
   "Take a vizard or vega-lite clojure map `spec` and convert it to json for debugging
