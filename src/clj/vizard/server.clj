@@ -55,7 +55,7 @@
   (POST "/spec" req
         (debugf "/spec got: %s" req)
         (let [spec (json/parse-string (slurp (:body req)))]
-          (reset! current-spec)
+          (reset! current-spec spec)
           (doseq [uid (:any @connected-uids)]
             (chsk-send! uid [:vizard/spec spec]))
           {:status 200}))
