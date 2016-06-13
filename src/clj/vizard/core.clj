@@ -14,9 +14,12 @@
   [spec & {:keys [host port]
            :or {port (:port @server/web-server_ 10666)
                 host "localhost"}}]
-  @(aleph/post (str "http://" host ":" port "/vl-spec")
-               {:body (json/generate-string spec)})
-  spec)
+  (try
+    (let [resp @(aleph/post (str "http://" host ":" port "/vl-spec")
+                           {:body (json/generate-string spec)})]
+     (debugf "server response: %s" resp)
+     spec)
+    (catch Exception e (errorf "error sending plot to server: %s" (slurp (:body (ex-data e)))))))
 
 (defn plot!
   "Take a vizard clojure map `spec` and POST it to a vizard
@@ -24,10 +27,12 @@
   [spec & {:keys [host port]
            :or {port (:port @server/web-server_ 10666)
                 host "localhost"}}]
-  (let [resp (-> @(aleph/post (str "http://" host ":" port "/spec")
-                           {:body (json/generate-string spec)}))]
-    (debugf "server response: %s" resp)
-    spec))
+  (try
+    (let [resp @(aleph/post (str "http://" host ":" port "/spec")
+                            {:body (json/generate-string spec)})]
+      (debugf "server response: %s" resp)
+      spec)
+    (catch Exception e (errorf "error sending plot to server: %s" (slurp (:body (ex-data e)))))))
 
 (defn to-json
   "Take a vizard or vega-lite clojure map `spec` and convert it to json for debugging
