@@ -33,8 +33,8 @@
              (when (not= old new)
                (infof "Connected uids change: %s" new))))
 
-(def current-vl-spec (atom {}))
-(def current-spec (atom {}))
+(def last-vl-spec (atom {}))
+(def last-spec (atom {}))
 
 (defn unique-id
   "Get a unique id for a session."
@@ -55,14 +55,14 @@
   (POST "/spec" req
         (debugf "/spec got: %s" req)
         (let [spec (json/parse-string (slurp (:body req)))]
-          (reset! current-spec spec)
+          (reset! last-spec spec)
           (doseq [uid (:any @connected-uids)]
             (chsk-send! uid [:vizard/spec spec]))
           {:status 200}))
   (POST "/vl-spec" req
         (debugf "/vl-spec got: %s" req)
         (let [vl-spec (json/parse-string (slurp (:body req)))]
-          (reset! current-vl-spec vl-spec)
+          (reset! last-vl-spec vl-spec)
           (doseq [uid (:any @connected-uids)]
             (chsk-send! uid [:vizard/vl-spec vl-spec]))
           {:status 200}))

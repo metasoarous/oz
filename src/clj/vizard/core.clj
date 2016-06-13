@@ -34,15 +34,15 @@
       spec)
     (catch Exception e (errorf "error sending plot to server: %s" (slurp (:body (ex-data e)))))))
 
-(defn current-spec
+(defn last-spec
   "Returns the most recent vega spec sent to the vizard server."
   []
-  @server/current-spec)
+  @server/last-spec)
 
-(defn current-vl-spec
+(defn last-vl-spec
   "Returns the most recent vega-lite spec sent to the vizard server."
   []
-  @server/current-vl-spec)
+  @server/last-vl-spec)
 
 (defn to-json
   "Take a vizard or vega-lite clojure map `spec` and convert it to json for debugging
