@@ -2,6 +2,7 @@
   (:require
    [clojure.string :as str]
    [ring.middleware.defaults]
+   [ring.middleware.anti-forgery :refer (*anti-forgery-token*)]
    [ring.util.response :refer (resource-response content-type)]
    [compojure.core :as comp :refer (defroutes GET POST)]
    [compojure.route :as route]
@@ -16,7 +17,7 @@
    [clojure.java.io :as io]))
 
 (timbre/set-level! :info)
-(reset! sente/debug-mode?_ true)
+(reset! sente/debug-mode?_ false)
 
 (let [packer (sente-transit/get-transit-packer)
       chsk-server (sente/make-channel-socket-server! (get-sch-adapter) {:packer packer})
@@ -52,6 +53,7 @@
                                           (:session req)
                                           (assoc (:session req) :uid (unique-id)))
                                :body (io/input-stream (io/resource "public/index.html"))} "text/html"))
+  (GET "/token" req (json/generate-string {:csrf-token *anti-forgery-token*}))
   (POST "/spec" req
         (debugf "/spec got: %s" req)
         (let [spec (json/parse-string (slurp (:body req)))]
@@ -74,11 +76,7 @@
   (route/not-found "<h1>Nope</h1>"))
 
 (def main-ring-handler
-  (let [ring-defaults-config
-        (assoc-in ring.middleware.defaults/site-defaults [:security :anti-forgery]
-                  false
-                  #_{:read-token (fn [req] (-> req :params :csrf-token))})]
-    (ring.middleware.defaults/wrap-defaults my-routes ring-defaults-config)))
+  (ring.middleware.defaults/wrap-defaults my-routes ring.middleware.defaults/site-defaults))
 
 (defmulti -event-msg-handler :id)
 

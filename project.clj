@@ -8,6 +8,7 @@
                  [org.clojure/clojurescript "1.8.40"]
                  [org.clojure/core.async "0.2.374"]
                  [cheshire "5.5.0"]
+                 [clj-http "2.2.0"]
                  [com.taoensso/sente "1.9.0-beta2"]
                  [com.taoensso/timbre "4.3.1"]
                  [aleph "0.4.1"]

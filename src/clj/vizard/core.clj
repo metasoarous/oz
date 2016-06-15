@@ -1,12 +1,16 @@
 (ns vizard.core
   (:require [vizard.server :as server]
             [vizard.plot :as p]
+            [clj-http.client :as client]
             [aleph.http :as aleph]
             [cheshire.core :as json]
             [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]))
 
-(def ^{:doc "start the vizard plot server on localhost:10666 by default."}
-  start-plot-server! server/start!)
+(def start-plot-server! ^{:doc "Start the vizard plot server on localhost:10666 by default."}
+  server/start!)
+
+(def cookie-store (clj-http.cookies/cookie-store))
+(def anti-forgery-token (atom nil))
 
 (defn p!
   "Take a vega-lite clojure map `spec` and POST it to a vizard
@@ -15,10 +19,19 @@
            :or {port (:port @server/web-server_ 10666)
                 host "localhost"}}]
   (try
-    (let [resp @(aleph/post (str "http://" host ":" port "/vl-spec")
-                           {:body (json/generate-string spec)})]
-     (debugf "server response: %s" resp)
-     spec)
+    (when-not @anti-forgery-token
+      (when-let [token (:csrf-token
+                        (json/parse-string
+                         (:body (client/get (str "http://" host ":" port "/token")
+                                            {:cookie-store cookie-store}))
+                         keyword))]
+        (reset! anti-forgery-token token)))
+    (let [resp (client/post (str "http://" host ":" port "/vl-spec")
+                            {:cookie-store cookie-store
+                             :headers {"X-CSRF-Token" @anti-forgery-token}
+                             :body (json/generate-string spec)})]
+      (debugf "server response: %s" resp)
+      spec)
     (catch Exception e (errorf "error sending plot to server: %s" (slurp (:body (ex-data e)))))))
 
 (defn plot!
@@ -28,8 +41,17 @@
            :or {port (:port @server/web-server_ 10666)
                 host "localhost"}}]
   (try
-    (let [resp @(aleph/post (str "http://" host ":" port "/spec")
-                            {:body (json/generate-string spec)})]
+    (when-not @anti-forgery-token
+      (when-let [token (:csrf-token
+                        (json/parse-string
+                         (:body (client/get (str "http://" host ":" port "/token")
+                                            {:cookie-store cookie-store}))
+                         keyword))]
+        (reset! anti-forgery-token token)))
+    (let [resp (client/post (str "http://" host ":" port "/spec")
+                            {:cookie-store cookie-store
+                             :headers {"X-CSRF-Token" @anti-forgery-token}
+                             :body (json/generate-string spec)})]
       (debugf "server response: %s" resp)
       spec)
     (catch Exception e (errorf "error sending plot to server: %s" (slurp (:body (ex-data e)))))))
