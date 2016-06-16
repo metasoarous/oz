@@ -58,13 +58,21 @@
 
 (defn last-spec
   "Returns the most recent vega spec sent to the vizard server."
-  []
-  @server/last-spec)
+  [& {:keys [host port]
+      :or {port (:port @server/web-server_ 10666)
+           host "localhost"}}]
+  (try
+    (json/parse-string (:body (client/get (str "http://" host ":" port "/spec"))) keyword)
+    (catch Exception e (errorf "error sending plot to server: %s" (slurp (:body (ex-data e)))))))
 
 (defn last-vl-spec
-  "Returns the most recent vega-lite spec sent to the vizard server."
-  []
-  @server/last-vl-spec)
+  "Returns the most recent vega spec sent to the vizard server."
+  [& {:keys [host port]
+      :or {port (:port @server/web-server_ 10666)
+           host "localhost"}}]
+  (try
+    (json/parse-string (:body (client/get (str "http://" host ":" port "/vl-spec"))) keyword)
+    (catch Exception e (errorf "error sending plot to server: %s" (slurp (:body (ex-data e)))))))
 
 (defn to-json
   "Take a vizard or vega-lite clojure map `spec` and convert it to json for debugging

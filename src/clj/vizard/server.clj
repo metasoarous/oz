@@ -37,6 +37,7 @@
 
 (def last-vl-spec (atom {}))
 (def last-spec (atom {}))
+(def compiled-vl-spec (atom {}))
 
 (defn unique-id
   "Get a unique id for a session."
@@ -56,19 +57,29 @@
                                :body (io/input-stream (io/resource "public/index.html"))} "text/html"))
   (GET "/token" req (json/generate-string {:csrf-token *anti-forgery-token*}))
   (POST "/spec" req
-        (debugf "/spec got: %s" req)
+        (debugf "POST /spec got: %s" req)
         (let [spec (json/parse-string (slurp (:body req)))]
           (reset! last-spec spec)
           (doseq [uid (:any @connected-uids)]
             (chsk-send! uid [:vizard/spec spec]))
           {:status 200}))
+  (GET "/spec" req
+       (debugf "GET /spec got: %s" req)
+       {:status 200
+        :content-type "application/json"
+        :body (json/generate-string @last-spec)})
   (POST "/vl-spec" req
-        (debugf "/vl-spec got: %s" req)
+        (debugf "POST /vl-spec got: %s" req)
         (let [vl-spec (json/parse-string (slurp (:body req)))]
           (reset! last-vl-spec vl-spec)
           (doseq [uid (:any @connected-uids)]
             (chsk-send! uid [:vizard/vl-spec vl-spec]))
           {:status 200}))
+  (GET "/vl-spec" req
+       (debugf "GET /vl-spec got: %s" req)
+       {:status 200
+        :content-type "application/json"
+        :body (json/generate-string @last-vl-spec)})
   (GET  "/chsk" req
         (debugf "/chsk got: %s" req)
         (ring-ajax-get-or-ws-handshake req))
@@ -84,6 +95,10 @@
 (defn event-msg-handler [{:as ev-msg :keys [id ?data event]}]
   (tracef "Event: %s" event)
   (-event-msg-handler ev-msg))
+
+(defmethod -event-msg-handler :vizard/to-vega
+  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
+  (reset! last-spec ?data))
 
 (defmethod -event-msg-handler :default
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]

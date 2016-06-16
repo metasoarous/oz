@@ -56,7 +56,10 @@
                               (.log js/console e))))]
     (case id
       :vizard/spec (swap! app-state assoc :spec (clj->js msg))
-      :vizard/vl-spec (swap! app-state assoc :spec (compile-vl-spec msg) :vl-spec msg)
+      :vizard/vl-spec (do
+                        (swap! app-state assoc :spec (compile-vl-spec msg) :vl-spec msg)
+                        (chsk-send! [:vizard/to-vega
+                                     (js->clj (compile-vl-spec msg) :keywordize-keys true)]))
       :default (debugf "Push event from server: %s" ?data))))
 
 (defmethod -event-msg-handler :chsk/handshake
