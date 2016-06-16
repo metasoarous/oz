@@ -74,4 +74,6 @@
 
              ;; to configure a different figwheel logfile path
              ;; :server-logfile "tmp/logs/figwheel-logfile.log"
-             })
+             }
+  :profiles {:uberjar {:aot :all}}
+  :main vizard.server)

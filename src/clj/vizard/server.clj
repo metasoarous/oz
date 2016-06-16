@@ -14,7 +14,8 @@
    [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
    [taoensso.sente.packers.transit :as sente-transit]
    [cheshire.core :as json]
-   [clojure.java.io :as io]))
+   [clojure.java.io :as io])
+  (:gen-class))
 
 (timbre/set-level! :info)
 (reset! sente/debug-mode?_ false)
@@ -133,5 +134,7 @@
    (start-router!)
    (start-web-server! port)))
 
-(defn -main []
-  (start!))
+(defn -main [& [port]]
+  (if port
+    (start! (Integer/parseInt port))
+    (start!)))
