@@ -4,7 +4,7 @@
             [om-tools.core :refer-macros [defcomponent defcomponentk defcomponentmethod]]
             [clojure.string :as str]
             [cljs.core.async :as async  :refer (<! >! put! chan)]
-            [taoensso.encore :as encore :refer ()]
+            [taoensso.encore :as encore :refer-macros (have have?)]
             [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
             [taoensso.sente :as sente :refer (cb-success?)]
             [taoensso.sente.packers.transit :as sente-transit]
@@ -42,9 +42,10 @@
 
 (defmethod -event-msg-handler :chsk/state
   [{:as ev-msg :keys [?data]}]
-  (if {:first-open? ?data}
-    (debugf "Channel socket successfully established!: %s" ?data)
-    (debugf "Channel socket state change: %s" ?data)))
+  (let [[old-state-map new-state-map] (have vector? ?data)]
+    (if (:first-open? new-state-map)
+      (debugf "Channel socket successfully established!: %s" ?data)
+      (debugf "Channel socket state change: %s" ?data))))
 
 (defmethod -event-msg-handler :chsk/recv
   [{:as ev-msg :keys [?data]}]
@@ -56,10 +57,10 @@
                               (.log js/console e))))]
     (case id
       :vizard/spec (swap! app-state assoc :spec (clj->js msg))
-      :vizard/vl-spec (do
-                        (swap! app-state assoc :spec (compile-vl-spec msg) :vl-spec msg)
-                        (chsk-send! [:vizard/to-vega
-                                     (js->clj (compile-vl-spec msg) :keywordize-keys true)]))
+      :vizard/vl-spec (let [spec (compile-vl-spec msg)
+                            clj-spec (js->clj spec :keywordize-keys true)]
+                        (chsk-send! [:vizard/to-vega clj-spec])
+                        (swap! app-state assoc :spec spec :vl-spec msg))
       :default (debugf "Push event from server: %s" ?data))))
 
 (defmethod -event-msg-handler :chsk/handshake

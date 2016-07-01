@@ -7,7 +7,7 @@
    [compojure.core :as comp :refer (defroutes GET POST)]
    [compojure.route :as route]
    [clojure.core.async :as async  :refer (<! <!! >! >!! put! chan go go-loop)]
-   [taoensso.encore :as encore]
+   [taoensso.encore :as encore :refer (have have?)]
    [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]
    [taoensso.sente  :as sente]
    [aleph.http :as aleph]
@@ -18,7 +18,7 @@
   (:gen-class))
 
 (timbre/set-level! :info)
-(reset! sente/debug-mode?_ false)
+;; (reset! sente/debug-mode?_ true)
 
 (let [packer (sente-transit/get-transit-packer)
       chsk-server (sente/make-channel-socket-server! (get-sch-adapter) {:packer packer})
@@ -37,7 +37,11 @@
 
 (def last-vl-spec (atom {}))
 (def last-spec (atom {}))
-(def compiled-vl-spec (atom {}))
+
+(add-watch last-spec :last-spec
+           (fn [_ _ old new]
+             (when (not= old new)
+               (debugf "last spec change: %s" new))))
 
 (defn unique-id
   "Get a unique id for a session."

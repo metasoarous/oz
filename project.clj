@@ -9,7 +9,7 @@
                  [org.clojure/core.async "0.2.374"]
                  [cheshire "5.5.0"]
                  [clj-http "2.2.0"]
-                 [com.taoensso/sente "1.9.0-beta2"]
+                 [com.taoensso/sente "1.9.0-RC1"]
                  [com.taoensso/timbre "4.3.1"]
                  [aleph "0.4.1"]
                  [ring "1.4.0"]
@@ -76,4 +76,4 @@
              ;; :server-logfile "tmp/logs/figwheel-logfile.log"
              }
   :profiles {:uberjar {:aot :all}}
-  :main vizard.server)
+  :main ^:skip-aot vizard.server)
