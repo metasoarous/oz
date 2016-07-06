@@ -18,7 +18,8 @@
 
 (defonce app-state (atom {:text "Hail Satan!"
                           :spec nil
-                          :vl-spec nil}))
+                          :vl-spec nil
+                          :values {}}))
 
 (let [packer (sente-transit/get-transit-packer)
       {:keys [chsk ch-recv send-fn state]}
