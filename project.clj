@@ -11,6 +11,7 @@
                  [clj-http "2.2.0"]
                  [com.taoensso/sente "1.9.0"]
                  [com.taoensso/timbre "4.5.1"]
+                 [com.taoensso/encore "2.68.1"]
                  [aleph "0.4.1"]
                  [ring "1.4.0"]
                  [ring/ring-defaults "0.2.0"]
