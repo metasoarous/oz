@@ -1,4 +1,4 @@
-(defproject yieldbot/vizard "0.1.8"
+(defproject yieldbot/vizard "0.1.9"
   :description "Magic Visualization"
   :url "http://github.com/yieldbot/vizard"
   :license {:name "Eclipse Public License"
@@ -22,7 +22,7 @@
                  [prismatic/om-tools "0.3.12"]
                  [com.cognitect/transit-cljs "0.8.239"]
                  [cljsjs/vega "2.6.0-0"]
-                 [cljsjs/vega-lite "1.1.1-0"]
+                 [cljsjs/vega-lite "1.2.0-0"]
                  [com.rpl/specter "0.9.1"]]
   :plugins [[lein-cljsbuild "1.1.3"]
             [lein-figwheel "0.5.2"]]
