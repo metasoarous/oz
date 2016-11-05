@@ -15,10 +15,10 @@
     (into {} (for [[k v] schema] [(if (keyword? k) (optional-key k) k) v]))
     schema))
 
-(defmacro
- defschema*
- [name body]
- (list 'defschema name (process-schema body)))
+(defmacro defschema*
+  "Like schema.core/defschema, but keyword map keys are optional by default."
+  [name body]
+  (list 'defschema name (process-schema body)))
 
 (defschema*
  Formula
@@ -342,7 +342,6 @@
 
 (defschema*
  Axis
- (maybe
   {:gridDash [Num],
    :properties Any,
    :labels Bool,
@@ -381,7 +380,7 @@
    :tickLabelFont Str,
    :axisColor Str,
    :titleFontWeight Str,
-   :tickColor Str}))
+   :tickColor Str})
 
 (defschema*
  Scale
@@ -432,7 +431,6 @@
 
 (defschema*
  Legend
- (maybe
   {:properties Any,
    :symbolSize Num,
    :titleFontSize Num,
@@ -459,7 +457,7 @@
    :symbolColor Str,
    :symbolStrokeWidth (ranged :min 0),
    :titleFontWeight Str,
-   :margin Num}))
+   :margin Num})
 
 (defschema*
  ChannelDefWithLegend
