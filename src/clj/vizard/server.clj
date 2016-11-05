@@ -14,6 +14,8 @@
    [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
    [taoensso.sente.packers.transit :as sente-transit]
    [cheshire.core :as json]
+   [vizard.schema :refer [Vega]]
+   [schema.core :as s]
    [clojure.java.io :as io])
   (:gen-class))
 
@@ -53,6 +55,15 @@
   [req]
   (get-in req [:session :uid]))
 
+(defn prepare-validation-error
+  "Translate instances of ValidationError to basic clojure data, so we can
+  serialize the result as JSON."
+  [error]
+  (letfn [(f [x] (if (instance? schema.utils.ValidationError x)
+                   (schema.utils/validation-error-explain x)
+                   x))]
+    (clojure.walk/postwalk f error)))
+
 (defroutes my-routes
   (GET  "/" req (content-type {:status 200
                                :session (if (session-uid req)
@@ -74,11 +85,18 @@
         :body (json/generate-string @last-spec)})
   (POST "/vl-spec" req
         (debugf "POST /vl-spec got: %s" req)
-        (let [vl-spec (json/parse-string (slurp (:body req)))]
-          (reset! last-vl-spec vl-spec)
-          (doseq [uid (:any @connected-uids)]
-            (chsk-send! uid [:vizard/vl-spec vl-spec]))
-          {:status 200}))
+        (let [vl-spec (json/parse-string (slurp (:body req)) true)]
+          (if-let [error (s/check Vega vl-spec)]
+            {:status 400
+             :content-type "application/json"
+             :body (json/generate-string
+                    {:error "invalid vega-lite spec"
+                     :reason (prepare-validation-error error)})}
+            (do
+              (reset! last-vl-spec vl-spec)
+              (doseq [uid (:any @connected-uids)]
+                (chsk-send! uid [:vizard/vl-spec vl-spec]))
+              {:status 200}))))
   (GET "/vl-spec" req
        (debugf "GET /vl-spec got: %s" req)
        {:status 200
