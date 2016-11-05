@@ -20,6 +20,7 @@
                  [sablono "0.3.6"]
                  [org.omcljs/om "0.9.0"]
                  [prismatic/om-tools "0.3.12"]
+                 [prismatic/schema "1.1.3"]
                  [com.cognitect/transit-cljs "0.8.239"]
                  [cljsjs/vega "2.6.0-0"]
                  [cljsjs/vega-lite "1.2.0-0"]
