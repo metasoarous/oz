@@ -86,17 +86,10 @@
   (POST "/vl-spec" req
         (debugf "POST /vl-spec got: %s" req)
         (let [vl-spec (json/parse-string (slurp (:body req)) true)]
-          (if-let [error (s/check Vega vl-spec)]
-            {:status 400
-             :content-type "application/json"
-             :body (json/generate-string
-                    {:error "invalid vega-lite spec"
-                     :reason (prepare-validation-error error)})}
-            (do
-              (reset! last-vl-spec vl-spec)
-              (doseq [uid (:any @connected-uids)]
-                (chsk-send! uid [:vizard/vl-spec vl-spec]))
-              {:status 200}))))
+          (reset! last-vl-spec vl-spec)
+          (doseq [uid (:any @connected-uids)]
+            (chsk-send! uid [:vizard/vl-spec vl-spec]))
+          {:status 200}))
   (GET "/vl-spec" req
        (debugf "GET /vl-spec got: %s" req)
        {:status 200
