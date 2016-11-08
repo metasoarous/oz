@@ -175,17 +175,17 @@
  ScaleConfig
  {:useRawDomain Bool,
   :fontSizeRange [Num],
-  :shapeRange (cond-pre [Str] Str),
+  :shapeRange (either [Str] Str),
   :bandSize (cond-pre BandSize Num),
   :tickSizeRange [Num],
   :barSizeRange [Num],
   :textBandWidth (ranged :min 0),
-  :nominalColorRange (cond-pre [Str] Str),
+  :nominalColorRange (either [Str] Str),
   :round Bool,
   :opacity [Num],
   :padding Num,
   :ruleSizeRange [Num],
-  :sequentialColorRange (cond-pre [Str] Str),
+  :sequentialColorRange (either [Str] Str),
   :pointSizeRange [Num]})
 
 (defschema* FacetScaleConfig {:round Bool, :padding Num})
@@ -332,13 +332,13 @@
  EqualFilter
  {:timeUnit TimeUnit,
   (required-key :field) Str,
-  :equal (cond-pre DateTime (cond-pre Str Num Bool))})
+  :equal (cond-pre DateTime Str Num Bool)})
 
 (defschema*
  OneOfFilter
  {:timeUnit TimeUnit,
   (required-key :field) Str,
-  :oneOf [(cond-pre DateTime (cond-pre Str Num Bool))]})
+  :oneOf [(cond-pre DateTime Str Num Bool)]})
 
 (defschema*
  Axis
@@ -369,7 +369,7 @@
    :tickSize (ranged :min 0),
    :layer Str,
    :gridWidth Num,
-   :values (cond-pre [Num] [DateTime]),
+   :values (either [Num] [DateTime]),
    :subdivide Num,
    :axisWidth Num,
    :ticks (ranged :min 0),
@@ -392,9 +392,9 @@
   :round Bool,
   :padding Num,
   :nice (cond-pre NiceTime Bool),
-  :domain (cond-pre [Str] [Num] [DateTime]),
+  :domain (either [Str] [Num] [DateTime]),
   :clamp Bool,
-  :range (cond-pre [Str] [Num] Str)})
+  :range (either [Str] [Num] Str)})
 
 (defschema*
  PositionChannelDef
@@ -420,7 +420,7 @@
 (defschema*
  Transform
  {:filter
-  (cond-pre
+  (either
    EqualFilter
    RangeFilter
    OneOfFilter
@@ -449,7 +449,7 @@
    :symbolShape Str,
    :titleColor Str,
    :gradientWidth Num,
-   :values (cond-pre [Str] [Num] [DateTime]),
+   :values (either [Str] [Num] [DateTime]),
    :padding Num,
    :labelFont Str,
    :labelAlign Str,
@@ -495,36 +495,36 @@
 (defschema*
  UnitEncoding
  {:y PositionChannelDef,
-  :path (cond-pre OrderChannelDef [OrderChannelDef]),
+  :path (either OrderChannelDef [OrderChannelDef]),
   :color ChannelDefWithLegend,
   :size ChannelDefWithLegend,
   :opacity ChannelDefWithLegend,
   :label FieldDef,
   :shape ChannelDefWithLegend,
-  :order (cond-pre OrderChannelDef [OrderChannelDef]),
+  :order (either OrderChannelDef [OrderChannelDef]),
   :x PositionChannelDef,
   :y2 FieldDef,
   :x2 FieldDef,
   :text FieldDef,
-  :detail (cond-pre FieldDef [FieldDef])})
+  :detail (either FieldDef [FieldDef])})
 
 (defschema*
  Encoding
  {:y PositionChannelDef,
-  :path (cond-pre OrderChannelDef [OrderChannelDef]),
+  :path (either OrderChannelDef [OrderChannelDef]),
   :color ChannelDefWithLegend,
   :size ChannelDefWithLegend,
   :column PositionChannelDef,
   :opacity ChannelDefWithLegend,
   :label FieldDef,
   :shape ChannelDefWithLegend,
-  :order (cond-pre OrderChannelDef [OrderChannelDef]),
+  :order (either OrderChannelDef [OrderChannelDef]),
   :x PositionChannelDef,
   :y2 FieldDef,
   :x2 FieldDef,
   :row PositionChannelDef,
   :text FieldDef,
-  :detail (cond-pre FieldDef [FieldDef])})
+  :detail (either FieldDef [FieldDef])})
 
 (defschema* FacetGridConfig {:color Str, :opacity Num, :offset Num})
 
