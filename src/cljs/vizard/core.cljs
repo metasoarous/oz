@@ -1,7 +1,5 @@
 (ns ^:figwheel-always vizard.core
-  (:require [om.core :as om :include-macros true]
-            [om-tools.dom :as dom :include-macros true]
-            [om-tools.core :refer-macros [defcomponent defcomponentk defcomponentmethod]]
+  (:require [reagent.core :as r]
             [clojure.string :as str]
             [cljs.core.async :as async  :refer (<! >! put! chan)]
             [taoensso.encore :as encore :refer-macros (have have?)]
@@ -16,10 +14,10 @@
 (timbre/set-level! :info)
 (enable-console-print!)
 
-(defonce app-state (atom {:text "Hail Satan!"
-                          :spec nil
-                          :vl-spec nil
-                          :values {}}))
+(defonce app-state (r/atom {:text "Hail Satan!"
+                            :spec nil
+                            :vl-spec nil
+                            :values {}}))
 
 (let [packer (sente-transit/get-transit-packer)
       {:keys [chsk ch-recv send-fn state]}
@@ -91,20 +89,22 @@
          (catch js/Error e
            (.log js/console e)))))))
 
-(defcomponent application [data owner]
-  (did-mount [_]
-             (debugf "spec: %s" (:vl-spec data))
-             (parse-vega-spec (:spec data) (om/get-node owner "vega")))
-  (did-update [_ _ _]
-              (debugf "spec: %s" (:vl-spec data))
-              (parse-vega-spec (:spec data) (om/get-node owner "vega")))
-  (render [_]
-          (dom/span {:ref "vega"} "")))
+(defn vega
+  "Reagent component that renders vega."
+  [spec]
+  (r/create-class
+   {:component-did-mount (fn [this]
+                           (parse-vega-spec spec (r/dom-node this)))
+    :component-will-update (fn [this [_ new-spec]]
+                             (parse-vega-spec new-spec (r/dom-node this)))
+    :render (fn [this & args]
+              [:span])}))
 
-(om/root
- application
- app-state
- {:target (. js/document (getElementById "app"))})
+(defn application [app-state]
+  [vega (:spec @app-state)])
+
+(r/render-component [application app-state]
+                    (. js/document (getElementById "app")))
 
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on
