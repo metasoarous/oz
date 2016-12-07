@@ -55,15 +55,6 @@
   [req]
   (get-in req [:session :uid]))
 
-(defn prepare-validation-error
-  "Translate instances of ValidationError to basic clojure data, so we can
-  serialize the result as JSON."
-  [error]
-  (letfn [(f [x] (if (instance? schema.utils.ValidationError x)
-                   (schema.utils/validation-error-explain x)
-                   x))]
-    (clojure.walk/postwalk f error)))
-
 (defroutes my-routes
   (GET  "/" req (content-type {:status 200
                                :session (if (session-uid req)
