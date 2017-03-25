@@ -5,29 +5,26 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.8.40"]
+                 [org.clojure/clojurescript "1.9.89" :scope "provided"]
                  [org.clojure/core.async "0.2.374"]
-                 [cheshire "5.5.0"]
+                 [cheshire "5.7.0"]
                  [clj-http "2.2.0"]
-                 [com.taoensso/sente "1.9.0"]
-                 [com.taoensso/timbre "4.5.1"]
-                 [com.taoensso/encore "2.68.1"]
+                 [com.taoensso/sente "1.11.0"]
                  [aleph "0.4.1"]
-                 [ring "1.4.0"]
-                 [ring/ring-defaults "0.2.0"]
-                 [compojure "1.4.0"]
-                 [com.cognitect/transit-clj  "0.8.285"]
-                 [reagent "0.6.0"]
+                 [ring "1.5.0"]
+                 [ring/ring-defaults "0.2.3"]
+                 [compojure "1.5.0"]
+                 [com.cognitect/transit-clj  "0.8.297"]
                  [com.cognitect/transit-cljs "0.8.239"]
+                 [reagent "0.6.0"]
                  [cljsjs/vega "2.6.0-0"]
                  [cljsjs/vega-lite "1.2.0-0"]
                  [com.rpl/specter "0.9.1"]]
-  :plugins [[lein-cljsbuild "1.1.3"]
-            [lein-figwheel "0.5.2"]]
-  :source-paths ["src/clj"]
-  :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
-  :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
+  :plugins [[lein-cljsbuild "1.1.3"]]
+  :source-paths ["src/clj" "src/cljs"]
+  :clean-targets ^{:protect false} [:target-path :compile-path "resources/public/js"]
   :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}
+  :repl-options {:init-ns user}
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
                         :figwheel {:on-jsload "vizard.core/on-js-reload"}
@@ -35,14 +32,14 @@
                                    :asset-path "js/compiled/out"
                                    :output-to "resources/public/js/compiled/vizard.js"
                                    :output-dir "resources/public/js/compiled/out"
-                                   :source-map-timestamp true}}
+                                   :source-map-timestamp true
+                                   :preloads [devtools.preload]}}
                        {:id "min"
                         :source-paths ["src/cljs"]
                         :compiler {:output-to "resources/public/js/compiled/vizard.js"
                                    :main vizard.core
                                    :optimizations :advanced
-                                   :pretty-print false}
-                        :jar true}]}
+                                   :pretty-print false}}]}
   :figwheel {
              ;; :http-server-root "public" ;; default and assumes "resources"
              ;; :server-port 3449 ;; default
@@ -74,5 +71,16 @@
              ;; to configure a different figwheel logfile path
              ;; :server-logfile "tmp/logs/figwheel-logfile.log"
              }
-  :profiles {:uberjar {:aot :all}}
+  :profiles {:dev
+             {:dependencies [[binaryage/devtools "0.9.0"]
+                             [figwheel-sidecar "0.5.9"]
+                             [com.cemerick/piggieback "0.2.1"]]
+              :plugins [[lein-figwheel "0.5.9"]]
+              :source-paths ["dev"]
+              :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
+             :uberjar
+             {:source-paths ^:replace ["src/clj"]
+              :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
+              :omit-source true
+              :aot :all}}
   :main ^:skip-aot vizard.server)
