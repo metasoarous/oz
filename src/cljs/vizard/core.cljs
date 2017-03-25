@@ -98,7 +98,7 @@
     :component-will-update (fn [this [_ new-spec]]
                              (parse-vega-spec new-spec (r/dom-node this)))
     :render (fn [this & args]
-              [:span])}))
+              [:div#vis])}))
 
 (defn application [app-state]
   [vega (:spec @app-state)])
