@@ -1,4 +1,4 @@
-(defproject yieldbot/vizard "0.2.0-SNAPSHOT"
+(defproject yieldbot/vizard "0.2.0"
   :description "Magic Visualization"
   :url "http://github.com/yieldbot/vizard"
   :license {:name "Eclipse Public License"
