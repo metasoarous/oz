@@ -25,6 +25,7 @@
   :clean-targets ^{:protect false} [:target-path :compile-path "resources/public/js"]
   :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}
   :repl-options {:init-ns user}
+  :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
                         :figwheel {:on-jsload "vizard.core/on-js-reload"}
@@ -80,7 +81,6 @@
               :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
              :uberjar
              {:source-paths ^:replace ["src/clj"]
-              :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
               :omit-source true
               :aot :all}}
   :main ^:skip-aot vizard.server)
