@@ -7,7 +7,8 @@
             [taoensso.sente :as sente :refer (cb-success?)]
             [taoensso.sente.packers.transit :as sente-transit]
             [cljsjs.vega]
-            [cljsjs.vega-lite])
+            [cljsjs.vega-lite]
+            [cljsjs.vega-embed])
   (:require-macros
    [cljs.core.async.macros :as asyncm :refer (go go-loop)]))
 
@@ -81,24 +82,20 @@
 
 (defn parse-vega-spec [spec elem]
   (when spec
-    (js/vg.parse.spec
-     spec
-     (fn [chart]
-       (try
-         (.update (chart #js {:el elem :renderer "canvas"}))
-         (catch js/Error e
-           (.log js/console e)))))))
+    (let [opts #js {"renderer" "canvas"}]
+      (js/vega.embed elem spec opts))))
 
 (defn vega
   "Reagent component that renders vega."
   [spec]
   (r/create-class
-   {:component-did-mount (fn [this]
+   {:display-name "vega"
+    :component-did-mount (fn [this]
                            (parse-vega-spec spec (r/dom-node this)))
     :component-will-update (fn [this [_ new-spec]]
                              (parse-vega-spec new-spec (r/dom-node this)))
-    :render (fn [this & args]
-              [:div#vis])}))
+    :reagent-render (fn [spec]
+                      [:div#vis])}))
 
 (defn application [app-state]
   [vega (:spec @app-state)])

@@ -1,2 +1,11 @@
 /* some style */
 
+.vega-embed a {
+    visibility: hidden;
+    font-size: 14px;
+    margin-right: 0.5em;
+}
+
+.vega-embed:hover a {
+    visibility: visible;
+}
