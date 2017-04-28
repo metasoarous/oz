@@ -89,12 +89,13 @@
   "Reagent component that renders vega."
   [spec]
   (r/create-class
-   {:component-did-mount (fn [this]
+   {:display-name "vega"
+    :component-did-mount (fn [this]
                            (parse-vega-spec spec (r/dom-node this)))
     :component-will-update (fn [this [_ new-spec]]
                              (parse-vega-spec new-spec (r/dom-node this)))
-    :render (fn [this & args]
-              [:div#vis])}))
+    :reagent-render (fn [spec]
+                      [:div#vis])}))
 
 (defn application [app-state]
   [vega (:spec @app-state)])
