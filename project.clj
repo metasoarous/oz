@@ -18,7 +18,7 @@
                  [com.cognitect/transit-cljs "0.8.239"]
                  [reagent "0.6.1"]
                  [cljsjs/vega "3.0.0-beta.30-0"]
-                 [cljsjs/vega-lite "2.0.0-beta.1-0"]
+                 [cljsjs/vega-lite "2.0.0-beta.2-0"]
                  [cljsjs/vega-embed "3.0.0-beta.11-0"]
                  [com.rpl/specter "0.9.1"]]
   :plugins [[lein-cljsbuild "1.1.3"]]
