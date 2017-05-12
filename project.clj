@@ -13,13 +13,14 @@
                  [aleph "0.4.1"]
                  [ring "1.5.0"]
                  [ring/ring-defaults "0.2.3"]
+                 [bk/ring-gzip "0.1.1"]
                  [compojure "1.5.0"]
                  [com.cognitect/transit-clj  "0.8.297"]
                  [com.cognitect/transit-cljs "0.8.239"]
                  [reagent "0.6.1"]
-                 [cljsjs/vega "3.0.0-beta.30-0"]
+                 [cljsjs/vega "3.0.0-beta.31-0"]
                  [cljsjs/vega-lite "2.0.0-beta.2-0"]
-                 [cljsjs/vega-embed "3.0.0-beta.11-0"]
+                 [cljsjs/vega-embed "3.0.0-beta.14-0"]
                  [com.rpl/specter "0.9.1"]]
   :plugins [[lein-cljsbuild "1.1.3"]]
   :source-paths ["src/clj" "src/cljs"]
@@ -74,7 +75,7 @@
              ;; :server-logfile "tmp/logs/figwheel-logfile.log"
              }
   :profiles {:dev
-             {:dependencies [[binaryage/devtools "0.9.0"]
+             {:dependencies [[binaryage/devtools "0.9.4"]
                              [figwheel-sidecar "0.5.9"]
                              [com.cemerick/piggieback "0.2.1"]]
               :plugins [[lein-figwheel "0.5.9"]]
