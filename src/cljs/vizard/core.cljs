@@ -15,6 +15,9 @@
 (timbre/set-level! :info)
 (enable-console-print!)
 
+(defn log [a-thing]
+  (.log js/console a-thing))
+
 (defonce app-state (r/atom {:text "Hail Satan!"
                             :spec nil
                             :vl-spec nil
@@ -24,7 +27,7 @@
       {:keys [chsk ch-recv send-fn state]}
       (sente/make-channel-socket-client! "/chsk"
                                          {:type :auto
-                                          :packer packer})]
+                                          :packer :edn})]
   (def chsk chsk)
   (def ch-chsk ch-recv)
   (def chsk-send! send-fn)
@@ -54,14 +57,14 @@
                           (try
                             (.-spec (js/vl.compile (clj->js vl-spec)))
                             (catch js/Error e
-                              (.log js/console e))))]
+                              (log e))))]
     (case id
       :vizard/spec (swap! app-state assoc :spec (clj->js msg))
       :vizard/vl-spec (let [spec (compile-vl-spec msg)
                             clj-spec (js->clj spec :keywordize-keys true)]
                         (chsk-send! [:vizard/to-vega clj-spec])
                         (swap! app-state assoc :spec spec :vl-spec msg))
-      :default (debugf "Push event from server: %s" ?data))))
+      (debugf "Push event from server: %s" ?data))))
 
 (defmethod -event-msg-handler :chsk/handshake
   [{:as ev-msg :keys [?data]}]
@@ -83,7 +86,9 @@
 (defn parse-vega-spec [spec elem]
   (when spec
     (let [opts #js {"renderer" "canvas"}]
-      (js/vega.embed elem spec opts))))
+      (js/vega.embed elem spec opts (fn [error res]
+                                      (log error)
+                                      (log res))))))
 
 (defn vega
   "Reagent component that renders vega."
