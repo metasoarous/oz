@@ -2,6 +2,7 @@
   (:require
    [clojure.string :as str]
    [ring.middleware.defaults]
+   [ring.middleware.gzip :refer [wrap-gzip]]
    [ring.middleware.anti-forgery :refer (*anti-forgery-token*)]
    [ring.util.response :refer (resource-response content-type)]
    [compojure.core :as comp :refer (defroutes GET POST)]
@@ -21,7 +22,7 @@
 ;; (reset! sente/debug-mode?_ true)
 
 (let [packer (sente-transit/get-transit-packer)
-      chsk-server (sente/make-channel-socket-server! (get-sch-adapter) {:packer packer})
+      chsk-server (sente/make-channel-socket-server! (get-sch-adapter) {:packer :edn})
       {:keys [ch-recv send-fn connected-uids
               ajax-post-fn ajax-get-or-ws-handshake-fn]} chsk-server]
   (def ring-ajax-post ajax-post-fn)
@@ -92,7 +93,9 @@
   (route/not-found "<h1>Nope</h1>"))
 
 (def main-ring-handler
-  (ring.middleware.defaults/wrap-defaults my-routes ring.middleware.defaults/site-defaults))
+  (-> my-routes
+      (ring.middleware.defaults/wrap-defaults ring.middleware.defaults/site-defaults)
+      (wrap-gzip)))
 
 (defmulti -event-msg-handler :id)
 
