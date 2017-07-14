@@ -8,7 +8,8 @@
             [taoensso.sente.packers.transit :as sente-transit]
             [cljsjs.vega]
             [cljsjs.vega-lite]
-            [cljsjs.vega-embed])
+            [cljsjs.vega-embed]
+            [cljsjs.vega-tooltip])
   (:require-macros
    [cljs.core.async.macros :as asyncm :refer (go go-loop)]))
 
@@ -20,14 +21,13 @@
 
 (defonce app-state (r/atom {:text "Hail Satan!"
                             :spec nil
-                            :vl-spec nil
-                            :values {}}))
+                            :vl-spec nil}))
 
 (let [packer (sente-transit/get-transit-packer)
       {:keys [chsk ch-recv send-fn state]}
       (sente/make-channel-socket-client! "/chsk"
                                          {:type :auto
-                                          :packer :edn})]
+                                          :packer packer})]
   (def chsk chsk)
   (def ch-chsk ch-recv)
   (def chsk-send! send-fn)
@@ -52,18 +52,9 @@
 
 (defmethod -event-msg-handler :chsk/recv
   [{:as ev-msg :keys [?data]}]
-  (let [[id msg] ?data
-        compile-vl-spec (fn [vl-spec]
-                          (try
-                            (.-spec (js/vl.compile (clj->js vl-spec)))
-                            (catch js/Error e
-                              (log e))))]
+  (let [[id msg] ?data]
     (case id
-      :vizard/spec (swap! app-state assoc :spec (clj->js msg))
-      :vizard/vl-spec (let [spec (compile-vl-spec msg)
-                            clj-spec (js->clj spec :keywordize-keys true)]
-                        (chsk-send! [:vizard/to-vega clj-spec])
-                        (swap! app-state assoc :spec spec :vl-spec msg))
+      :vizard/vl-spec (swap! app-state assoc :vl-spec (clj->js msg))
       (debugf "Push event from server: %s" ?data))))
 
 (defmethod -event-msg-handler :chsk/handshake
@@ -83,27 +74,30 @@
 (defn start! []
   (start-router!))
 
-(defn parse-vega-spec [spec elem]
+(defn parse-vl-spec [spec elem]
   (when spec
-    (let [opts #js {"renderer" "canvas"}]
-      (js/vega.embed elem spec opts (fn [error res]
-                                      (log error)
-                                      (log res))))))
+    (let [opts {:renderer "canvas"
+                :mode "vega-lite"}]
+      (js/vega.embed elem spec (clj->js opts) (fn [error res]
+                                                (if error
+                                                  (log error)
+                                                  (. js/vegaTooltip (vegaLite (.-view res) spec))))))))
 
-(defn vega
-  "Reagent component that renders vega."
+(defn vega-lite
+  "Reagent component that renders vega-lite."
   [spec]
   (r/create-class
-   {:display-name "vega"
+   {:display-name "vega-lite"
     :component-did-mount (fn [this]
-                           (parse-vega-spec spec (r/dom-node this)))
+                           (parse-vl-spec spec (r/dom-node this)))
     :component-will-update (fn [this [_ new-spec]]
-                             (parse-vega-spec new-spec (r/dom-node this)))
+                             (parse-vl-spec new-spec (r/dom-node this)))
     :reagent-render (fn [spec]
                       [:div#vis])}))
 
 (defn application [app-state]
-  [vega (:spec @app-state)])
+  (when-let [spec (:vl-spec @app-state)]
+    [vega-lite spec]))
 
 (r/render-component [application app-state]
                     (. js/document (getElementById "app")))
@@ -113,5 +107,8 @@
   ;; your application
   ;; (swap! app-state update-in [:__figwheel_counter] inc)
   )
+
+(let [config js/vega.embed.config]
+  (aset config "editor_url" "http://vega.github.io/editor/"))
 
 (start!)
