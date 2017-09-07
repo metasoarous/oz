@@ -2,6 +2,8 @@
   (:require
    [clojure.string :as str]
    [ring.middleware.defaults]
+   [ring.middleware.gzip :refer [wrap-gzip]]
+   [ring.middleware.cljsjs :refer [wrap-cljsjs]]
    [ring.middleware.anti-forgery :refer (*anti-forgery-token*)]
    [ring.util.response :refer (resource-response content-type)]
    [compojure.core :as comp :refer (defroutes GET POST)]
@@ -36,12 +38,11 @@
                (infof "Connected uids change: %s" new))))
 
 (def last-vl-spec (atom {}))
-(def last-spec (atom {}))
 
-(add-watch last-spec :last-spec
+(add-watch last-vl-spec :last-vl-spec
            (fn [_ _ old new]
              (when (not= old new)
-               (debugf "last spec change: %s" new))))
+               (debugf "last vl spec change: %s" new))))
 
 (defn unique-id
   "Get a unique id for a session."
@@ -60,18 +61,6 @@
                                           (assoc (:session req) :uid (unique-id)))
                                :body (io/input-stream (io/resource "public/index.html"))} "text/html"))
   (GET "/token" req (json/generate-string {:csrf-token *anti-forgery-token*}))
-  (POST "/spec" req
-        (debugf "POST /spec got: %s" req)
-        (let [spec (json/parse-string (slurp (:body req)))]
-          (reset! last-spec spec)
-          (doseq [uid (:any @connected-uids)]
-            (chsk-send! uid [:vizard/spec spec]))
-          {:status 200}))
-  (GET "/spec" req
-       (debugf "GET /spec got: %s" req)
-       {:status 200
-        :content-type "application/json"
-        :body (json/generate-string @last-spec)})
   (POST "/vl-spec" req
         (debugf "POST /vl-spec got: %s" req)
         (let [vl-spec (json/parse-string (slurp (:body req)))]
@@ -92,17 +81,16 @@
   (route/not-found "<h1>Nope</h1>"))
 
 (def main-ring-handler
-  (ring.middleware.defaults/wrap-defaults my-routes ring.middleware.defaults/site-defaults))
+  (-> my-routes
+      (ring.middleware.defaults/wrap-defaults ring.middleware.defaults/site-defaults)
+      (wrap-cljsjs)
+      (wrap-gzip)))
 
 (defmulti -event-msg-handler :id)
 
 (defn event-msg-handler [{:as ev-msg :keys [id ?data event]}]
   (tracef "Event: %s" event)
   (-event-msg-handler ev-msg))
-
-(defmethod -event-msg-handler :vizard/to-vega
-  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
-  (reset! last-spec ?data))
 
 (defmethod -event-msg-handler :default
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
