@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.89" :scope "provided"]
+                 [org.clojure/clojurescript "1.9.671" :scope "provided"]
                  [org.clojure/core.async "0.2.374"]
                  [cheshire "5.7.0"]
                  [clj-http "2.2.0"]
@@ -24,7 +24,7 @@
                  [cljsjs/vega-embed "3.0.0-beta.18-0"]
                  [cljsjs/vega-tooltip "0.4.0-0"]
                  [com.rpl/specter "0.9.1"]]
-  :plugins [[lein-cljsbuild "1.1.3"]]
+  :plugins [[lein-cljsbuild "1.1.6"]]
   :source-paths ["src/clj" "src/cljs"]
   :clean-targets ^{:protect false} [:target-path :compile-path "resources/public/js"]
   :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}
@@ -78,9 +78,9 @@
              }
   :profiles {:dev
              {:dependencies [[binaryage/devtools "0.9.4"]
-                             [figwheel-sidecar "0.5.9"]
-                             [com.cemerick/piggieback "0.2.1"]]
-              :plugins [[lein-figwheel "0.5.9"]]
+                             [figwheel-sidecar "0.5.11"]
+                             [com.cemerick/piggieback "0.2.2"]]
+              :plugins [[lein-figwheel "0.5.11"]]
               :source-paths ["dev"]
               :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
              :uberjar
