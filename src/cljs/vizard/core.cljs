@@ -78,7 +78,7 @@
   (when spec
     (let [opts {:renderer "canvas"
                 :mode "vega-lite"}]
-      (-> (js/vega.embed elem spec (clj->js opts))
+      (-> (js/vegaEmbed elem spec (clj->js opts))
           (.then (fn [res]
                    #_(log res)
                    (. js/vegaTooltip (vegaLite (.-view res) spec))))
