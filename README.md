@@ -11,25 +11,21 @@ vizard is a tiny client/server library meant to enable REPL-based data visualiza
 Add vizard to your leiningen project dependencies
 
 ``` clojure
-[yieldbot/vizard "0.2.1"]
+[yieldbot/vizard "1.0.0"]
 ```
+
 
 In a repl:
 
 ``` clojure
 
-    (require '[vizard [core :refer :all] [plot :as plot] [lite :as lite]])
+    (require '[vizard [core :refer :all] [lite :as lite]])
 
     (start-plot-server!)
 
     (defn group-data [& names]
         (apply concat (for [n names]
         (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
-
-    (defn heat-data [w h]
-        (for [x (range w)
-              y (range h)]
-            {:x x :y y :z (rand)}))
 ```
 
 Now send some plots off. Here is a stacked bar plot:
@@ -42,8 +38,7 @@ Now send some plots off. Here is a stacked bar plot:
                                                   :field "y"
                                                   :type "quantitative"}
                                               :color {:field "col"
-                                                      :type "nominal"
-                                                      :scale {:range "category20b"}}}}
+                                                      :type "nominal"}}}
                                   (group-data "foo" "bar" "baz" "buh" "bunk" "dunk"))))
 
 ```
@@ -61,8 +56,7 @@ Here's a multiple series line plot:
                                              :y {:field "y"
                                                  :type "quantitative"}
                                              :color {:field "col"
-                                                     :type "nominal"
-                                                     :scale {:range "category20b"}}}}
+                                                     :type "nominal"}}}
                                  (group-data "foo" "bar" "baz" "buh" "bunk" "dunk"))))
 ```
 
@@ -73,14 +67,12 @@ Which should look about like this:
 ## Local Development
 
 First, start up figwheel
-``` sh
-lein figwheel
+``` clojure
+  (do-it-fools!)
 ```
-
-Next, start a normal CIDER or other nrepl client and connect as you would normally.
 
 ## License
 
-Copyright © 2015 Yieldbot, Inc.
+Copyright © 2017 Yieldbot, Inc.
 
 Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.
