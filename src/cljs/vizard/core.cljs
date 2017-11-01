@@ -78,10 +78,12 @@
   (when spec
     (let [opts {:renderer "canvas"
                 :mode "vega-lite"}]
-      (js/vega.embed elem spec (clj->js opts) (fn [error res]
-                                                (if error
-                                                  (log error)
-                                                  (. js/vegaTooltip (vegaLite (.-view res) spec))))))))
+      (-> (js/vegaEmbed elem spec (clj->js opts))
+          (.then (fn [res]
+                   #_(log res)
+                   (. js/vegaTooltip (vegaLite (.-view res) spec))))
+          (.catch (fn [err]
+                    (log err)))))))
 
 (defn vega-lite
   "Reagent component that renders vega-lite."
@@ -107,8 +109,5 @@
   ;; your application
   ;; (swap! app-state update-in [:__figwheel_counter] inc)
   )
-
-(let [config js/vega.embed.config]
-  (aset config "editor_url" "http://vega.github.io/editor/"))
 
 (start!)

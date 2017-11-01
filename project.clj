@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.671" :scope "provided"]
+                 [org.clojure/clojurescript "1.9.854" :scope "provided"]
                  [org.clojure/core.async "0.2.374"]
                  [cheshire "5.7.0"]
                  [clj-http "2.2.0"]
@@ -19,10 +19,10 @@
                  [com.cognitect/transit-clj  "0.8.297"]
                  [com.cognitect/transit-cljs "0.8.239"]
                  [reagent "0.6.1"]
-                 [cljsjs/vega "3.0.0-beta.38-0"]
-                 [cljsjs/vega-lite "2.0.0-beta.5-0"]
-                 [cljsjs/vega-embed "3.0.0-beta.18-0"]
-                 [cljsjs/vega-tooltip "0.4.0-0"]
+                 [cljsjs/vega "3.0.1-0"]
+                 [cljsjs/vega-lite "2.0.0-0"]
+                 [cljsjs/vega-embed "3.0.0-rc7-0"]
+                 [cljsjs/vega-tooltip "0.4.4-0"]
                  [com.rpl/specter "0.9.1"]]
   :plugins [[lein-cljsbuild "1.1.6"]]
   :source-paths ["src/clj" "src/cljs"]
