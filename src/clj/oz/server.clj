@@ -1,4 +1,4 @@
-(ns vizard.server
+(ns oz.server
   (:require
    [clojure.string :as str]
    [ring.middleware.defaults]
@@ -66,7 +66,7 @@
         (let [vl-spec (json/parse-string (slurp (:body req)))]
           (reset! last-vl-spec vl-spec)
           (doseq [uid (:any @connected-uids)]
-            (chsk-send! uid [:vizard/vl-spec vl-spec]))
+            (chsk-send! uid [:oz/vl-spec vl-spec]))
           {:status 200}))
   (GET "/vl-spec" req
        (debugf "GET /vl-spec got: %s" req)

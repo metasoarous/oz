@@ -1,6 +1,6 @@
-(defproject yieldbot/vizard "1.0.1"
+(defproject yieldbot/oz "1.0.1"
   :description "Magic Visualization"
-  :url "http://github.com/yieldbot/vizard"
+  :url "http://github.com/metasoarous/oz"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
@@ -32,17 +32,17 @@
   :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
-                        :figwheel {:on-jsload "vizard.core/on-js-reload"}
-                        :compiler {:main vizard.core
+                        :figwheel {:on-jsload "oz.core/on-js-reload"}
+                        :compiler {:main oz.core
                                    :asset-path "js/compiled/out"
-                                   :output-to "resources/public/js/compiled/vizard.js"
+                                   :output-to "resources/public/js/compiled/oz.js"
                                    :output-dir "resources/public/js/compiled/out"
                                    :source-map-timestamp true
                                    :preloads [devtools.preload]}}
                        {:id "min"
                         :source-paths ["src/cljs"]
-                        :compiler {:output-to "resources/public/js/compiled/vizard.js"
-                                   :main vizard.core
+                        :compiler {:output-to "resources/public/js/compiled/oz.js"
+                                   :main oz.core
                                    :optimizations :advanced
                                    :pretty-print false}}]}
   :figwheel {
@@ -50,7 +50,7 @@
              ;; :server-port 3449 ;; default
              ;; :server-ip "127.0.0.1"
 
-             :css-dirs ["resources/public/css"] ;; watch and update CSS
+             :css-dirs ["resources/public/css"]} ;; watch and update CSS
 
              ;; Start an nREPL server into the running figwheel process
              ;; :nrepl-port 7888
@@ -75,7 +75,7 @@
 
              ;; to configure a different figwheel logfile path
              ;; :server-logfile "tmp/logs/figwheel-logfile.log"
-             }
+             
   :profiles {:dev
              {:dependencies [[binaryage/devtools "0.9.4"]
                              [figwheel-sidecar "0.5.11"]
@@ -87,4 +87,4 @@
              {:source-paths ^:replace ["src/clj"]
               :omit-source true
               :aot :all}}
-  :main ^:skip-aot vizard.server)
+  :main ^:skip-aot oz.server)

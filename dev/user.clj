@@ -1,5 +1,5 @@
 (ns user
-  (:require [vizard.server :refer [start! stop!]]
+  (:require [oz.server :refer [start! stop!]]
             [figwheel-sidecar.repl-api :as figwheel]))
 
 ;; Let Clojure warn you when it needs to reflect on types, or when it does math

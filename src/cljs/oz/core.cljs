@@ -1,4 +1,4 @@
-(ns ^:figwheel-always vizard.core
+(ns ^:figwheel-always oz.core
   (:require [reagent.core :as r]
             [clojure.string :as str]
             [cljs.core.async :as async  :refer (<! >! put! chan)]
@@ -19,7 +19,7 @@
 (defn log [a-thing]
   (.log js/console a-thing))
 
-(defonce app-state (r/atom {:text "Hail Satan!"
+(defonce app-state (r/atom {:text "Pay no attention to the man behind the curtain!"
                             :spec nil
                             :vl-spec nil}))
 
@@ -54,7 +54,7 @@
   [{:as ev-msg :keys [?data]}]
   (let [[id msg] ?data]
     (case id
-      :vizard/vl-spec (swap! app-state assoc :vl-spec (clj->js msg))
+      :oz/vl-spec (swap! app-state assoc :vl-spec (clj->js msg))
       (debugf "Push event from server: %s" ?data))))
 
 (defmethod -event-msg-handler :chsk/handshake
@@ -96,6 +96,20 @@
                              (parse-vl-spec new-spec (r/dom-node this)))
     :reagent-render (fn [spec]
                       [:div#vis])}))
+
+
+(defn vega
+  "Reagent component that renders vega"
+  [spec]
+  (r/create-class
+   {:display-name "vega"
+    :component-did-mount (fn [this]
+                           (parse-vl-spec spec (r/dom-node this)))
+    :component-will-update (fn [this [_ new-spec]]
+                             (parse-vl-spec new-spec (r/dom-node this)))
+    :reagent-render (fn [spec]
+                      [:div#vis])}))
+
 
 (defn application [app-state]
   (when-let [spec (:vl-spec @app-state)]
