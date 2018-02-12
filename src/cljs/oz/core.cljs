@@ -20,8 +20,7 @@
   (.log js/console a-thing))
 
 (defonce app-state (r/atom {:text "Pay no attention to the man behind the curtain!"
-                            :spec nil
-                            :vl-spec nil}))
+                            :view-spec nil}))
 
 (let [packer (sente-transit/get-transit-packer)
       {:keys [chsk ch-recv send-fn state]}
@@ -50,17 +49,22 @@
       (debugf "Channel socket successfully established!: %s" ?data)
       (debugf "Channel socket state change: %s" ?data))))
 
-(defmethod -event-msg-handler :chsk/recv
-  [{:as ev-msg :keys [?data]}]
-  (let [[id msg] ?data]
-    (case id
-      :oz/vl-spec (swap! app-state assoc :vl-spec (clj->js msg))
-      (debugf "Push event from server: %s" ?data))))
-
 (defmethod -event-msg-handler :chsk/handshake
   [{:as ev-msg :keys [?data]}]
   (let [[?uid ?csrf-token ?handshake-data] ?data]
     (debugf "Handshake: %s" ?data)))
+
+
+
+;; This is the main event handler; If we want to do cool things with other kinds of data going back and forth,
+;; this is where we'll inject it.
+(defmethod -event-msg-handler :chsk/recv
+  [{:as ev-msg :keys [?data]}]
+  (let [[id msg] ?data]
+    (case id
+      :oz.core/view-spec (swap! app-state assoc :view-spec msg)
+      (debugf "Push event from server: %s" ?data))))
+
 
 (def router_ (atom nil))
 
@@ -74,14 +78,28 @@
 (defn start! []
   (start-router!))
 
-(defn parse-vl-spec [spec elem]
+(defn render-vega-lite
+  ([spec elem]
+   (when spec
+     (let [spec (clj->js spec)
+           opts {:renderer "canvas"
+                 :mode "vega-lite"}]
+       (-> (js/vegaEmbed elem spec (clj->js opts))
+           (.then (fn [res]
+                    #_(log res)
+                    (. js/vegaTooltip (vegaLite (.-view res) spec))))
+           (.catch (fn [err]
+                     (log err))))))))
+
+(defn render-vega [spec elem]
   (when spec
-    (let [opts {:renderer "canvas"
-                :mode "vega-lite"}]
+    (let [spec (clj->js spec)
+          opts {:renderer "canvas"
+                :mode "vega"}]
       (-> (js/vegaEmbed elem spec (clj->js opts))
           (.then (fn [res]
                    #_(log res)
-                   (. js/vegaTooltip (vegaLite (.-view res) spec))))
+                   (. js/vegaTooltip (vega (.-view res) spec))))
           (.catch (fn [err]
                     (log err)))))))
 
@@ -91,9 +109,9 @@
   (r/create-class
    {:display-name "vega-lite"
     :component-did-mount (fn [this]
-                           (parse-vl-spec spec (r/dom-node this)))
+                           (render-vega-lite spec (r/dom-node this)))
     :component-will-update (fn [this [_ new-spec]]
-                             (parse-vl-spec new-spec (r/dom-node this)))
+                             (render-vega-lite new-spec (r/dom-node this)))
     :reagent-render (fn [spec]
                       [:div#vis])}))
 
@@ -104,16 +122,27 @@
   (r/create-class
    {:display-name "vega"
     :component-did-mount (fn [this]
-                           (parse-vl-spec spec (r/dom-node this)))
+                           (render-vega spec (r/dom-node this)))
     :component-will-update (fn [this [_ new-spec]]
-                             (parse-vl-spec new-spec (r/dom-node this)))
+                             (render-vega new-spec (r/dom-node this)))
     :reagent-render (fn [spec]
                       [:div#vis])}))
 
 
+(defn view-spec
+  [[tag & args]]
+  (case tag
+    :vega [vega (first args)]
+    :vega-lite [vega-lite (first args)]
+    (into [tag] args)))
+  ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
+  ;; rendering using the components above. Leave regular hiccup unchanged).
+  ;; TODO finish writing; already hooked in below so will break now
+
+
 (defn application [app-state]
-  (when-let [spec (:vl-spec @app-state)]
-    [vega-lite spec]))
+  (when-let [spec (:view-spec @app-state)]
+    [view-spec spec]))
 
 (r/render-component [application app-state]
                     (. js/document (getElementById "app")))

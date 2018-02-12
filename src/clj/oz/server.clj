@@ -32,17 +32,15 @@
   (def chsk-send! send-fn)
   (def connected-uids connected-uids))
 
+(defn send-all!
+  [data]
+  (doseq [uid (:any @connected-uids)]
+    (chsk-send! uid data)))
+
 (add-watch connected-uids :connected-uids
            (fn [_ _ old new]
              (when (not= old new)
                (infof "Connected uids change: %s" new))))
-
-(def last-vl-spec (atom {}))
-
-(add-watch last-vl-spec :last-vl-spec
-           (fn [_ _ old new]
-             (when (not= old new)
-               (debugf "last vl spec change: %s" new))))
 
 (defn unique-id
   "Get a unique id for a session."
@@ -61,18 +59,6 @@
                                           (assoc (:session req) :uid (unique-id)))
                                :body (io/input-stream (io/resource "public/index.html"))} "text/html"))
   (GET "/token" req (json/generate-string {:csrf-token *anti-forgery-token*}))
-  (POST "/vl-spec" req
-        (debugf "POST /vl-spec got: %s" req)
-        (let [vl-spec (json/parse-string (slurp (:body req)))]
-          (reset! last-vl-spec vl-spec)
-          (doseq [uid (:any @connected-uids)]
-            (chsk-send! uid [:oz/vl-spec vl-spec]))
-          {:status 200}))
-  (GET "/vl-spec" req
-       (debugf "GET /vl-spec got: %s" req)
-       {:status 200
-        :content-type "application/json"
-        :body (json/generate-string @last-vl-spec)})
   (GET  "/chsk" req
         (debugf "/chsk got: %s" req)
         (ring-ajax-get-or-ws-handshake req))
@@ -104,8 +90,8 @@
 (defn stop-router! [] (when-let [stop-fn @router_] (stop-fn)))
 (defn start-router! []
   (stop-router!)
-  (reset! router_
           (sente/start-server-chsk-router!
+  (reset! router_
            ch-chsk event-msg-handler)))
 
 (defonce web-server_ (atom nil))
