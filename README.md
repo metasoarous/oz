@@ -26,37 +26,47 @@ Add oz to your leiningen project dependencies
 ```
 
 
-In a repl:
+To get things going, require oz and start the plot server as follows:
 
 ``` clojure
+(require '[oz.core :as oz])
 
-    (require '[oz.core :as oz])
-
-    (oz/start-plot-server!)
-
-    (defn group-data [& names]
-        (apply concat (for [n names]
-        (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
+(oz/start-plot-server!)
 ```
 
-Now send some plots off. Here is a stacked bar plot:
+Next we'll define a function for generating some dummy data
+
+```clojure
+(defn group-data [& names]
+  (apply concat (for [n names]
+  (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
+```
+
+
+### `oz/p!`
+
+The simplest function for displaying vega is `oz/p!`.
+It will display a single vega or vega-lite plot in the .
+
+Now put together some vega-lite and send off for rendering.
+Here is a stacked bar plot:
 
 ``` clojure
-  (def stacked-bar
-    {:data {:values (group-data "foo" "bar" "baz" "buh" "bunk" "dunk")}
-     :mark "bar"
-     :encoding {:x {:field "x"
-                    :type "ordinal"}
-                :y {:aggregate "sum"
-                    :field "y"
-                    :type "quantitative"}
-                :color {:field "col"
-                        :type "nominal"}}})
+(def stacked-bar
+  {:data {:values (group-data "foo" "bar" "baz" "buh" "bunk" "dunk")}
+   :mark "bar"
+   :encoding {:x {:field "x"
+                  :type "ordinal"}
+              :y {:aggregate "sum"
+                  :field "y"
+                  :type "quantitative"}
+              :color {:field "col"
+                      :type "nominal"}}})
 
-  (oz/v! stacked-bar)
+(oz/v! stacked-bar)
 ```
 
-Which should look something like this in when rendered in the browser:
+This should look something like this in when rendered in the browser:
 
 ![bar](doc/bar-lite.png)
 
@@ -64,23 +74,42 @@ Which should look something like this in when rendered in the browser:
 For vega instead of vega-lite, you can also specify `:mode :vega`:
 
 ```clojure
-  (oz/v! stacked-bar :mode "vega")
+(oz/v! stacked-bar :mode "vega")
 ```
 
-You can (eventually) specify or overide the data via `:data` key:
+You can (eventually) specify or override the data via `:data` key:
 
 ```clojure
-  (oz/view! stacked-bar :data {:values (group-data "baz" "buh" "bunk" "dunk")})
+(oz/v! stacked-bar :data {:values (group-data "baz" "buh" "bunk" "dunk")})
 ```
 
-You can (eventually) create little widgets using hiccup:
+
+### `ox/view!`
+
+This is a more powerful function which will let you compose vega and vega-lite views together with other html, as represented via hiccup:
+
+For demonstration, we'll first create another plot view to throw in the mix
 
 ```clojure
-  (oz/view! [:div [:h1 "A stacked bar chart example"]
-                  [:vega-lite stacked-bar]
-                  [:vega more-complicated-bar :data {:values (group-data "poop")}]])
+(def another-plot
+  {:data {:values [{:x 1 :y 2} {:x 3 :y 5}]}
+   :encoding {:x {:field "x"}
+              :y {:field "y"}}
+   :mark "line"})
 ```
 
+Next we can put these things together as hiccup and view using `oz/view!`, nesting vega and vega-lite specs using the `:vega` and `:vega-lite` keys, as below:
+
+```clojure
+(oz/view! [:div [:h1 "A stacked bar chart example"]
+             [:vega-lite stacked-bar]
+             [:p "Another little example for you"]
+             [:vega-lite aplot]]) 
+```
+
+You should now see something like this:
+
+![composite-view](doc/composite-view.png)
 
 ## Local Development
 
