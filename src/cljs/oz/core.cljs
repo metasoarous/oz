@@ -130,14 +130,20 @@
 
 
 (defn view-spec
-  [[tag & args]]
-  (case tag
-    :vega [vega (first args)]
-    :vega-lite [vega-lite (first args)]
-    (into [tag] args)))
+  ;; should handle sharing data with nodes that need it?
+  [spec]
   ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
   ;; rendering using the components above. Leave regular hiccup unchanged).
   ;; TODO finish writing; already hooked in below so will break now
+  (let [spec
+          (clojure.walk/prewalk
+            (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
+                      (into [(case (first x) :vega vega :vega-lite vega-lite)]
+                            (rest x))
+                      x))
+            spec)]
+    (print spec)
+    spec))
 
 
 (defn application [app-state]
