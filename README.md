@@ -6,14 +6,14 @@ Magic Visualization
 
 Oz is a library for data-driven, REPL-based data visualization in the browser, using vega and vega lite.
 
-A fork of [vizard](https://github.com/yieldbot/vizard), oz differs from its ancestor in:
+A fork of [vizard](https://github.com/yieldbot/vizard), oz differs from its ancestor in providing:
 
-* providing both vega-lite _and_ vega support (vizard is vega-lite only)
+* both vega-lite _and_ vega support (vizard is vega-lite only)
+* an API for describing dashboard-like composites of vega-based views using hiccup
 
 It also has the following eventual goals:
 
-* provide an API for merging vega and vega-lite descriptions
-* an API for describing dashboards or other composites of vega-based views using hiccup
+* provide an API for combining vega and vega-lite into a single plot (vega for detailed control, vega-lite for the simple bits)
 * higher level viz constructors, as they accrete and become useful
 
 
