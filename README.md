@@ -25,7 +25,7 @@ It also has the following eventual goals:
 Add oz to your leiningen project dependencies
 
 ``` clojure
-[metasoarous/oz "1.0.1"]
+[metasoarous/oz "1.1.1-beta"]
 ```
 
 
