@@ -135,14 +135,11 @@
   ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
   ;; rendering using the components above. Leave regular hiccup unchanged).
   ;; TODO finish writing; already hooked in below so will break now
-  (let [spec
-          (clojure.walk/prewalk
-            (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
-                      (into [(case (first x) :vega vega :vega-lite vega-lite)]
-                            (rest x))
-                      x))
-            spec)]
-    (print spec)
+  (clojure.walk/prewalk
+    (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
+              (into [(case (first x) :vega vega :vega-lite vega-lite)]
+                    (rest x))
+              x))
     spec))
 
 
