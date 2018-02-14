@@ -1,4 +1,4 @@
-[oz](resources/public/oz.svg)
+![oz](resources/public/oz.svg)
 
 Magic Visualization
 
