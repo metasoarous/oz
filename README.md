@@ -1,6 +1,6 @@
 ![oz](resources/public/oz.svg)
 
-Great and powerful data visualizations
+Great and powerful data visualizationz
 
 <br/>
 
@@ -25,7 +25,7 @@ It also has the following eventual goals:
 Add oz to your leiningen project dependencies
 
 ``` clojure
-[metasoarous/oz "1.1.1-beta"]
+[metasoarous/oz "1.1.1"]
 ```
 
 
