@@ -1,4 +1,4 @@
-# oz
+[oz](resources/public/oz.svg)
 
 Magic Visualization
 
@@ -98,7 +98,7 @@ For demonstration, we'll first create another plot view to throw in the mix
    :mark "line"})
 ```
 
-Next we can put these things together as hiccup and view using `oz/view!`, nesting vega and vega-lite specs using the `:vega` and `:vega-lite` keys, as below:
+gext we can put these things together as hiccup and view using `oz/view!`, nesting vega and vega-lite specs using the `:vega` and `:vega-lite` keys, as below:
 
 ```clojure
 (oz/view! [:div [:h1 "A stacked bar chart example"]
