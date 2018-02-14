@@ -90,9 +90,8 @@
 (defn stop-router! [] (when-let [stop-fn @router_] (stop-fn)))
 (defn start-router! []
   (stop-router!)
-          (sente/start-server-chsk-router!
   (reset! router_
-           ch-chsk event-msg-handler)))
+          (sente/start-server-chsk-router! ch-chsk event-msg-handler)))
 
 (defonce web-server_ (atom nil))
 (defn stop-web-server! [] (when-let [stop-fn @web-server_] (stop-fn)))
