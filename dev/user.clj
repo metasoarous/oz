@@ -1,6 +1,7 @@
 (ns user
   (:require [oz.server :refer [start! stop!]]
             [oz.core :as oz]
+            [cheshire.core :as json]
             [figwheel-sidecar.repl-api :as figwheel]))
 
 ;; Let Clojure warn you when it needs to reflect on types, or when it does math
@@ -69,6 +70,12 @@
              [:vega-lite line-plot]
              [:p "Another view of the data"]
              [:vega-lite stacked-bar]])
+
+  ;; vega example
+  (def vega-data (json/parse-string (slurp (clojure.java.io/resource "vega.json")))) 
+  vega-data
+  (oz/v! vega-data :mode :vega)
+
 
   :end-examples)
 
