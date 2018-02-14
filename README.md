@@ -24,9 +24,7 @@ It also has the following eventual goals:
 
 Add oz to your leiningen project dependencies
 
-``` clojure
-[metasoarous/oz "1.1.1"]
-```
+[![Clojars Project](https://img.shields.io/clojars/v/metasoarous/oz.svg)](https://clojars.org/metasoarous/oz)
 
 
 To get things going, require oz and start the plot server as follows:
