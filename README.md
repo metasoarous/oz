@@ -1,6 +1,9 @@
 ![oz](resources/public/oz.svg)
 
-Magic Visualization
+Great and powerful data visualizations
+
+<br/>
+
 
 ## Overview
 
