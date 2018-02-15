@@ -72,14 +72,14 @@
   ;; some hiccup
   (oz/view! [:div
              [:h1 "Look ye and behold"]
-             [:p "A couple of small charts"]]
+             [:p "A couple of small charts"]
              [:div {:style {:display "flex" :flex-direction "row"}}
               [:vega-lite line-plot]
-              [:vega vega-data
+              [:vega vega-data]]
              [:p "A wider, more expansive chart"]
              [:vega-lite stacked-bar]
              [:h2 "If ever, oh ever a viz there was, the vizard of oz is one because, because, because..."]
-             [:p "Because of the wonderful things it does"]]])
+             [:p "Because of the wonderful things it does"]])
 
 
   :end-examples)
