@@ -102,6 +102,10 @@ For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/v!`:
 (oz/v! vega-data :mode :vega)
 ```
 
+This should render like:
+
+![cars plot](doc/car-points.png)
+
 
 ### `ox/view!`
 
