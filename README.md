@@ -103,7 +103,6 @@ For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/v!`:
 ```
 
 
-
 ### `ox/view!`
 
 This is a more powerful function which will let you compose vega and vega-lite views together with other html, using hiccup notation.
@@ -128,7 +127,7 @@ Note that the vega and vega-lite specs are described in the output vega as using
 
 You should now see something like this:
 
-![composite-view](doc/composite-view.png)
+![composite view](doc/composite-view.png)
 
 
 ## Local Development
