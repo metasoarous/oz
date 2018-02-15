@@ -35,6 +35,8 @@ To get things going, require oz and start the plot server as follows:
 (oz/start-plot-server!)
 ```
 
+This will fire up a browser window with a websocket connection for funneling view data back and forth.
+
 Next we'll define a function for generating some dummy data
 
 ```clojure
@@ -47,14 +49,32 @@ Next we'll define a function for generating some dummy data
 ### `oz/p!`
 
 The simplest function for displaying vega is `oz/p!`.
-It will display a single vega or vega-lite plot in the .
+It will display a single vega or vega-lite plot in any connected browser windows.
 
-Now put together some vega-lite and send off for rendering.
-Here is a stacked bar plot:
+For example, a simple line plot:
 
 ``` clojure
+  (def line-plot
+    {:data {:values (group-data "monkey" "slipper" "broom")}
+     :encoding {:x {:field "x"}
+                :y {:field "y"}
+                :color {:field "col" :type "nominal"}}
+     :mark "line"})
+
+  ;; Render the plot to the 
+  (oz/v! line-plot)
+```
+
+Should render something like:
+
+![lines plot](doc/lines.png)
+
+
+Another example:
+
+```clojure
 (def stacked-bar
-  {:data {:values (group-data "foo" "bar" "baz" "buh" "bunk" "dunk")}
+  {:data {:values (group-data "munchkin" "witch" "dog" "lion" "tiger" "bear")}
    :mark "bar"
    :encoding {:x {:field "x"
                   :type "ordinal"}
@@ -67,50 +87,49 @@ Here is a stacked bar plot:
 (oz/v! stacked-bar)
 ```
 
-This should look something like this in when rendered in the browser:
+This should render something like:
 
-![bar](doc/bar-lite.png)
+![bars plot](doc/bars.png)
 
 
-For vega instead of vega-lite, you can also specify `:mode :vega`:
+### vega support
 
-```clojure
-(oz/v! stacked-bar :mode "vega")
-```
-
-You can (eventually) specify or override the data via `:data` key:
+For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/v!`:
 
 ```clojure
-(oz/v! stacked-bar :data {:values (group-data "baz" "buh" "bunk" "dunk")})
+;; load some example vega (this may only work from within a checkout of oz; haven't checked)
+(def vega-data (json/parse-string (slurp (clojure.java.io/resource "example-cars-plot.vega.json")))) 
+(oz/v! vega-data :mode :vega)
 ```
+
 
 
 ### `ox/view!`
 
-This is a more powerful function which will let you compose vega and vega-lite views together with other html, as represented via hiccup:
+This is a more powerful function which will let you compose vega and vega-lite views together with other html, using hiccup notation.
+The idea is to provide some quick and dirty utilities for building composite view dashboards.
 
-For demonstration, we'll first create another plot view to throw in the mix
-
-```clojure
-(def another-plot
-  {:data {:values [{:x 1 :y 2} {:x 3 :y 5}]}
-   :encoding {:x {:field "x"}
-              :y {:field "y"}}
-   :mark "line"})
-```
-
-gext we can put these things together as hiccup and view using `oz/view!`, nesting vega and vega-lite specs using the `:vega` and `:vega-lite` keys, as below:
+For demonstration we'll combine the three plots above into one:
 
 ```clojure
-(oz/view! [:div [:h1 "A stacked bar chart example"]
-             [:vega-lite stacked-bar]
-             [:p "Another little example for you"]
-             [:vega-lite aplot]]) 
+(oz/view! [:div
+           [:h1 "Look ye and behold"]
+           [:p "A couple of small charts"]
+           [:div {:style {:display "flex" :flex-direction "row"}}
+            [:vega-lite line-plot]
+            [:vega vega-data]]
+           [:p "A wider, more expansive chart"]
+           [:vega-lite stacked-bar]
+           [:h2 "If ever, oh ever a viz there was, the vizard of oz is one because, because, because..."]
+           [:p "Because of the wonderful things it does"]])
 ```
+
+Note that the vega and vega-lite specs are described in the output vega as using the `:vega` and `:vega-lite` keys.
 
 You should now see something like this:
 
 ![composite-view](doc/composite-view.png)
+
 
 ## Local Development
 

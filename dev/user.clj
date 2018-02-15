@@ -24,8 +24,9 @@
 (comment
 
   ;; Start the plot server
-  (do-it-fools!)
-  (oz/start-plot-server!)
+  ;(do-it-fools!) ;; for figwheel dev
+  (oz.server/start!)
+  (oz/start-plot-server! 8776)
 
   ;; define a function for generating some dummy data
   (defn group-data [& names]
@@ -36,7 +37,7 @@
 
   ;; Define a simple plot, inlining the data
   (def line-plot
-    {:data {:values (group-data "cats" "dogs" "snakes")}
+    {:data {:values (group-data "monkey" "slipper" "broom")}
      :encoding {:x {:field "x"}
                 :y {:field "y"}
                 :color {:field "col" :type "nominal"}}
@@ -48,7 +49,7 @@
 
   ;; Build a more intricate plot
   (def stacked-bar
-    {:data {:values (group-data "foo" "bar" "baz" "buh" "bunk" "dunk")}
+    {:data {:values (group-data "munchkin" "witch" "dog" "lion" "tiger" "bear")}
      :mark "bar"
      :encoding {:x {:field "x"
                     :type "ordinal"}
@@ -62,19 +63,23 @@
   (oz/v! stacked-bar)
 
 
+  ;; vega example
+  (def vega-data (json/parse-string (slurp (clojure.java.io/resource "example-cars-plot.vega.json")))) 
+  (oz/v! vega-data :mode :vega)
+
+  ;; All together now
   ;; We can also use the `view!` function to view a composite of both charts, together with
   ;; some hiccup
   (oz/view! [:div
-             [:h1 "Some really great data vizs here"]
-             [:p "A simple line plot"]
-             [:vega-lite line-plot]
-             [:p "Another view of the data"]
-             [:vega-lite stacked-bar]])
-
-  ;; vega example
-  (def vega-data (json/parse-string (slurp (clojure.java.io/resource "vega.json")))) 
-  vega-data
-  (oz/v! vega-data :mode :vega)
+             [:h1 "Look ye and behold"]
+             [:p "A couple of small charts"]]
+             [:div {:style {:display "flex" :flex-direction "row"}}
+              [:vega-lite line-plot]
+              [:vega vega-data
+             [:p "A wider, more expansive chart"]
+             [:vega-lite stacked-bar]
+             [:h2 "If ever, oh ever a viz there was, the vizard of oz is one because, because, because..."]
+             [:p "Because of the wonderful things it does"]]])
 
 
   :end-examples)
