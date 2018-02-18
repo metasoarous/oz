@@ -15,8 +15,6 @@ The real magic is in vega/vega-lite.
 
 If you don't already know about vega/vega-lite, it's worth taking a few minutes to orient yourself with [this talk](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/9uaHRWj04D4" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-
 The long story short is that vega and vega-lite are declarative grammars for describing data visualizations.
 Of particular note, they are based on the Grammar of Graphics, which also served as the guiding light for the popular R `ggplot2` viz library.
 In this setting, we define visualizations by specifying how attributes of our data map to aesthetics properties of visualization.
