@@ -19,7 +19,7 @@ The long story short is that vega and vega-lite are declarative grammars for des
 Of particular note, they are based on the Grammar of Graphics, which also served as the guiding light for the popular R `ggplot2` viz library.
 In this setting, we define visualizations by specifying how attributes of our data map to aesthetics properties of visualization.
 Vega-lite in particular looks to be a less verbose and more automated flavor of vega, with considerable attention paid to interactive features and composablity.
-The creators also have some cool Tableu like tools for exploring data and building visualizations.
+The creators also have some cool Tableau like tools for exploring data and building visualizations.
 To find out more, see [their website](https://vega.github.io/).
 
 ### About oz specifically...
@@ -153,32 +153,39 @@ Note that vega-lite already has very powerful and impressive [plot concatenation
 But again, when doing something quick and dirty, this functionality may prove useful.
 
 
-### Sharing features
+## Sharing features
 
 Looking to share your cool plots with someone?
 We've got you covered.
 
 ```clojure
-(oz/publish-plot! line-plot)
+user=> (oz/publish-plot! line-plot)
+Gist url: https://api.github.com/gists/a887765dadc594ac3140fc3501e6dbd2
+Vega editor url: https://vega.github.io/editor/#/gist/vega-lite/gists/a887765dadc594ac3140fc3501e6dbd2
 ```
 
-This will post the plot content to a GitHub Gist, and use the gist uuid to create a vega-editor link which will print to the screen.
+This will post the plot content to a GitHub Gist, and use the gist uuid to create a [vega-editor](http://vega.github.io) link which prints to the screen.
 When you visit the vega-editor link, it will load the gist in question and place the content in the editor.
-It will also render the plot, and update in real time as you tinker with the plot code, making it a wonderful yet simple tool for sharing and prototyping.
+It renders the plot, and updates in real time as you tinker with the code, making it a wonderful yet simple tool for sharing and prototyping.
+
+![vega-editor](doc/export.png)
 
 
-## Local Development
+## Local development
 
-First, start up figwheel
+For development environment, `dev/utils.clj` has 
+
 ``` clojure
-  (do-it-fools!)
+(do-it-fools!)
 ```
+
+Then do yer thing.
 
 ## License
 
 Copyright © 2018 Christopher Small
 
-Forked from Vizard - Copyright © 2017 Yieldbot, Inc.
+Forked from Vizard (with thanks) - Copyright © 2017 Yieldbot, Inc.
 
 Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.
 
