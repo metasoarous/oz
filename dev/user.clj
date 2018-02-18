@@ -25,7 +25,6 @@
 
   ;; Start the plot server
   ;(do-it-fools!) ;; for figwheel dev
-  (oz.server/start!)
   (oz/start-plot-server! 8776)
 
   ;; define a function for generating some dummy data
@@ -45,6 +44,9 @@
 
   ;; Render the plot to the 
   (oz/v! line-plot)
+
+  ;; We can also try publishing the plot like so (follow the vega-editor link)
+  (oz/publish-plot! line-plot)
 
 
   ;; Build a more intricate plot

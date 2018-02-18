@@ -7,12 +7,30 @@ Great and powerful data visualizationz
 
 ## Overview
 
-Oz is a library for data-driven, REPL-based data visualization in the browser, using vega and vega lite.
+Oz is a library for data-driven, REPL-based data visualization in the browser, using vega and vega-lite.
+
+Oz itself is almost no code.
+It's really just a tiny websocket server which pushes vega and vega-lite plot data to a browser window for rendering.
+The real magic is in vega/vega-lite.
+
+If you don't already know about vega/vega-lite, it's worth taking a few minutes to orient yourself with [this talk](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/9uaHRWj04D4" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+The long story short is that vega and vega-lite are declarative grammars for describing data visualizations.
+Of particular note, they are based on the Grammar of Graphics, which also served as the guiding light for the popular R `ggplot2` viz library.
+In this setting, we define visualizations by specifying how attributes of our data map to aesthetics properties of visualization.
+Vega-lite in particular looks to be a less verbose and more automated flavor of vega, with considerable attention paid to interactive features and composablity.
+The creators also have some cool Tableu like tools for exploring data and building visualizations.
+To find out more, see [their website](https://vega.github.io/).
+
+### About oz specifically...
 
 A fork of [vizard](https://github.com/yieldbot/vizard), oz differs from its ancestor in providing:
 
 * both vega-lite _and_ vega support (vizard is vega-lite only)
-* an API for describing dashboard-like composites of vega-based views using hiccup
+* an API for describing dashboard-like composites of vega & vega-lite based views together with other html using hiccup
+* plot publishing/sharing features via the online vega editor
 
 It also has the following eventual goals:
 
@@ -132,6 +150,23 @@ Note that the vega and vega-lite specs are described in the output vega as using
 You should now see something like this:
 
 ![composite view](doc/composite-view.png)
+
+Note that vega-lite already has very powerful and impressive [plot concatenation](https://vega.github.io/vega-lite/docs/concat.html) features, and that in general these should be preferred as they allow for tighter coupling of the data and interactive features of vega-lite.
+But again, when doing something quick and dirty, this functionality may prove useful.
+
+
+### Sharing features
+
+Looking to share your cool plots with someone?
+We've got you covered.
+
+```clojure
+(oz/publish-plot! line-plot)
+```
+
+This will post the plot content to a GitHub Gist, and use the gist uuid to create a vega-editor link which will print to the screen.
+When you visit the vega-editor link, it will load the gist in question and place the content in the editor.
+It will also render the plot, and update in real time as you tinker with the plot code, making it a wonderful yet simple tool for sharing and prototyping.
 
 
 ## Local Development
