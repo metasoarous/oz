@@ -1,6 +1,6 @@
 ![oz](resources/public/oz.svg)
 
-Great and powerful data visualizationz
+Great and powerful data vizualizationz
 
 <br/>
 
@@ -10,13 +10,12 @@ Great and powerful data visualizationz
 Oz is a library for data-driven, REPL-based data visualization in the browser, using vega and vega-lite.
 
 Oz itself is almost no code.
-It's really just a tiny websocket server which pushes vega and vega-lite plot data to a browser window for rendering.
-The real magic is in vega/vega-lite.
+The real magic is in vega & vega-lite.
 
-If you don't already know about vega/vega-lite, it's worth taking a few minutes to orient yourself with [this talk](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators.
+If you don't already know about vega/vega-lite, it's worth taking a few minutes to orient yourself with [this talk](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators at the Interactive Data Lab (IDL) at University of Washington.
 
 The long story short is that vega and vega-lite are declarative grammars for describing data visualizations.
-Of particular note, they are based on the Grammar of Graphics, which also served as the guiding light for the popular R `ggplot2` viz library.
+Of note, they are based on the Grammar of Graphics, which served as the guiding light for the popular R `ggplot2` viz library.
 In this setting, we define visualizations by specifying how attributes of our data map to aesthetics properties of visualization.
 Vega-lite in particular looks to be a less verbose and more automated flavor of vega, with considerable attention paid to interactive features and composablity.
 The creators also have some cool Tableau like tools for exploring data and building visualizations.
@@ -24,19 +23,21 @@ To find out more, see [their website](https://vega.github.io/).
 
 ### About oz specifically...
 
-A fork of [vizard](https://github.com/yieldbot/vizard), oz differs from its ancestor in providing:
+Oz itself provides:
 
-* both vega-lite _and_ vega support (vizard is vega-lite only)
-* an API for describing dashboard-like composites of vega & vega-lite based views together with other html using hiccup
-* plot publishing/sharing features via the online vega editor
+* client side `vega` and `vega-lite` Reagent components
+* a websocket for pushing vega and vega-lite data to a browser for rendering via these components
+* an API for composing vega & vega-lite together in the context of html as hiccup for complex dashboards or document generation
+* plot publishing/sharing features via GitHub gists and the IDL's live [vega editor](http://vega.github.io/editor)
 
 It also has the following eventual goals:
 
+* use as a static build tool for publishing scientific documents
 * provide an API for combining vega and vega-lite into a single plot (vega for detailed control, vega-lite for the simple bits)
 * higher level viz constructors, as they accrete and become useful
 
 
-## Usage
+## REPL Usage
 
 Add oz to your leiningen project dependencies
 
@@ -126,7 +127,7 @@ This should render like:
 ### `ox/view!`
 
 This is a more powerful function which will let you compose vega and vega-lite views together with other html, using hiccup notation.
-The idea is to provide some quick and dirty utilities for building composite view dashboards.
+The idea is to provide some quick and dirty utilities for building composite view dashboards, and for the construction of documents.
 
 For demonstration we'll combine the three plots above into one:
 
@@ -164,11 +165,22 @@ Gist url: https://api.github.com/gists/a887765dadc594ac3140fc3501e6dbd2
 Vega editor url: https://vega.github.io/editor/#/gist/vega-lite/gists/a887765dadc594ac3140fc3501e6dbd2
 ```
 
-This will post the plot content to a GitHub Gist, and use the gist uuid to create a [vega-editor](http://vega.github.io) link which prints to the screen.
+This will post the plot content to a GitHub Gist, and use the gist uuid to create a [vega-editor](http://vega.github.io/editor) link which prints to the screen.
 When you visit the vega-editor link, it will load the gist in question and place the content in the editor.
 It renders the plot, and updates in real time as you tinker with the code, making it a wonderful yet simple tool for sharing and prototyping.
 
-![vega-editor](doc/export.png)
+[![vega-editor](doc/export.png)](https://vega.github.io/editor/#/gist/vega-lite/gists/a887765dadc594ac3140fc3501e6dbd2)
+
+
+## As client side reagent components
+
+If you like, you may also use the Reagent components found at `oz.core` to render vega and/or vega-lite you construct client side.
+
+```clojure
+[:div
+ [oz.core/vega { ... }]
+ [oz.core/vega-lite { ... }]]
+```
 
 
 ## Local development
