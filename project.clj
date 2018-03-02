@@ -1,4 +1,4 @@
-(defproject metasoarous/oz "1.2.1"
+(defproject metasoarous/oz "1.2.2"
   :description "Great and powerful data visualizations in Clojure using Vega and Vega-lite"
   :url "http://github.com/metasoarous/oz"
   :license {:name "Eclipse Public License"
@@ -16,20 +16,20 @@
                   ;["vcs" "push"]]
 
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.clojure/clojurescript "1.9.854" :scope "provided"]
+                 [org.clojure/clojurescript "1.10.64" :scope "provided"]
                  [org.clojure/core.async "0.4.474"]
-                 [cheshire "5.7.0"]
-                 [clj-http "2.2.0"]
-                 [com.taoensso/sente "1.11.0"]
-                 [aleph "0.4.1"]
-                 [ring "1.5.0"]
-                 [ring/ring-defaults "0.2.3"]
-                 [bk/ring-gzip "0.1.1"]
+                 [cheshire "5.8.0"]
+                 [clj-http "3.7.0"]
+                 [com.taoensso/sente "1.12.0"]
+                 [aleph "0.4.4"]
+                 [ring "1.6.3"]
+                 [ring/ring-defaults "0.3.1"]
+                 [bk/ring-gzip "0.2.1"]
                  [ring-cljsjs "0.1.0"]
-                 [compojure "1.5.0"]
-                 [com.cognitect/transit-clj  "0.8.297"]
-                 [com.cognitect/transit-cljs "0.8.239"]
-                 [reagent "0.6.1"]
+                 [compojure "1.6.0"]
+                 [com.cognitect/transit-clj  "0.8.300"]
+                 [com.cognitect/transit-cljs "0.8.243"]
+                 [reagent "0.7.0"]
                  [cljsjs/vega "3.0.7-0"]
                  [cljsjs/vega-lite "2.0.0-0"]
                  [cljsjs/vega-embed "3.0.0-rc7-0"]
@@ -88,8 +88,8 @@
              ;; :server-logfile "tmp/logs/figwheel-logfile.log"
              
   :profiles {:dev
-             {:dependencies [[binaryage/devtools "0.9.4"]
-                             [figwheel-sidecar "0.5.11"]
+             {:dependencies [[binaryage/devtools "0.9.9"]
+                             [figwheel-sidecar "0.5.15"]
                              [com.cemerick/piggieback "0.2.2"]]
               :plugins [[lein-figwheel "0.5.11"]]
               :source-paths ["dev"]
