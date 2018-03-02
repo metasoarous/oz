@@ -63,9 +63,9 @@ Next we'll define a function for generating some dummy data
 ```
 
 
-### `oz/p!`
+### `oz/v!`
 
-The simplest function for displaying vega is `oz/p!`.
+The simplest function for displaying vega or vega-lite is `oz/v!`.
 It will display a single vega or vega-lite plot in any connected browser windows.
 
 For example, a simple line plot:
@@ -115,6 +115,9 @@ For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/v!`:
 
 ```clojure
 ;; load some example vega (this may only work from within a checkout of oz; haven't checked)
+
+(require '[cheshire.core :as json])
+
 (def vega-data (json/parse-string (slurp (clojure.java.io/resource "example-cars-plot.vega.json")))) 
 (oz/v! vega-data :mode :vega)
 ```
@@ -124,7 +127,7 @@ This should render like:
 ![cars plot](doc/car-points.png)
 
 
-### `ox/view!`
+### `oz/view!`
 
 This is a more powerful function which will let you compose vega and vega-lite views together with other html, using hiccup notation.
 The idea is to provide some quick and dirty utilities for building composite view dashboards, and for the construction of documents.
