@@ -26,7 +26,7 @@ To find out more, see [their website](https://vega.github.io/).
 Oz itself provides:
 
 * client side `vega` and `vega-lite` Reagent components
-* a websocket for pushing vega and vega-lite data to a browser for rendering via these components
+* a REPL API for for pushing vega and vega-lite data to a browser window via websockets
 * an API for composing vega & vega-lite together in the context of html as hiccup for complex dashboards or document generation
 * plot publishing/sharing features via GitHub gists and the IDL's live [vega editor](http://vega.github.io/editor)
 
