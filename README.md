@@ -12,22 +12,22 @@ Oz is a library for data-driven, REPL-based data visualization in the browser, u
 Oz itself is almost no code.
 The real magic is in vega & vega-lite.
 
-If you don't already know about vega/vega-lite, it's worth taking a few minutes to orient yourself with [this talk](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators at the Interactive Data Lab (IDL) at University of Washington.
+If you don't already know about vega/vega-lite, it's worth taking a few minutes to orient yourself with [this mindblowing talk/demo](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators at the Interactive Data Lab (IDL) at University of Washington.
 
 The long story short is that vega and vega-lite are declarative grammars for describing data visualizations.
 Of note, they are based on the Grammar of Graphics, which served as the guiding light for the popular R `ggplot2` viz library.
 In this setting, we define visualizations by specifying how attributes of our data map to aesthetics properties of visualization.
 Vega-lite in particular looks to be a less verbose and more automated flavor of vega, with considerable attention paid to interactive features and composablity.
 The creators also have some cool Tableau like tools for exploring data and building visualizations.
-To find out more, see [their website](https://vega.github.io/).
+[Find out more on their website](https://vega.github.io/).
 
 ### About oz specifically...
 
 Oz itself provides:
 
+* a REPL API for for pushing vega and vega-lite data to a browser window over websockets
 * client side `vega` and `vega-lite` Reagent components
-* a REPL API for for pushing vega and vega-lite data to a browser window via websockets
-* an API for composing vega & vega-lite together in the context of html as hiccup for complex dashboards or document generation
+* an API for composing vega & vega-lite together in the context of html as hiccup for document and dashboard generation
 * plot publishing/sharing features via GitHub gists and the IDL's live [vega editor](http://vega.github.io/editor)
 
 It also has the following eventual goals:
