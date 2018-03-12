@@ -39,7 +39,8 @@
   :source-paths ["src/clj" "src/cljs"]
   :clean-targets ^{:protect false} [:target-path :compile-path "resources/public/js"]
   :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}
-  :repl-options {:init-ns user}
+  :repl-options {:init-ns user
+                 :timeout 120000}
   :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
