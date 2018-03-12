@@ -33,14 +33,30 @@
     (catch Exception e
       (errorf "error sending plot to server: %s" (ex-data e)))))
 
+(def ^{:private true} vega-spec-opts
+  #{:data :width :height :datasets})
+
+;; For right now, leaving this private, since really implementation detail to main repl api functions below.
+;; But eventually, would be nice to rename this and add a public merge-opts which just does the remove nil
+;; step, as a helper basically.
+(defn- merge-opts
+  "Merge relevant api opts into vega data structure, removing entries with nil values"
+  [spec opts]
+  (->> opts
+       (filter (comp vega-spec-opts first))
+       (remove (comp nil? second))
+       (into spec)))
+
 (defn v!
   "Take a vega or vega-lite clojure map `spec` and POST it to a oz
   server running at `:host` and `:port` to be rendered."
-  [spec & {:keys [data host port mode]
+  [spec & {:as opts
+           :keys [data width height host port mode]
            :or {port (:port @server/web-server_ 10666)
                 host "localhost"
                 mode :vega-lite}}]
-  (let [spec (if data (assoc spec :data data) spec)]
+  ;; Update spec opts, then send view
+  (let [spec (merge-opts spec opts)]
     (view! [mode spec] :host host :port port)))
 
 (defn gist-plot!
@@ -63,8 +79,10 @@
 
 (defn publish-plot!
   "Publish plot via `gitst-plot!`, and print out a vega-editor url correspond to said gist."
-  [plot & {:keys [data mode name] :or {mode :vega-lite name "plot"}}]
-  (let [plot (if data (assoc plot :data data) plot)
+  [plot & {:as opts
+           :keys [data width height mode name]
+           :or {mode :vega-lite name "plot"}}]
+  (let [plot (merge-opts plot opts)
         gist (gist-plot! plot :name name)
         gist-url (:url gist)]
     (println "Gist url:" gist-url)
