@@ -153,6 +153,9 @@ You should now see something like this:
 Note that vega-lite already has very powerful and impressive [plot concatenation](https://vega.github.io/vega-lite/docs/concat.html) features, and that in general these should be preferred as they allow for tighter coupling of the data and interactive features of vega-lite.
 But again, when doing something quick and dirty, this functionality may prove useful.
 
+Also note that while not illustrated above, you can specify multiple maps in these vectors, and they will be merged into one.
+So for example, you can do `[:vega-lite stacked-bar {:width 100}]` to override the width.
+
 
 ## Sharing features
 
@@ -181,6 +184,9 @@ If you like, you may also use the Reagent components found at `oz.core` to rende
  [oz.core/vega { ... }]
  [oz.core/vega-lite { ... }]]
 ```
+
+At present, these components do not take a second argument.
+The merging of spec maps described above applies prior to application of this reagent component.
 
 
 ## Local development

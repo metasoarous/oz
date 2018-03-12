@@ -137,8 +137,8 @@
   ;; TODO finish writing; already hooked in below so will break now
   (clojure.walk/prewalk
     (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
-              (into [(case (first x) :vega vega :vega-lite vega-lite)]
-                    (rest x))
+              [(case (first x) :vega vega :vega-lite vega-lite)
+               (reduce merge (rest x))]
               x))
     spec))
 
