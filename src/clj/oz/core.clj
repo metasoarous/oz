@@ -11,8 +11,8 @@
 (def start-plot-server! ^{:doc "Start the oz plot server on localhost:10666 by default."}
   server/start!)
 
-(defonce cookie-store (clj-http.cookies/cookie-store))
-(defonce anti-forgery-token (atom nil))
+(defonce ^{:private true} cookie-store (clj-http.cookies/cookie-store))
+(defonce ^{:private true} anti-forgery-token (atom nil))
 
 
 (defn view!
