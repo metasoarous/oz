@@ -2,7 +2,7 @@
 # CHANGELOG
 
 
-## 1.3.1
+## 1.3.2
 
 * update js libs:
   * vega 3.0.7 -> 3.2.1
