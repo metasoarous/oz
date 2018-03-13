@@ -3,18 +3,6 @@
   :url "http://github.com/metasoarous/oz"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-
-  ;; default release steps
-  ;:release-tasks [["vcs" "assert-committed"]
-                  ;["change" "version"
-                   ;"leiningen.release/bump-version" "release"]
-                  ;["vcs" "commit"]
-                  ;["vcs" "tag"]
-                  ;["deploy"]
-                  ;["change" "version" "leiningen.release/bump-version"]
-                  ;["vcs" "commit"]
-                  ;["vcs" "push"]]
-
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.64" :scope "provided"]
                  [org.clojure/core.async "0.4.474"]
