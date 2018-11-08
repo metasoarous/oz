@@ -218,7 +218,7 @@ cd $VEGA_DISTS
 
 cd $CLJSJS_PACKAGES_PATH
 git add vega vega-lite vega-tooltip vega-embed
-git commit -m "[vega] Update vega related packages\n\nVersions: vega -> $v_version, vega-lite -> $vl_version, vega-embed -> $ve_version, vega-tooltip -> $vt_version."
+git commit -m "[vega] Update vega related packages" -m "Versions: vega -> $v_version, vega-lite -> $vl_version, vega-embed -> $ve_version, vega-tooltip -> $vt_version."
 
 # Let user know what they need to do next
 
