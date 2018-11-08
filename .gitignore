@@ -12,3 +12,8 @@ pom.xml.asc
 .lein-plugins/
 .repl
 .nrepl-port
+cljsjs-packages
+vega-dists
+.lein-failures
+.cljs_rhino_repl
+scratch

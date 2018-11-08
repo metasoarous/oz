@@ -14,12 +14,18 @@ The real magic is in vega & vega-lite.
 
 If you don't already know about vega/vega-lite, it's worth taking a few minutes to orient yourself with [this mindblowing talk/demo](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators at the Interactive Data Lab (IDL) at University of Washington.
 
+[![Vega & Vega-Lite talk from IDL](https://i.imgur.com/YPzAfcX.png)](https://www.youtube.com/watch?v=9uaHRWj04D4)
+
 The long story short is that vega and vega-lite are declarative grammars for describing data visualizations.
 Of note, they are based on the Grammar of Graphics, which served as the guiding light for the popular R `ggplot2` viz library.
-In this setting, we define visualizations by specifying how attributes of our data map to aesthetics properties of visualization.
-Vega-lite in particular looks to be a less verbose and more automated flavor of vega, with considerable attention paid to interactive features and composablity.
-The creators also have some cool Tableau like tools for exploring data and building visualizations.
-[Find out more on their website](https://vega.github.io/).
+In this setting, we define visualizations by specifying at a high level how attributes of our data map to aesthetics properties of visualization.
+Vega-lite in particular aims to be a less verbose and more automated flavor of vega, with features focused on maximal leverage for day to day usage.
+
+Watched the IDL talk and hungry for more content?
+Here's another which focuses on the philosophical ideas behind Vega & Vega-Lite, how they relate to Clojure, and how you can use the tools from Clojure using Oz.
+
+[![Seajure Clojure + Vega/Vega-Lite talk](https://i.imgur.com/SmIPUQt.png)](https://www.youtube.com/watch?v=hXq5Bb40zZY&t=815s)
+
 
 ### About oz specifically...
 
@@ -35,6 +41,17 @@ It also has the following eventual goals:
 * use as a static build tool for publishing scientific documents
 * provide an API for combining vega and vega-lite into a single plot (vega for detailed control, vega-lite for the simple bits)
 * higher level viz constructors, as they accrete and become useful
+
+
+### Ecosystem
+
+Some other things in the Vega/Vega-Lite ecosystem you may want to look at
+
+* [Hanami](https://github.com/jsa-aerial/hanami) - Really cool library from [Jon Anthony](https://github.com/jsa-aerial) with high level constructors for Vega/Vega-Lite data
+* [Vega Editor](https://vega.github.io/editor) - Wonderful editing tool (as mentioned above) for editing and sharing Vega/Vega-Lite data visualizations.
+* [Voyager](https://github.com/vega/voyager) - Also from the IDL, Voyager is a wonderful Tableau like (drag and drop) tool for exploring data and constructing exportable Vega/Vega-Lite visualizations.
+* [Vega Examples](https://vega.github.io/examples) - A 
+* [Vega home](https://vega.github.io/) - More great stuff from the IDL folks
 
 
 ## REPL Usage
@@ -201,6 +218,40 @@ For development environment, `dev/utils.clj` has
 ```
 
 Then do yer thing.
+
+
+
+## Debugging & updating Vega/Vega-Lite versions
+
+I'm frequently shocked (pleasantly) at how if I find I'm unable to do something in Vega or Vega-Lite that I think I should, updating the Vega or Vega-Lite version fixes the problem.
+As a side note, I think this speaks volumes of the stellar job (pun intended) the IDL has been doing of developing these tools.
+More to the point though, if you find yourself unable to do something you expect to be able to do, it's not a bad idea to try
+
+1. Make sure your Oz version is up to date, in case there's a more recent Vega/Vega-Lite versions required there fix the problem.
+2. Check [cljsjs](http://cljsjs.github.io/) to see if there's a more recent version of the Vega/Vega-Lite (or Vega-Embed or Vega-Hover, as appropriate).
+   You can override whatever version of these libraries is getting used by Oz by adding the correspoding `[cljsjs/vega-* ...]` coordinates to your `project.clj` dependencies list.
+   As long as this comes before your Oz version specification, your cljsjs version specification should take precedence.
+3. If there's not a more recent version on cljsjs, but there are more up to date versions of the JS libraries (check the github pages or npm).
+   Read below for instructions.
+4. If this still doesn't solve your problem, file an issue on the appropriate Vega GitHub project.
+   I've found the developers super responsive to issues.
+
+
+## Updating cljsjs packages
+
+For more context and information, see the cljsjs [creating pacakages](https://github.com/cljsjs/packages/wiki/Creating-Packages), [updating packages](https://github.com/cljsjs/packages/wiki/Updating-packages) and [creating externs](https://github.com/cljsjs/packages/wiki/Creating-Externs) documentation.
+For convenience, I've automated much of this work in the script at `./bin/update-cljsjs.sh`.
+
+
+
+## Building and deploying oz
+
+This is mostly for my convenience....
+
+```
+#forthcoming...
+```
+
 
 ## License
 
