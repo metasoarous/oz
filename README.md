@@ -14,7 +14,7 @@ The real magic is in vega & vega-lite.
 
 If you don't already know about vega/vega-lite, it's worth taking a few minutes to orient yourself with [this mindblowing talk/demo](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators at the Interactive Data Lab (IDL) at University of Washington.
 
-[![Vega & Vega-Lite talk from IDL](https://i.imgur.com/YPzAfcX.png)](https://www.youtube.com/watch?v=9uaHRWj04D4)
+[![Vega & Vega-Lite talk from IDL](https://i.imgur.com/YPzAfcXl.png)](https://www.youtube.com/watch?v=9uaHRWj04D4)
 
 The long story short is that vega and vega-lite are declarative grammars for describing data visualizations.
 Of note, they are based on the Grammar of Graphics, which served as the guiding light for the popular R `ggplot2` viz library.
@@ -24,7 +24,7 @@ Vega-lite in particular aims to be a less verbose and more automated flavor of v
 Watched the IDL talk and hungry for more content?
 Here's another which focuses on the philosophical ideas behind Vega & Vega-Lite, how they relate to Clojure, and how you can use the tools from Clojure using Oz.
 
-[![Seajure Clojure + Vega/Vega-Lite talk](https://i.imgur.com/SmIPUQt.png)](https://www.youtube.com/watch?v=hXq5Bb40zZY&t=815s)
+[![Seajure Clojure + Vega/Vega-Lite talk](https://i.imgur.com/SmIPUQtl.png)](https://www.youtube.com/watch?v=hXq5Bb40zZY&t=815s)
 
 
 ### About oz specifically...
