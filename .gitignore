@@ -13,7 +13,7 @@ pom.xml.asc
 .repl
 .nrepl-port
 cljsjs-packages
-vega-dists
+cljsjs-vega-dists
 .lein-failures
 .cljs_rhino_repl
 scratch
