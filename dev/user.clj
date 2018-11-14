@@ -29,10 +29,11 @@
 
   ;; define a function for generating some dummy data
   (defn group-data [& names]
-    (apply concat
-      (for [n names]
-        (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
-
+    (for [n names
+          x (range 20)]
+      {:col n
+       :x   x
+       :y   (rand-int 100)}))
 
   ;; Define a simple plot, inlining the data
   (def line-plot
