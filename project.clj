@@ -32,8 +32,8 @@
   :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
-                        :figwheel {:on-jsload "oz.core/on-js-reload"}
-                        :compiler {:main oz.core
+                        :figwheel {:on-jsload "oz.app/on-js-reload"}
+                        :compiler {:main oz.app
                                    :asset-path "js/compiled/out"
                                    :output-to "resources/public/js/compiled/oz.js"
                                    :output-dir "resources/public/js/compiled/out"
@@ -42,7 +42,7 @@
                        {:id "min"
                         :source-paths ["src/cljs"]
                         :compiler {:output-to "resources/public/js/compiled/oz.js"
-                                   :main oz.core
+                                   :main oz.app
                                    :optimizations :advanced
                                    :pretty-print false}}]}
   :figwheel {
