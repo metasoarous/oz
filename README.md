@@ -143,7 +143,7 @@ For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/v!`:
 
 (require '[cheshire.core :as json])
 
-(def vega-data (json/parse-string (slurp (clojure.java.io/resource "countour-lines.vega.json")))) 
+(def vega-data (json/parse-string (slurp (clojure.java.io/resource "contour-lines.vega.json")))) 
 (oz/v! vega-data :mode :vega)
 ```
 
