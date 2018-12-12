@@ -139,7 +139,6 @@
                       :vega (json/generate-string spec))
         create-gist-opts (merge {:description description :public public}
                                 (auth-args opts))
-        _ (println "create-gist-opts" create-gist-opts)
         gist (gists/create-gist {name spec-string} create-gist-opts)]
     gist))
 
@@ -149,12 +148,11 @@
 
 
 (defn- vega-editor-url
-  [gist & {:keys [mode] :or {mode :vega-lite}}]
+  [{:as gist :keys [owner id history files]} & {:keys [mode] :or {mode :vega-lite}}]
   (str
     "https://vega.github.io/editor/#/gist/"
-    (name mode)
-    "/"
-    (-> gist :files first second :raw_url (string/split #"\/") reverse (->> (take 5) (remove #{"raw"}) reverse (string/join "/")))))
+    (string/join "/"
+      [(name mode) (:login owner) id (-> history first :version) (-> gist :files first second :filename)])))
 
 (defn- ozviz-url
   [gist-url]
@@ -181,17 +179,21 @@
   
   Additional options:
   * `:public`: default false
-  * `:description`: auto generated based on spec"
+  * `:description`: auto generated based on spec
+  * `:return-full-gist`: return the full tentacles gist api response data"
   [spec & {:as opts
-           :keys [mode]
+           :keys [mode return-full-gist]
            :or {mode :vega-lite}}]
   (let [gist (mapply gist! spec opts)
         gist-url (:url gist)]
     (println "Gist url:" (:html_url gist))
     (println "Raw gist url:" gist-url)
+    ;; Should really merge these into gist and return as data...
     (case (spec-type spec)
       :ozviz (println "Ozviz url:" (ozviz-url gist-url))
-      :vega (println "Vega editor url:" (vega-editor-url gist :mode mode)))))
+      :vega (println "Vega editor url:" (vega-editor-url gist :mode mode)))
+    (when return-full-gist
+      gist)))
 
 (defn publish-plot!
   "Deprecated form of `publish!`"

@@ -66,29 +66,30 @@
 
   ;; Render our new plot
   (oz/v! stacked-bar)
+  (oz/publish! stacked-bar)
 
 
   ;; vega example
-  (def vega-data (json/parse-string (slurp (clojure.java.io/resource "countour-lines.vega.json")))) 
-  (oz/v! vega-data :mode :vega)
+  (def contour-plot (json/parse-string (slurp (clojure.java.io/resource "contour-lines.vega.json")))) 
+  (oz/v! contour-plot :mode :vega)
 
-  ;; All together now
-  ;; We can also use the `view!` function to view a composite of both charts, together with
-  ;; some hiccup
-  (def spec [:div
-             [:h1 "Look ye and behold"]
-             [:p "A couple of small charts"]
-             [:div {:style {:display "flex" :flex-direction "row"}}
-              [:vega-lite line-plot]
-              [:vega-lite stacked-bar]]
-             [:p "A wider, more expansive chart"]
-             [:vega vega-data]
-             [:h2 "If ever, oh ever a viz there was, the vizard of oz is one because, because, because..."]
-             [:p "Because of the wonderful things it does"]])
-  (oz/view! spec)
+  ;; Construct some 
+  (def viz
+    [:div
+      [:h1 "Look ye and behold"]
+      [:p "A couple of small charts"]
+      [:div {:style {:display "flex" :flex-direction "row"}}
+        [:vega-lite line-plot]
+        [:vega-lite stacked-bar]]
+      [:p "A wider, more expansive chart"]
+      [:vega contour-plot]
+      [:h2 "If ever, oh ever a viz there was, the vizard of oz is one because, because, because..."]
+      [:p "Because of the wonderful things it does"]])
+
+  (oz/view! viz)
 
   ;; And finally, we can publish this document to a github gist and load via ozviz.io
-  (oz/publish! spec)
+  (oz/publish! viz)
 
   :end-examples)
 

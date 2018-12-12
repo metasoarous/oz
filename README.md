@@ -143,8 +143,8 @@ For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/v!`:
 
 (require '[cheshire.core :as json])
 
-(def vega-data (json/parse-string (slurp (clojure.java.io/resource "contour-lines.vega.json")))) 
-(oz/v! vega-data :mode :vega)
+(def contour-plot (json/parse-string (slurp (clojure.java.io/resource "contour-lines.vega.json")))) 
+(oz/v! contour-plot :mode :vega)
 ```
 
 This should render like:
@@ -160,17 +160,19 @@ The idea is to provide some quick and dirty utilities for building composite vie
 For demonstration we'll combine the three plots above into one:
 
 ```clojure
-(def spec [:div
-           [:h1 "Look ye and behold"]
-           [:p "A couple of small charts"]
-           [:div {:style {:display "flex" :flex-direction "row"}}
-            [:vega-lite line-plot]
-            [:vega vega-data]]
-           [:p "A wider, more expansive chart"]
-           [:vega-lite stacked-bar]
-           [:h2 "If ever, oh ever a viz there was, the vizard of oz is one because, because, because..."]
-           [:p "Because of the wonderful things it does"]])
-(oz/view! spec)
+(def viz
+  [:div
+    [:h1 "Look ye and behold"]
+    [:p "A couple of small charts"]
+    [:div {:style {:display "flex" :flex-direction "row"}}
+      [:vega-lite line-plot]
+      [:vega-lite stacked-bar]]
+    [:p "A wider, more expansive chart"]
+    [:vega contour-plot]
+    [:h2 "If ever, oh ever a viz there was, the vizard of oz is one because, because, because..."]
+    [:p "Because of the wonderful things it does"]])
+
+(oz/view! viz)
 ```
 
 Note that the vega and vega-lite specs are described in the output vega as using the `:vega` and `:vega-lite` keys.
@@ -179,8 +181,8 @@ You should now see something like this:
 
 ![composite view](doc/composite-view.png)
 
-Note that vega-lite already has very powerful and impressive [plot concatenation](https://vega.github.io/vega-lite/docs/concat.html) features, and that in general these should be preferred as they allow for tighter coupling of the data and interactive features of vega-lite.
-But again, when doing something quick and dirty, this functionality may prove useful.
+Note that vega/vega-lite already have very powerful and impressive [plot concatenation](https://vega.github.io/vega-lite/docs/concat.html) features which allow for coupling of interactivity between plots in a viz.
+However, combing things through hiccup like this is nice for expedience, and for leverage over the full expressiveness of HTML (tables anyone?).
 
 Also note that while not illustrated above, you can specify multiple maps in these vectors, and they will be merged into one.
 So for example, you can do `[:vega-lite stacked-bar {:width 100}]` to override the width.
@@ -196,25 +198,28 @@ When you visit the vega-editor link, it will load the gist in question and place
 It renders the plot, and updates in real time as you tinker with the code, making it a wonderful yet simple tool for sharing and prototyping.
 
 ```clojure
-user=> (oz/publish! line-plot)
-Gist html url: https://gist.github.com/f838b26ee0a502a0c5e5536b6d86d787
-Raw gist url: https://api.github.com/gists/f838b26ee0a502a0c5e5536b6d86d787
-Vega editor url: https://vega.github.io/editor/#/gist/vega-lite/metasoarous/f838b26ee0a502a0c5e5536b6d86d787/83e74ec3938f80ab5f0d47be0c7ee67dde355175/vega-viz.json
+user=> (oz/publish! stacked-bar)
+Gist url: https://gist.github.com/87a5621b0dbec648b2b54f68b3354c3a
+Raw gist url: https://api.github.com/gists/87a5621b0dbec648b2b54f68b3354c3a
+Vega editor url: https://vega.github.io/editor/#/gist/vega-lite/metasoarous/87a5621b0dbec648b2b54f68b3354c3a/e1d471b5a5619a1f6f94e38b2673feff15056146/vega-viz.json
 ```
 
 Following the Vega editor url with take you here (click on image to follow):
 
-[![vega-editor](doc/export-small.png)](https://vega.github.io/editor/#/gist/vega-lite/metasoarous/f838b26ee0a502a0c5e5536b6d86d787/83e74ec3938f80ab5f0d47be0c7ee67dde355175/vega-viz.json)
+[![vega-editor](doc/export.small.png)](https://vega.github.io/editor/#/gist/vega-lite/metasoarous/87a5621b0dbec648b2b54f68b3354c3a/e1d471b5a5619a1f6f94e38b2673feff15056146/vega-viz.json)
 
 As mentioned above, we can also share our hiccup documents/dashboards.
 Since Vega Editor knows nothing about hiccup, we've created <ozviz.io> as a tool for loading these documents.
 
 ```
-user=> (oz/publish! spec)
-Gist url: https://gist.github.com/e6313e288f94cd1ec039e5ac4ebf894f
-Raw gist url: https://api.github.com/gists/e6313e288f94cd1ec039e5ac4ebf894f
-Ozviz url: http://ozviz.io/#/gist/e6313e288f94cd1ec039e5ac4ebf894f
+user=> (oz/publish! viz)
+Gist url: https://gist.github.com/305fb42fa03e3be2a2c78597b240d30e
+Raw gist url: https://api.github.com/gists/305fb42fa03e3be2a2c78597b240d30e
+Ozviz url: http://ozviz.io/#/gist/305fb42fa03e3be2a2c78597b240d30e
 ```
+
+Try it out: <http://ozviz.io/#/gist/305fb42fa03e3be2a2c78597b240d30e>
+
 
 ### Authentication
 
@@ -231,7 +236,7 @@ While you can use `{:auth "username:password"}` in this file, as above, it's far
   * Enter a description like "Oz api token"
   * Select the "[ ] **gist**" scope checkbox, to grant gisting permissions for this token
   * Click "Generate token" to finish
-* Copy the token and paste place in your `~/.oz/github-creds.edn` file as `{:token "xxxxxxxxxxxxxx"}`
+* Copy the token and paste place in your `~/.oz/github-creds.edn` file as `{:oauth-token "xxxxxxxxxxxxxx"}`
 
 When you're finished, it's a good idea to run `chmod 600 ~/.oz/github-creds.edn` so that only your user can read the credential file.
 
