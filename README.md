@@ -34,7 +34,7 @@ Oz itself provides:
 * a REPL API for for pushing vega and vega-lite data to a browser window over websockets
 * client side `vega` and `vega-lite` Reagent components
 * an API for composing vega & vega-lite together in the context of html as hiccup for document and dashboard generation
-* plot publishing/sharing features via GitHub gists and the IDL's live [vega editor](http://vega.github.io/editor)
+* plot/document publishing/sharing features via GitHub gists, the IDL's live [vega editor](http://vega.github.io/editor), and <ozviz.io>.
 
 It also has the following eventual goals:
 
@@ -47,21 +47,25 @@ It also has the following eventual goals:
 
 Some other things in the Vega/Vega-Lite ecosystem you may want to look at
 
-* [Hanami](https://github.com/jsa-aerial/hanami) - Really cool library from [Jon Anthony](https://github.com/jsa-aerial) with high level constructors for Vega/Vega-Lite data
 * [Vega Editor](https://vega.github.io/editor) - Wonderful editing tool (as mentioned above) for editing and sharing Vega/Vega-Lite data visualizations.
+* [Ozviz](http://ozviz.io) - Sister project to Oz: A Vega Editor like tool for sharing (and soon editing) hiccup
 * [Voyager](https://github.com/vega/voyager) - Also from the IDL, Voyager is a wonderful Tableau like (drag and drop) tool for exploring data and constructing exportable Vega/Vega-Lite visualizations.
-* [Vega Examples](https://vega.github.io/examples) - A 
-* [Vega home](https://vega.github.io/) - More great stuff from the IDL folks
+* [Vega Examples](https://vega.github.io/examples) - A robust showcase of visualizations from which to draw inspiration and code.
+* [Vega home](https://vega.github.io/) - More great stuff from the IDL folks.
+* [Hanami](https://github.com/jsa-aerial/hanami) - Cool library from [Jon Anthony](https://github.com/jsa-aerial) with high level constructors for Vega/Vega-Lite data
 
 
 ## REPL Usage
 
-Add oz to your leiningen project dependencies
+If you clone this repository and open up the `dev/user.clj` file, you can follow along by executing the
+commented out code block at the end of the file.
+
+Assuming you're starting from scratch, first add oz to your leiningen project dependencies
 
 [![Clojars Project](https://img.shields.io/clojars/v/metasoarous/oz.svg)](https://clojars.org/metasoarous/oz)
 
 
-To get things going, require oz and start the plot server as follows:
+Next, require oz and start the plot server as follows:
 
 ``` clojure
 (require '[oz.core :as oz])
@@ -70,13 +74,17 @@ To get things going, require oz and start the plot server as follows:
 ```
 
 This will fire up a browser window with a websocket connection for funneling view data back and forth.
+If you forget to call this function, it will be called for you when you create your first plot, but be aware
+that it will delay the first display, and it's possible you'll have to resend the plot on a slower
+computer.
 
 Next we'll define a function for generating some dummy data
 
 ```clojure
-(defn group-data [& names]
-  (apply concat (for [n names]
-  (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
+(defn play-data [& names]
+  (for [n names
+        i (range 20)]
+    {:time i :item n :quantity (+ (Math/pow (* i (count n)) 0.8) (rand-int (count n)))}))
 ```
 
 
@@ -88,15 +96,15 @@ It will display a single vega or vega-lite plot in any connected browser windows
 For example, a simple line plot:
 
 ``` clojure
-  (def line-plot
-    {:data {:values (group-data "monkey" "slipper" "broom")}
-     :encoding {:x {:field "x"}
-                :y {:field "y"}
-                :color {:field "col" :type "nominal"}}
-     :mark "line"})
+(def line-plot
+  {:data {:values (play-data "monkey" "slipper" "broom")}
+   :encoding {:x {:field "time"}
+              :y {:field "quantity"}
+              :color {:field "item" :type "nominal"}}
+   :mark "line"})
 
-  ;; Render the plot to the 
-  (oz/v! line-plot)
+;; Render the plot
+(oz/v! line-plot)
 ```
 
 Should render something like:
@@ -108,14 +116,14 @@ Another example:
 
 ```clojure
 (def stacked-bar
-  {:data {:values (group-data "munchkin" "witch" "dog" "lion" "tiger" "bear")}
+  {:data {:values (play-data "munchkin" "witch" "dog" "lion" "tiger" "bear")}
    :mark "bar"
-   :encoding {:x {:field "x"
+   :encoding {:x {:field "time"
                   :type "ordinal"}
               :y {:aggregate "sum"
-                  :field "y"
+                  :field "quantity"
                   :type "quantitative"}
-              :color {:field "col"
+              :color {:field "item"
                       :type "nominal"}}})
 
 (oz/v! stacked-bar)
@@ -135,24 +143,24 @@ For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/v!`:
 
 (require '[cheshire.core :as json])
 
-(def vega-data (json/parse-string (slurp (clojure.java.io/resource "example-cars-plot.vega.json")))) 
+(def vega-data (json/parse-string (slurp (clojure.java.io/resource "countour-lines.vega.json")))) 
 (oz/v! vega-data :mode :vega)
 ```
 
 This should render like:
 
-![cars plot](doc/car-points.png)
+![contours plot](doc/contours.png)
 
 
 ### `oz/view!`
 
 This is a more powerful function which will let you compose vega and vega-lite views together with other html, using hiccup notation.
-The idea is to provide some quick and dirty utilities for building composite view dashboards, and for the construction of documents.
+The idea is to provide some quick and dirty utilities for building composite view dashboards and scientific documents.
 
 For demonstration we'll combine the three plots above into one:
 
 ```clojure
-(oz/view! [:div
+(def spec [:div
            [:h1 "Look ye and behold"]
            [:p "A couple of small charts"]
            [:div {:style {:display "flex" :flex-direction "row"}}
@@ -162,6 +170,7 @@ For demonstration we'll combine the three plots above into one:
            [:vega-lite stacked-bar]
            [:h2 "If ever, oh ever a viz there was, the vizard of oz is one because, because, because..."]
            [:p "Because of the wonderful things it does"]])
+(oz/view! spec)
 ```
 
 Note that the vega and vega-lite specs are described in the output vega as using the `:vega` and `:vega-lite` keys.
@@ -179,20 +188,59 @@ So for example, you can do `[:vega-lite stacked-bar {:width 100}]` to override t
 
 ## Sharing features
 
-Looking to share your cool plots with someone?
-We've got you covered.
-
-```clojure
-user=> (oz/publish-plot! line-plot)
-Gist url: https://api.github.com/gists/a887765dadc594ac3140fc3501e6dbd2
-Vega editor url: https://vega.github.io/editor/#/gist/vega-lite/gists/a887765dadc594ac3140fc3501e6dbd2
-```
+Looking to share your cool plots or hiccup documents with someone?
+We've got you covered via the `publish!` utility function.
 
 This will post the plot content to a GitHub Gist, and use the gist uuid to create a [vega-editor](http://vega.github.io/editor) link which prints to the screen.
 When you visit the vega-editor link, it will load the gist in question and place the content in the editor.
 It renders the plot, and updates in real time as you tinker with the code, making it a wonderful yet simple tool for sharing and prototyping.
 
-[![vega-editor](doc/export.png)](https://vega.github.io/editor/#/gist/vega-lite/gists/a887765dadc594ac3140fc3501e6dbd2)
+```clojure
+user=> (oz/publish! line-plot)
+Gist html url: https://gist.github.com/f838b26ee0a502a0c5e5536b6d86d787
+Raw gist url: https://api.github.com/gists/f838b26ee0a502a0c5e5536b6d86d787
+Vega editor url: https://vega.github.io/editor/#/gist/vega-lite/metasoarous/f838b26ee0a502a0c5e5536b6d86d787/83e74ec3938f80ab5f0d47be0c7ee67dde355175/vega-viz.json
+```
+
+Following the Vega editor url with take you here (click on image to follow):
+
+[![vega-editor](doc/export-small.png)](https://vega.github.io/editor/#/gist/vega-lite/metasoarous/f838b26ee0a502a0c5e5536b6d86d787/83e74ec3938f80ab5f0d47be0c7ee67dde355175/vega-viz.json)
+
+As mentioned above, we can also share our hiccup documents/dashboards.
+Since Vega Editor knows nothing about hiccup, we've created <ozviz.io> as a tool for loading these documents.
+
+```
+user=> (oz/publish! spec)
+Gist url: https://gist.github.com/e6313e288f94cd1ec039e5ac4ebf894f
+Raw gist url: https://api.github.com/gists/e6313e288f94cd1ec039e5ac4ebf894f
+Ozviz url: http://ozviz.io/#/gist/e6313e288f94cd1ec039e5ac4ebf894f
+```
+
+### Authentication
+
+In order to use the `oz/publish!` function, you must provide authentication.
+
+The easiest way is to pass `:auth "username:password"` to the `oz/publish!` function.
+However, this can be problematic in that you don't want these credentials accidentally strewn throughout your code or `./.lein-repl-history`.
+
+To address this issue, `oz/publish!` will by default try to read authorization parameters from a file at `~/.oz/github-creds.edn`.
+The contents should be a map of authorization arguments, as passed to the [tentacles api](https://github.com/clj-commons/tentacles).
+While you can use `{:auth "username:password"}` in this file, as above, it's far better from a security standpoint to use OAuth tokens.
+
+* First, [generate a new token](https://github.com/settings/tokens/new) (Settings > Developer settings > Personal access tokens):
+  * Enter a description like "Oz api token"
+  * Select the "[ ] **gist**" scope checkbox, to grant gisting permissions for this token
+  * Click "Generate token" to finish
+* Copy the token and paste place in your `~/.oz/github-creds.edn` file as `{:token "xxxxxxxxxxxxxx"}`
+
+When you're finished, it's a good idea to run `chmod 600 ~/.oz/github-creds.edn` so that only your user can read the credential file.
+
+And that's it!
+Your calls to `(oz/publish! spec)` should now be authenticated.
+
+Sadly, GitHub used to allow the posting of anonymous gists, without the requirement of authentication, which saved us from all this hassle.
+However, they've since [deprecated this](https://blog.github.com/2018-02-18-deprecation-notice-removing-anonymous-gist-creation/).
+If you like, you can [submit a comment](https://github.com/contact) asking that GitHub consider enabling auto-expiring anonymous gists, which would avoid this setup.
 
 
 ## As client side reagent components
@@ -208,6 +256,8 @@ If you like, you may also use the Reagent components found at `oz.core` to rende
 At present, these components do not take a second argument.
 The merging of spec maps described above applies prior to application of this reagent component.
 
+Eventually we'll be adding options for hooking into the signal dataflow graphs within these visualizations so that interactions in a Vega/Vega-Lite visualization can be used to inform other Reagent components in your app.
+
 
 ## Local development
 
@@ -218,7 +268,6 @@ For development environment, `dev/utils.clj` has
 ```
 
 Then do yer thing.
-
 
 
 ## Debugging & updating Vega/Vega-Lite versions
@@ -241,16 +290,6 @@ More to the point though, if you find yourself unable to do something you expect
 
 For more context and information, see the cljsjs [creating pacakages](https://github.com/cljsjs/packages/wiki/Creating-Packages), [updating packages](https://github.com/cljsjs/packages/wiki/Updating-packages) and [creating externs](https://github.com/cljsjs/packages/wiki/Creating-Externs) documentation.
 For convenience, I've automated much of this work in the script at `./bin/update-cljsjs.sh`.
-
-
-
-## Building and deploying oz
-
-This is mostly for my convenience....
-
-```
-#forthcoming...
-```
 
 
 ## License

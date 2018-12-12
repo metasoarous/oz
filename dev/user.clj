@@ -2,6 +2,7 @@
   (:require [oz.server :refer [start! stop!]]
             [oz.core :as oz]
             [cheshire.core :as json]
+            [clojure.pprint :as pp]
             [figwheel-sidecar.repl-api :as figwheel]))
 
 ;; Let Clojure warn you when it needs to reflect on types, or when it does math
@@ -25,40 +26,42 @@
 
   ;; Start the plot server
   ;(do-it-fools!) ;; for figwheel dev
-  (oz/start-plot-server! 8776)
+  (oz/start-plot-server!)
+  ;(stop!)
 
   ;; define a function for generating some dummy data
-  (defn group-data [& names]
-    (apply concat
-      (for [n names]
-        (map-indexed (fn [i x] {:x i :y x :col n}) (take 20 (repeatedly #(rand-int 100)))))))
-
+  (defn play-data [& names]
+    (for [n names
+          i (range 20)]
+      {:time i :item n :quantity (+ (Math/pow (* i (count n)) 0.8) (rand-int (count n)))}))
 
   ;; Define a simple plot, inlining the data
   (def line-plot
-    {:data {:values (group-data "monkey" "slipper" "broom")}
-     :encoding {:x {:field "x"}
-                :y {:field "y"}
-                :color {:field "col" :type "nominal"}}
+    {:data {:values (play-data "monkey" "slipper" "broom")}
+     :encoding {:x {:field "time"}
+                :y {:field "quantity"}
+                :color {:field "item" :type "nominal"}}
      :mark "line"})
 
   ;; Render the plot to the 
   (oz/v! line-plot)
+  (oz/view! [:h1 "fuck you"])
 
-  ;; We can also try publishing the plot like so (follow the vega-editor link)
-  (oz/publish-plot! line-plot)
-
+  ;; We can also try publishing the plot like so (requires auth; see README.md for setup)
+  (oz/publish! line-plot)
+  ;; Then follow the vega-editor link.
 
   ;; Build a more intricate plot
+  ;; (Note here also that we're doing the Right Thing (TM) and including the field types...)
   (def stacked-bar
-    {:data {:values (group-data "munchkin" "witch" "dog" "lion" "tiger" "bear")}
+    {:data {:values (play-data "munchkin" "witch" "dog" "lion" "tiger" "bear")}
      :mark "bar"
-     :encoding {:x {:field "x"
+     :encoding {:x {:field "time"
                     :type "ordinal"}
                 :y {:aggregate "sum"
-                    :field "y"
+                    :field "quantity"
                     :type "quantitative"}
-                :color {:field "col"
+                :color {:field "item"
                         :type "nominal"}}})
 
   ;; Render our new plot
@@ -66,23 +69,26 @@
 
 
   ;; vega example
-  (def vega-data (json/parse-string (slurp (clojure.java.io/resource "example-cars-plot.vega.json")))) 
+  (def vega-data (json/parse-string (slurp (clojure.java.io/resource "countour-lines.vega.json")))) 
   (oz/v! vega-data :mode :vega)
 
   ;; All together now
   ;; We can also use the `view!` function to view a composite of both charts, together with
   ;; some hiccup
-  (oz/view! [:div
+  (def spec [:div
              [:h1 "Look ye and behold"]
              [:p "A couple of small charts"]
              [:div {:style {:display "flex" :flex-direction "row"}}
               [:vega-lite line-plot]
-              [:vega vega-data]]
+              [:vega-lite stacked-bar]]
              [:p "A wider, more expansive chart"]
-             [:vega-lite stacked-bar]
+             [:vega vega-data]
              [:h2 "If ever, oh ever a viz there was, the vizard of oz is one because, because, because..."]
              [:p "Because of the wonderful things it does"]])
+  (oz/view! spec)
 
+  ;; And finally, we can publish this document to a github gist and load via ozviz.io
+  (oz/publish! spec)
 
   :end-examples)
 

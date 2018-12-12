@@ -2,6 +2,19 @@
 # CHANGELOG
 
 
+## 1.4.0
+
+* deprecate `publish-plot!` in favor of more general `publish!`, which sends to http://ozviz.io as appropriate
+* split reagent api from main app namespace
+* update aleph to avoid java 9 issues
+* call start-plot-server! automatically on `v!` or `view!` if it hasn't been already
+* update js libs:
+  * cljsjs/vega -> "4.4.0-0"
+  * cljsjs/vega-lite -> "3.0.0-rc10-0"
+  * cljsjs/vega-embed -> "3.26.0-0"
+  * cljsjs/vega-tooltip -> "0.14.0-0"
+
+
 ## 1.3.2
 
 * update js libs:
