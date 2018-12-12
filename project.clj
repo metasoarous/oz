@@ -1,4 +1,4 @@
-(defproject metasoarous/oz "1.3.1"
+(defproject metasoarous/oz "1.4.0-SNAPSHOT"
   :description "Great and powerful data visualizations in Clojure using Vega and Vega-lite"
   :url "http://github.com/metasoarous/oz"
   :license {:name "Eclipse Public License"
@@ -21,8 +21,8 @@
                  [cljsjs/vega "4.4.0-0"]
                  [cljsjs/vega-lite "3.0.0-rc10-0"]
                  [cljsjs/vega-embed "3.26.0-0"]
-                 [cljsjs/vega-tooltip "0.1k.0-0"]
-                 [irresponsible/tentacles "0.6.1"]]
+                 [cljsjs/vega-tooltip "0.14.0-0"]
+                 [irresponsible/tentacles "0.6.3"]]
   :plugins [[lein-cljsbuild "1.1.6"]]
   :source-paths ["src/clj" "src/cljs"]
   :clean-targets ^{:protect false} [:target-path :compile-path "resources/public/js"]
