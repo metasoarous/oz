@@ -1,59 +1,65 @@
 /* some style */
 
-.vega-embed a {
-    visibility: hidden;
-    font-size: 14px;
-    margin-right: 0.5em;
+@font-face {
+    font-family: "LatinModernRomanWOFF";
+    /*src: url('https://www.albany.edu/~hammond/webfonts/lmroman12-regular.woff');*/
+    src: url('../../fonts/lmroman12-regular.woff');
 }
 
-.vega-embed:hover a {
-    visibility: visible;
+/* for math fonts? */
+/*@font-face {*/
+    /*font-family: "LatinModernMathWOFF";*/
+    /*src: url('https://www.albany.edu/~hammond/webfonts/latinmodern-math.woff');*/
+    /*font-weight: bold;*/
+/*}*/
+
+
+body {
+  padding: 30px;
 }
 
-.vg-tooltip {
-    visibility: hidden;
-    padding: 6px;
-    border-radius: 3px;
-    position: fixed;
-    z-index: 2000;
-    font-family: sans-serif;
-    font-size: 11px;
-
-    /* The default look of the tooltip is the same as .light-theme
-  but it can be overwritten by .dark-theme */
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid #d9d9d9;
-    color: black;
-}
-.vg-tooltip td.key, .vg-tooltip td.value {
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.vg-tooltip td.key {
-    color: #808080;
-    max-width: 150px;
-    text-align: right;
-    padding-right: 1px;
-}
-.vg-tooltip td.value {
-    max-width: 200px;
-    text-align: left;
+div#app {
+  margin: 0;
+  padding: 0;
+  font-family: 'Open Sans', sans-serif;
 }
 
-/* Dark and light color themes */
-.vg-tooltip.dark-theme {
-    background-color: rgba(64, 64, 64, 0.9);
-    border: none;
-    color: white;
+h1, h2, h3, h4 {
+  font-family: "LatinModernRomanWOFF", serif;
+  /*font-family: 'Open Sans', sans-serif;*/
 }
-.vg-tooltip.dark-theme td.key {
-    color: #bfbfbf;
+
+.fancy {
+  font-family: "LatinModernRomanWOFF", serif;
 }
-.vg-tooltip.light-theme {
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid #d9d9d9;
-    color: black;
+.plain {
+  font-family: 'Open Sans', sans-serif;
 }
-.vg-tooltip.light-theme td.key {
-    color: #808080;
+
+h1 {
+  font-size: 40px;
+  margin-top: 40px;
+  margin-bottom: 20px;
 }
+
+h2, h3 {
+  margin-top: 35px;
+  margin-bottom: 13px;
+}
+
+h2 {font-size: 30px;}
+h3 {font-size: 23px;}
+h4 {font-size: 18px;}
+
+code {
+  font-size: 16px;
+  color: grey;
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+a {
+  color: darkblue;
+}
+
+
