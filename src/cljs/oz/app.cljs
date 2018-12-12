@@ -78,8 +78,11 @@
 
 
 (defn application [app-state]
-  (when-let [spec (:view-spec @app-state)]
-    [core/view-spec spec]))
+  (if-let [spec (:view-spec @app-state)]
+    [core/view-spec spec]
+    [:div
+      [:h1 "Waiting for first spec to load..."]
+      [:p "This may take a second the first time if you call a plot function, unless you first call " [:code '(oz/start-plot-server!)] "."]]))
 
 (r/render-component [application app-state]
                     (. js/document (getElementById "app")))
