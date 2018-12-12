@@ -41,6 +41,8 @@
            (fn [_ _ old new]
              (when (not= old new)
                (infof "Connected uids change: %s" new))))
+(defn connected-uids? []
+  @connected-uids)
 
 (defn unique-id
   "Get a unique id for a session."
@@ -94,6 +96,7 @@
           (sente/start-server-chsk-router! ch-chsk event-msg-handler)))
 
 (defonce web-server_ (atom nil))
+(defn web-server-started? [] @web-server_)
 (defn stop-web-server! [] (when-let [stop-fn @web-server_] (stop-fn)))
 (defn start-web-server! [& [port]]
   (stop-web-server!)
@@ -111,7 +114,6 @@
     (try
       (.browse (java.awt.Desktop/getDesktop) (java.net.URI. uri))
       (catch java.awt.HeadlessException _))
-
     (reset! web-server_ stop-fn)))
 
 (defn stop! []
@@ -130,3 +132,4 @@
   (if port
     (start! (Integer/parseInt port))
     (start!)))
+
