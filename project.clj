@@ -1,4 +1,4 @@
-(defproject metasoarous/oz "1.4.0-beta1-SNAPSHOT"
+(defproject metasoarous/oz "1.4.0-SNAPSHOT"
   :description "Great and powerful data visualizations in Clojure using Vega and Vega-lite"
   :url "http://github.com/metasoarous/oz"
   :license {:name "Eclipse Public License"

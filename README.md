@@ -64,6 +64,8 @@ Assuming you're starting from scratch, first add oz to your leiningen project de
 
 [![Clojars Project](https://img.shields.io/clojars/v/metasoarous/oz.svg)](https://clojars.org/metasoarous/oz)
 
+(This README currently covers the latest features in `[metasoarous/oz "1.4.0-beta1-SNAPSHOT"]`; Once I hear it's working for folks I'll take out of beta/snapshot)
+
 
 Next, require oz and start the plot server as follows:
 
