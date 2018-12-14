@@ -73,7 +73,10 @@
   (def contour-plot (json/parse-string (slurp (clojure.java.io/resource "contour-lines.vega.json")))) 
   (oz/v! contour-plot :mode :vega)
 
-  ;; Construct some 
+  ;; Note that to publish vega, you must set :mode
+  (oz/publish! contour-plot :mode :vega)
+
+  ;; Construct a composite document using hiccup
   (def viz
     [:div
       [:h1 "Look ye and behold"]
