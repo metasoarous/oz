@@ -74,9 +74,9 @@ Next, require oz and start the plot server as follows:
 
 (oz/start-plot-server!)
 ```
-
 This will fire up a browser window with a websocket connection for funneling view data back and forth.
 If you forget to call this function, it will be called for you when you create your first plot, but be aware
+
 that it will delay the first display, and it's possible you'll have to resend the plot on a slower
 computer.
 
@@ -211,7 +211,7 @@ Following the Vega editor url with take you here (click on image to follow):
 [![vega-editor](doc/export.small.png)](https://vega.github.io/editor/#/gist/vega-lite/metasoarous/87a5621b0dbec648b2b54f68b3354c3a/e1d471b5a5619a1f6f94e38b2673feff15056146/vega-viz.json)
 
 As mentioned above, we can also share our hiccup documents/dashboards.
-Since Vega Editor knows nothing about hiccup, we've created <ozviz.io> as a tool for loading these documents.
+Since Vega Editor knows nothing about hiccup, we've created [ozviz.io](https://ozviz.io) as a tool for loading these documents.
 
 ```
 user=> (oz/publish! viz)
