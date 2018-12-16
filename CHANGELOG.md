@@ -4,8 +4,10 @@
 
 ## 1.4.0
 
-* deprecate `publish-plot!` in favor of more general `publish!`, which sends to http://ozviz.io as appropriate
-* split reagent api from main app namespace
+* improved styling
+* fixed gist publishing by adding authorization
+* deprecate `publish-plot!` in favor of more general `publish!`, which loads via http://ozviz.io for hiccup forms
+* split reagent api from main app namespace to avoid bugs using oz as a reagent lib
 * update aleph to avoid java 9 issues
 * call start-plot-server! automatically on `v!` or `view!` if it hasn't been already
 * update js libs:
