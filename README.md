@@ -34,7 +34,7 @@ Oz itself provides:
 * a REPL API for for pushing vega and vega-lite data to a browser window over websockets
 * client side `vega` and `vega-lite` Reagent components
 * an API for composing vega & vega-lite together in the context of html as hiccup for document and dashboard generation
-* plot/document publishing/sharing features via GitHub gists, the IDL's live [vega editor](http://vega.github.io/editor), and <ozviz.io>.
+* plot/document publishing/sharing features via GitHub gists, the IDL's live [vega editor](http://vega.github.io/editor), and [ozviz.io](http://ozviz.io).
 
 It also has the following eventual goals:
 
