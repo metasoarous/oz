@@ -50,7 +50,7 @@ Some other things in the Vega/Vega-Lite ecosystem you may want to look at
 * [Vega Editor](https://vega.github.io/editor) - Wonderful editing tool (as mentioned above) for editing and sharing Vega/Vega-Lite data visualizations.
 * [Ozviz](http://ozviz.io) - Sister project to Oz: A Vega Editor like tool for sharing (and soon editing) hiccup with embedded Vega/Vega-Lite visualizations, as used with the `view!` function.
 * [Voyager](https://github.com/vega/voyager) - Also from the IDL, Voyager is a wonderful Tableau like (drag and drop) tool for exploring data and constructing exportable Vega/Vega-Lite visualizations.
-* [Vega Examples](https://vega.github.io/examples) - A robust showcase of visualizations from which to draw inspiration and code.
+* [Vega Examples](https://vega.github.io/vega/examples) & [Vega-Lite Examples](https://vega.github.io/vega-lite/examples/) - A robust showcase of visualizations from which to draw inspiration and code.
 * [Vega home](https://vega.github.io/) - More great stuff from the IDL folks.
 * [Hanami](https://github.com/jsa-aerial/hanami) - Cool library from [Jon Anthony](https://github.com/jsa-aerial) with high level constructors for Vega/Vega-Lite data
 
