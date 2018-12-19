@@ -2,6 +2,10 @@
 # CHANGELOG
 
 
+## 1.4.1
+
+* fix bad default home path for osx github cred file
+
 ## 1.4.0
 
 * improved styling
