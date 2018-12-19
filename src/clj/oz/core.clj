@@ -94,7 +94,7 @@
 (defn- auth-args
   [args]
   (let [the-auth-args (submap args #{:auth :auth-token :client-id :access-token})
-        auth-file (or (:auth-file args) (str "/home/" (System/getProperty "user.name") "/.oz/github-creds.edn"))]
+        auth-file (or (:auth-file args) (str (System/getProperty "user.home") "/.oz/github-creds.edn"))]
     (if (empty? the-auth-args)
       (try
         (edn/read-string (slurp auth-file))
