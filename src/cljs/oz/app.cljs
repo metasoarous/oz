@@ -1,4 +1,4 @@
-(ns ^:figwheel-always oz.app
+(ns ^:no-doc ^:figwheel-always oz.app
   (:require [reagent.core :as r]
             [cljs.core.async :as async  :refer (<! >! put! chan)]
             [taoensso.encore :as encore :refer-macros (have have?)]

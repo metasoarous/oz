@@ -1,4 +1,4 @@
-(ns oz.server
+(ns ^:no-doc oz.server
   (:require
    [clojure.string :as str]
    [ring.middleware.defaults]
