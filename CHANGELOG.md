@@ -2,6 +2,12 @@
 # CHANGELOG
 
 
+## 1.5.0 (alpha)
+
+* add preliminary `oz.core/export!` functionality (live vega output in html file)
+* experimentatal clojupyter integration for notebook users
+
+
 ## 1.4.1
 
 * fix bad default home path for osx github cred file
