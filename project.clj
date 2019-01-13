@@ -26,6 +26,7 @@
                  [cljsjs/vega-lite "3.0.0-rc10-0"]
                  [cljsjs/vega-embed "3.26.0-0"]
                  [cljsjs/vega-tooltip "0.14.0-0"]
+                 [markdown-to-hiccup "0.6.0"]
                  [irresponsible/tentacles "0.6.3"]]
   :plugins [[lein-cljsbuild "1.1.6"]]
   :source-paths ["src/clj" "src/cljs"]

@@ -1,13 +1,16 @@
 (ns oz.core
+  (:refer-clojure :exclude [read])
   (:require [oz.server :as server]
             [clj-http.client :as client]
             [aleph.http :as aleph]
             [clojure.string :as string]
+            [clojure.set :as set]
             [clojure.edn :as edn]
             [clojure.pprint :as pp]
             [cheshire.core :as json]
+            [markdown-to-hiccup.core :as markdown]
             [hiccup.core :as hiccup]
-            [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]
+            [taoensso.timbre :as log :refer (tracef debugf infof warnf errorf)]
             [tentacles.gists :as gists]))
 
 
@@ -267,7 +270,54 @@
   (spit filepath (html spec opts)))
 
 
+(defn- process-block
+  [block]
+  (if (vector? block)
+    (let [[block-type & contents :as block] block]
+      (if (= :pre block-type)
+        (let [[_ {:keys [class] :or {class ""}} src] (->> contents (remove map?) first)
+              classes (->> (string/split class #" ") (map keyword) set)]
+          (if-not (empty? (set/intersection classes #{:vega :vega-lite :oz :edn-vega :edn-vega-lite :edn-oz :json-vega-lite :json-vega :json-oz}))
+            (let [viz-type (cond
+                             (set/intersection classes #{:vega :edn-vega :json-vega}) :vega
+                             (set/intersection classes #{:vega-lite :edn-vega-lite :json-vega-lite}) :vega-lite
+                             (set/intersection classes #{:oz :edn-oz :json-oz}) :oz)
+                  src-type (cond
+                             (set/intersection classes #{:edn :edn-vega :edn-vega-lite :edn-oz}) :edn
+                             (set/intersection classes #{:json :json-vega :json-vega-lite :json-oz}) :json)
+                  data (case src-type
+                         :edn (edn/read-string src)
+                         :json (json/parse-string src))]
+              (case viz-type
+                :oz data
+                (:vega :vega-lite) [viz-type data]))
+            block))
+        block))
+    block))
+    
 
+(defn from-markdown
+  "Process markdown string into a hiccup document"
+  [md-string]
+  (try
+    (let [hiccup (-> md-string markdown/md->hiccup (markdown/hiccup-in :html :body) rest)]
+      (clojure.pprint/pprint hiccup)
+      (->> hiccup (map process-block) (into [:div])))
+    (catch Exception e
+      (log/error "Unable to process markdown")
+      (.printStackTrace e))))
+
+(defn read
+  "Reads file and processes according to file type"
+  [filename]
+  (from-markdown (slurp filename)))
+
+
+;(do
+(comment
+  (export!
+    (read "examples/test.md")
+    "test.html"))
 
 ;(do
 (comment
