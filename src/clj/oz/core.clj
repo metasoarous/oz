@@ -223,46 +223,56 @@
        [:div {:id id}]
        [:script {:type "text/javascript"} code]])))
 
-(defn- ^:no-doc embed
+(defn ^:no-doc embed
   "Embed the spec as a live html page; Currently private, may be made public in future, and name may change."
-  [spec]
-  ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
-  ;; rendering using the components above. Leave regular hiccup unchanged).
-  ;; TODO finish writing; already hooked in below so will break now
-  (if (map? spec)
-    (embed [:vega-lite spec])
-    [:html
-     [:head
-      [:meta {:charset "UTF-8"}]
-      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-      [:link {:rel "shortcut icon" :href "https://raw.githubusercontent.com/metasoarous/oz/master/resources/public/oz.svg?sanitize=true" :type "image/x-icon"}]
-      [:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
-      [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
-      [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
-      [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@4.4.0"}]
-      [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.0-rc11"}]
-      [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-embed@3.28.0"}]]
-     [:body
-      (clojure.walk/prewalk
-        (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
-                  (live-embed x)
-                  x))
-        spec)
-      [:div#vis-tooltip {:class "vg-tooltip"}]]]))
+  ([spec opts]
+   ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
+   ;; rendering using the components above. Leave regular hiccup unchanged).
+   ;; TODO finish writing; already hooked in below so will break now
+   (clojure.walk/prewalk
+     (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
+               (live-embed x)
+               x))
+     spec))
+  ([spec]
+   (embed spec {})))
+
+
+(defn html
+  ([spec opts]
+   (if (map? spec)
+     (html [:vega-lite spec])
+     (hiccup/html 
+       [:html
+        [:head
+         [:meta {:charset "UTF-8"}]
+         [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+         [:link {:rel "shortcut icon" :href "https://raw.githubusercontent.com/metasoarous/oz/master/resources/public/oz.svg?sanitize=true" :type "image/x-icon"}]
+         [:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
+         [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
+         [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
+         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@4.4.0"}]
+         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.0-rc11"}]
+         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-embed@3.28.0"}]]
+        [:body
+         (embed spec opts)
+         [:div#vis-tooltip {:class "vg-tooltip"}]]])))
+  ([spec]
+   (html spec {})))
+   
 
 (defn export!
   "In alpha; Export spec to an html file. May have other options, including svg, jpg & pdf available"
   [spec filepath & {:as opts :keys []}]
-  (spit filepath
-        (hiccup/html (embed-vega spec))))
+  (spit filepath (html spec opts)))
 
 
-;(do
-(comment
+(do
+;(comment
   (export!
     [:div
      [:h1 "Greetings, Earthling"]
-     [:p "Take us to the King of Kings."]
+     [:p "Take us to the King of Kings. Thy kale chips set us free."]
      [:h2 "Look, and behold"]
      [:vega-lite {:data {:values [{:a 2 :b 3} {:a 5 :b 2} {:a 7 :b 4}]}
                   :mark :point
