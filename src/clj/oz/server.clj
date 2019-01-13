@@ -111,10 +111,14 @@
            (fn [] (.close ^java.io.Closeable server) (deliver p nil))])
         uri (format "http://localhost:%s/" port)]
     (infof "Web server is running at `%s`" uri)
+    (reset! web-server_ stop-fn)
+    ; (clojure.java.browse/browse-url uri)
     (try
-      (.browse (java.awt.Desktop/getDesktop) (java.net.URI. uri))
-      (catch java.awt.HeadlessException _))
-    (reset! web-server_ stop-fn)))
+      (if (and (java.awt.Desktop/isDesktopSupported)
+               (.isSupported (java.awt.Desktop/getDesktop) java.awt.Desktop$Action/BROWSE))
+        (.browse (java.awt.Desktop/getDesktop) (java.net.URI. uri))
+        (.exec (java.lang.Runtime/getRuntime) (str "xdg-open " uri)))
+      (catch java.awt.HeadlessException _))))
 
 (defn stop! []
   (stop-router!)
