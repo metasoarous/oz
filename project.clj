@@ -1,25 +1,27 @@
-(defproject metasoarous/oz "1.4.1"
+(defproject metasoarous/oz "1.5.0-SNAPSHOT"
   :description "Great and powerful data visualizations in Clojure using Vega and Vega-lite"
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
   :url "http://github.com/metasoarous/oz"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.clojure/clojurescript "1.10.64" :scope "provided"]
-                 [org.clojure/core.async "0.4.474"]
-                 [cheshire "5.8.0"]
-                 [clj-http "3.7.0"]
-                 [com.taoensso/sente "1.12.0"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
+                 [org.clojure/clojurescript "1.10.439" :scope "provided"]
+                 [org.clojure/core.async "0.4.490"]
+                 [cheshire "5.8.1"]
+                 [clj-http "3.9.1"]
+                 [com.taoensso/sente "1.13.1"]
+                 [com.clojure-goes-fast/lazy-require "0.1.1"]
                  [aleph "0.4.6"]
-                 [ring "1.6.3"]
-                 [ring/ring-defaults "0.3.1"]
-                 [bk/ring-gzip "0.2.1"]
+                 [ring "1.7.1"]
+                 [ring/ring-defaults "0.3.2"]
+                 [bk/ring-gzip "0.3.0"]
                  [ring-cljsjs "0.1.0"]
-                 [compojure "1.6.0"]
-                 [com.cognitect/transit-clj  "0.8.300"]
-                 [com.cognitect/transit-cljs "0.8.243"]
-                 [reagent "0.7.0"]
+                 [compojure "1.6.1"]
+                 [hiccup "1.0.5"]
+                 [com.cognitect/transit-clj  "0.8.313"]
+                 [com.cognitect/transit-cljs "0.8.256"]
+                 [reagent "0.8.1"]
                  [cljsjs/vega "4.4.0-0"]
                  [cljsjs/vega-lite "3.0.0-rc10-0"]
                  [cljsjs/vega-embed "3.26.0-0"]
@@ -79,12 +81,12 @@
              ;; :server-logfile "tmp/logs/figwheel-logfile.log"
              
   :profiles {:dev
-             {:dependencies [[binaryage/devtools "0.9.9"]
-                             [figwheel-sidecar "0.5.15"]
+             {:dependencies [[binaryage/devtools "0.9.10"]
+                             [figwheel-sidecar "0.5.18"]
                              [com.cemerick/piggieback "0.2.2"]]
               :plugins [[lein-figwheel "0.5.11"]]
-              :source-paths ["dev"]
-              :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
+              :source-paths ["dev"]}
+              ;:repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
              :uberjar
              {:source-paths ^:replace ["src/clj"]
               :omit-source true
