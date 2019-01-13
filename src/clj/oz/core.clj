@@ -6,6 +6,7 @@
             [clojure.edn :as edn]
             [clojure.pprint :as pp]
             [cheshire.core :as json]
+            [hiccup.core :as hiccup]
             [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]
             [tentacles.gists :as gists]))
 
@@ -75,7 +76,7 @@
       (errorf "error sending plot to server: %s" (ex-data e)))))
 
 
-(defn v!
+(defn ^:no-doc v!
   "Take a vega or vega-lite clojure map `spec` and POST it to an oz
   server running at `:host` and `:port` to be rendered."
   [spec & {:as opts
@@ -201,5 +202,74 @@
   (warnf "WARNING!!! DEPRECATED!!! Please call `publish!` instead.")
   (let [spec (merge-opts plot opts)]
     (publish! spec opts)))
+
+
+;; WIP code for building static SVG
+;(defn- browse-headless [url]
+  ;(let [settings (-> (com.machinepublishers.jbrowserdriver.Settings/builder)
+                     ;(.headScript nil)
+                     ;.build)]
+    ;(doto (com.machinepublishers.jbrowserdriver.JBrowserDriver. settings)
+      ;.init)
+    ;(.get url)))
+
+
+(defn- ^:no-doc live-embed
+  "Embed a specific visualization; Currently private, may be public in future, and name may change."
+  ([[mode spec]]
+   (let [id (str "viz-" (java.util.UUID/randomUUID))
+         code (format "vegaEmbed('#%s', %s, %s);" id (json/generate-string spec) (json/generate-string {:mode mode}))]
+     [:div
+       [:div {:id id}]
+       [:script {:type "text/javascript"} code]])))
+
+(defn- ^:no-doc embed
+  "Embed the spec as a live html page; Currently private, may be made public in future, and name may change."
+  [spec]
+  ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
+  ;; rendering using the components above. Leave regular hiccup unchanged).
+  ;; TODO finish writing; already hooked in below so will break now
+  (if (map? spec)
+    (embed [:vega-lite spec])
+    [:html
+     [:head
+      [:meta {:charset "UTF-8"}]
+      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+      [:link {:rel "shortcut icon" :href "https://raw.githubusercontent.com/metasoarous/oz/master/resources/public/oz.svg?sanitize=true" :type "image/x-icon"}]
+      [:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
+      [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
+      [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
+      [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@4.4.0"}]
+      [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.0-rc11"}]
+      [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-embed@3.28.0"}]]
+     [:body
+      (clojure.walk/prewalk
+        (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
+                  (live-embed x)
+                  x))
+        spec)
+      [:div#vis-tooltip {:class "vg-tooltip"}]]]))
+
+(defn export!
+  "In alpha; Export spec to an html file. May have other options, including svg, jpg & pdf available"
+  [spec filepath & {:as opts :keys []}]
+  (spit filepath
+        (hiccup/html (embed-vega spec))))
+
+
+;(do
+(comment
+  (export!
+    [:div
+     [:h1 "Greetings, Earthling"]
+     [:p "Take us to the King of Kings."]
+     [:h2 "Look, and behold"]
+     [:vega-lite {:data {:values [{:a 2 :b 3} {:a 5 :b 2} {:a 7 :b 4}]}
+                  :mark :point
+                  :width 400
+                  :encoding {:x {:field "a"}
+                             :y {:field "b"}}}]]
+    ;; Should be using options for mode vega/vega-lite TODO
+    "test.html"))
 
 
