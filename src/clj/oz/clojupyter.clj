@@ -9,7 +9,7 @@
 ;(defonce -setup?
   ;(setup!))
 
-(defn prep-spec
+(defn- prep-spec
   ([spec mode]
    (clojure.walk/prewalk
      (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
@@ -30,6 +30,7 @@
           code (format "vegaEmbed('#%s', %s, {'mode': 'vega-lite'});" id, (json/write-str vega-json))]
         (helper/add-javascript "https://cdn.jsdelivr.net/npm/vega-embed@3")
         (display/hiccup-html 
+          ;; This should be using the embed login from core
           [:div [:div {:id id}
                      [:script spec]]]))))
 
