@@ -1,13 +1,8 @@
 (ns oz.notebook.clojupyter
-  "Experimental support for rendering vega in clojupyter"
+  "Experimental support for rendering vega in Jupyter with Clojupyter"
   (:require
     [oz.core :as oz]
     [lazy-require.core :as lreq]))
-
-
-;; Something fancy that remembers if its been setup? Probablematic just to always run?
-;(defonce -setup?
-  ;(setup!))
 
 
 (defn view! [spec]
@@ -21,5 +16,6 @@
         ;; This should be using the embed login from core
         (oz/embed spec)))))
 
+;; Do we want this alias?
 ;(defn v! [spec & {:keys [d]}])
   
