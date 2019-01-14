@@ -227,7 +227,8 @@
        [:script {:type "text/javascript"} code]])))
 
 (defn ^:no-doc embed
-  "Embed the spec as a live html page; Currently private, may be made public in future, and name may change."
+  "Take hiccup or vega/lite spec and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
+  When rendered, should present as live html page; Currently private, may be made public in future, and name may change."
   ([spec opts]
    ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
    ;; rendering using the components above. Leave regular hiccup unchanged).
