@@ -1,9 +1,8 @@
-(ns oz.clojupyter
+(ns oz.notebook.clojupyter
   "Experimental support for rendering vega in clojupyter"
   (:require
     [oz.core :as oz]
-    [lazy-require.core :as lreq]
-    [clojure.data.json :as json]))
+    [lazy-require.core :as lreq]))
 
 
 ;; Something fancy that remembers if its been setup? Probablematic just to always run?
