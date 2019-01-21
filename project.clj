@@ -5,6 +5,8 @@
   :url "http://github.com/metasoarous/oz"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
+  ;; trying to get es6 to work for running vega/vega-lite
+  :jvm-opts ["-Dnashorn.args=--language=es6"]
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/clojurescript "1.10.439" :scope "provided"]
                  [org.clojure/core.async "0.4.490"]
@@ -26,7 +28,10 @@
                  [cljsjs/vega-lite "3.0.0-rc10-0"]
                  [cljsjs/vega-embed "3.26.0-0"]
                  [cljsjs/vega-tooltip "0.14.0-0"]
-                 [markdown-to-hiccup "0.6.0"]
+                 [markdown-to-hiccup "0.6.1"]
+                 [org.clojars.didiercrunch/clojupyter "0.1.5"]
+                 [io.forward/yaml "1.0.9"]
+                 [commonmark-hiccup "0.1.0"]
                  [irresponsible/tentacles "0.6.3"]]
   :plugins [[lein-cljsbuild "1.1.6"]]
   :source-paths ["src/clj" "src/cljs"]

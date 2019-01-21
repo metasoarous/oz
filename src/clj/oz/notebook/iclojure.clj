@@ -1,5 +1,5 @@
 (ns oz.notebook.iclojure
-  "Experimental support for rendering vega in clojupyter"
+  "Experimental support for rendering vega in Jupyter with IClojure"
   (:require
     [oz.core :as oz]
     [lazy-require.core :as lreq]

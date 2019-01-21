@@ -228,14 +228,14 @@
 
 (defn ^:no-doc embed
   "Take hiccup or vega/lite spec and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
-  When rendered, should present as live html page; Currently private, may be made public in future, and name may change."
-  ([spec opts]
+  When rendered, should present as live html page; Currently semi-private, may be made fully public in future."
+  ([spec {:as opts :keys [embed-fn] :or {embed-fn live-embed}}]
    ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
    ;; rendering using the components above. Leave regular hiccup unchanged).
    ;; TODO finish writing; already hooked in below so will break now
    (clojure.walk/prewalk
      (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
-               (live-embed x)
+               (embed-fn x)
                x))
      spec))
   ([spec]
