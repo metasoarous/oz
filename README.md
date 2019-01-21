@@ -314,8 +314,13 @@ See the `view!` method in the namespaces `oz.notebook.clojupyter` and `oz.notebo
 
 ### Requiring in IClojure
 
-TODO I'm actually not quite sure how the dependencies work for IClojure, but would greatly appreciate a PR with some details on how to get going if anyone cares to submit.
+```clojure
+/cp {:deps {metasoarous/oz {:mvn/version "x.x.x"}}}
+(require '[oz.notebook.iclojure :as oz])
 
+;; Create spec, then
+(oz/view! edn-spec)
+```
 
 ## Local development
 
