@@ -1,14 +1,12 @@
 
 # The beauty of oz markdown
 
-Imagine writing a lovely little markdown file, when suddenly, you need a data visualization.
+Imagine you're writing a lovely little markdown file, when suddenly, you need a data visualization.
 
 With oz, this magical code
 
-    Turns into this
-
-    ```edn-vega-lite
-    {:data {:values [{:a 2 :b 3 :c "green"} {:a 5 :b 2 :c "green"} {:a 7 :b 4 :c "purple"}]}
+    ```edn vega-lite
+    {:data {:values [{:a 2.1 :b 3.4 :c "Z"} {:a 5.2 :b 2.3 :c "Z"} {:a 7.4 :b 4.8 :c "Q"} {:a 3.2 :b 3.1 :c "Q"}]}
      :mark :point
      :width 400
      :encoding {:x {:field "a"}
@@ -18,8 +16,8 @@ With oz, this magical code
 
 Turns into this
 
-```edn-vega-lite
-{:data {:values [{:a 2 :b 3 :c "green"} {:a 5 :b 2 :c "green"} {:a 7 :b 4 :c "purple"} {:a 3 :b 3 :c "purple"}]}
+```edn vega-lite
+{:data {:values [{:a 2.1 :b 3.4 :c "Z"} {:a 5.2 :b 2.3 :c "Z"} {:a 7.4 :b 4.8 :c "Q"} {:a 3.2 :b 3.1 :c "Q"}]}
  :mark :point
  :width 400
  :encoding {:x {:field "a"}
@@ -27,12 +25,10 @@ Turns into this
             :color {:field "c"}}}
 ```
 
-Will eventually make this look like this for better editor and md viewer formatting:
+The real magic here is in the code class specification `edn vega-lite`.
+It's possible to replace `edn` with `json`, and `vega` with `vega-lite` as appropriate.
+Additionally, these classes can be hyphenated for compatibility with editors/parsers that have problems with multiple class specifications (e.g. `edn-vega-lite`)
 
-    ```edn vega-lite
-    {:data {:values [{:a 2 :b 3 :c "green"} {:a 5 :b 2 :c "green"} {:a 7 :b 4 :c "purple"}]}
-     ,,,}
-    ```
-
-    
+Note that embedding all of your data into a vega/vega-lite spec directly as `:values` may be untenable for larger data sets.
+In these cases, the recommended solution is to post your data to a GitHub gist, or elsewhere online where you can refer to it using the `:url` syntax (e.g. `{:data {:url "https://your.data.url/path"} ...}`).
 
