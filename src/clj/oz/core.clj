@@ -268,20 +268,20 @@
       (if (= :pre block-type)
         (let [[_ {:keys [class] :or {class ""}} src] (->> contents (remove map?) first)
               classes (->> (string/split class #" ") (map keyword) set)]
-          (if-not (empty? (set/intersection classes #{:vega :vega-lite :oz :edn-vega :edn-vega-lite :edn-oz :json-vega-lite :json-vega :json-oz :yaml-vega :yaml-vega-lite}))
+          (if-not (empty? (set/intersection classes #{:vega :vega-lite :hiccup :edn-vega :edn-vega-lite :edn-hiccup :json-vega-lite :json-vega :json-hiccup :yaml-vega :yaml-vega-lite}))
             (let [viz-type (cond
                              (set/intersection classes #{:vega :edn-vega :json-vega}) :vega
                              (set/intersection classes #{:vega-lite :edn-vega-lite :json-vega-lite}) :vega-lite
-                             (set/intersection classes #{:oz :edn-oz :json-oz}) :oz)
+                             (set/intersection classes #{:hiccup :edn-hiccup :json-hiccup}) :hiccup)
                   src-type (cond
-                             (set/intersection classes #{:edn :edn-vega :edn-vega-lite :edn-oz}) :edn
-                             (set/intersection classes #{:json :json-vega :json-vega-lite :json-oz}) :json)
+                             (set/intersection classes #{:edn :edn-vega :edn-vega-lite :edn-hiccup}) :edn
+                             (set/intersection classes #{:json :json-vega :json-vega-lite :json-hiccup}) :json)
                   data (case src-type
                          :edn (edn/read-string src)
                          :json (json/parse-string src keyword)
                          :yaml (yaml/parse-string src))]
               (case viz-type
-                :oz data
+                :hiccup data
                 (:vega :vega-lite) [viz-type data]))
             block))
         block))

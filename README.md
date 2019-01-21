@@ -292,7 +292,7 @@ Additionally, these classes can be hyphenated for compatibility with editors/par
 Note that embedding all of your data into a vega/vega-lite spec directly as `:values` may be untenable for larger data sets.
 In these cases, the recommended solution is to post your data to a GitHub gist, or elsewhere online where you can refer to it using the `:url` syntax (e.g. `{:data {:url "https://your.data.url/path"} ...}`).
 
-One final note: in lieue of `vega` or `vega-lite` you can specify `oz` in order to embed oz-style hiccup forms which may or may not contain `[:vega ...]` or `[:vega-lite ...]` blocks.
+One final note: in lieue of `vega` or `vega-lite` you can specify `hiccup` in order to embed oz-style hiccup forms which may or may not contain `[:vega ...]` or `[:vega-lite ...]` blocks.
 This allows you to embed nontrivial html in your markdown files as hiccup, when basic markdown just doesn't cut it, without having to resort to manually writing html.
 
 
