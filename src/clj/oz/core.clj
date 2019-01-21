@@ -1,5 +1,5 @@
 (ns oz.core
-  (:refer-clojure :exclude [read])
+  (:refer-clojure :exclude [load])
   (:require [oz.server :as server]
             [clj-http.client :as client]
             [aleph.http :as aleph]
@@ -8,6 +8,7 @@
             [clojure.edn :as edn]
             [clojure.pprint :as pp]
             [cheshire.core :as json]
+            [yaml.core :as yaml]
             [markdown-to-hiccup.core :as markdown]
             [hiccup.core :as hiccup]
             [taoensso.timbre :as log :refer (tracef debugf infof warnf errorf)]
@@ -271,14 +272,14 @@
   (spit filepath (html spec opts)))
 
 
-(defn- process-block
+(defn- process-md-block
   [block]
   (if (vector? block)
     (let [[block-type & contents :as block] block]
       (if (= :pre block-type)
         (let [[_ {:keys [class] :or {class ""}} src] (->> contents (remove map?) first)
               classes (->> (string/split class #" ") (map keyword) set)]
-          (if-not (empty? (set/intersection classes #{:vega :vega-lite :oz :edn-vega :edn-vega-lite :edn-oz :json-vega-lite :json-vega :json-oz}))
+          (if-not (empty? (set/intersection classes #{:vega :vega-lite :oz :edn-vega :edn-vega-lite :edn-oz :json-vega-lite :json-vega :json-oz :yaml-vega :yaml-vega-lite}))
             (let [viz-type (cond
                              (set/intersection classes #{:vega :edn-vega :json-vega}) :vega
                              (set/intersection classes #{:vega-lite :edn-vega-lite :json-vega-lite}) :vega-lite
@@ -288,7 +289,8 @@
                              (set/intersection classes #{:json :json-vega :json-vega-lite :json-oz}) :json)
                   data (case src-type
                          :edn (edn/read-string src)
-                         :json (json/parse-string src))]
+                         :json (json/parse-string src keyword)
+                         :yaml (yaml/parse-string src))]
               (case viz-type
                 :oz data
                 (:vega :vega-lite) [viz-type data]))
@@ -302,16 +304,22 @@
   [md-string]
   (try
     (let [hiccup (-> md-string markdown/md->hiccup (markdown/hiccup-in :html :body) rest)]
-      (clojure.pprint/pprint hiccup)
-      (->> hiccup (map process-block) (into [:div])))
+      (->> hiccup (map process-md-block) (into [:div])))
     (catch Exception e
       (log/error "Unable to process markdown")
       (.printStackTrace e))))
 
-(defn read
+
+(defn load
   "Reads file and processes according to file type"
-  [filename]
-  (from-markdown (slurp filename)))
+  [filename & {:as opts :keys [format]}]
+  (let [contents (slurp filename)]
+    (case (or (name format)
+              (last (string/split filename #"\.")))
+      "md" (from-markdown contents)
+      "edn" (edn/read-string contents)
+      "json" (json/parse-string contents keyword)
+      "yaml" (yaml/parse-string contents))))
 
 
 ;(do
