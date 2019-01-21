@@ -7,52 +7,49 @@ Great and powerful data vizualizationz
 
 ## Overview
 
-Oz is a library for data-driven, REPL-based data visualization in the browser, using vega and vega-lite.
+Oz is a simple data visualization library for Clojure built around Vega & Vega-Lite.
 
-Oz itself is almost no code.
-The real magic is in vega & vega-lite.
-
-If you don't already know about vega/vega-lite, it's worth taking a few minutes to orient yourself with [this mindblowing talk/demo](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators at the Interactive Data Lab (IDL) at University of Washington.
-
-[![Vega & Vega-Lite talk from IDL](https://i.imgur.com/YPzAfcXl.png)](https://www.youtube.com/watch?v=9uaHRWj04D4)
-
-The long story short is that vega and vega-lite are declarative grammars for describing data visualizations.
+Vega and Vega-lite are declarative grammars for describing interactive data visualizations.
 Of note, they are based on the Grammar of Graphics, which served as the guiding light for the popular R `ggplot2` viz library.
-In this setting, we define visualizations by specifying at a high level how attributes of our data map to aesthetics properties of visualization.
-Vega-lite in particular aims to be a less verbose and more automated flavor of vega, with features focused on maximal leverage for day to day usage.
-
-Watched the IDL talk and hungry for more content?
-Here's another which focuses on the philosophical ideas behind Vega & Vega-Lite, how they relate to Clojure, and how you can use the tools from Clojure using Oz.
-
-[![Seajure Clojure + Vega/Vega-Lite talk](https://i.imgur.com/SmIPUQtl.png)](https://www.youtube.com/watch?v=hXq5Bb40zZY&t=815s)
+With Vega & Vega-Lite, we define visualizations by declaratively specifying how attributes of our data map to aesthetics properties of a visualization.
+Vega-Lite in particular focuses on maximal productivity and leverage for day to day usage (and is the place to start), while Vega (to which Vega-Lite compiles) is ideal for more nuanced control.
 
 
 ### About oz specifically...
 
 Oz itself provides:
 
-* a REPL API for for pushing vega and vega-lite data to a browser window over websockets
+* a REPL API for for pushing vega and vega-lite data to a browser window over a websocket (see `v!` and `view!`)
 * client side `vega` and `vega-lite` Reagent components
 * an API for composing vega & vega-lite together in the context of html as hiccup for document and dashboard generation
 * plot/document publishing/sharing features via GitHub gists, the IDL's live [vega editor](http://vega.github.io/editor), and [ozviz.io](http://ozviz.io).
+* load markdown, hiccup or Vega/Vega-Lite files from disk via the `load` function
+* write out self-contained html files with live/interactive visualizations embedded, via the `export!` function
+* embed visualizations in Jupyter notebooks via the Clojupyter & IClojure kernels
 
-It also has the following eventual goals:
 
-* use as a static build tool for publishing scientific documents
-* provide an API for combining vega and vega-lite into a single plot (vega for detailed control, vega-lite for the simple bits)
-* higher level viz constructors, as they accrete and become useful
+### Learning Vega & Vega-Lite
+
+Because Oz is but a wrapper, really understanding how to use it requires understanding the core Vega & Vega-Lite.
+If you're new to the scene, it's worth taking a few minutes to orient yourself with [this mindblowing talk/demo](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators at the Interactive Data Lab (IDL) at University of Washington.
+
+[![Vega & Vega-Lite talk from IDL](https://i.imgur.com/YPzAfcXm.png)](https://www.youtube.com/watch?v=9uaHRWj04D4)
+
+Watched the IDL talk and hungry for more content?
+Here's another which focuses on the philosophical ideas behind Vega & Vega-Lite, how they relate to Clojure, and how you can use the tools from Clojure using Oz.
+
+[![Seajure Clojure + Vega/Vega-Lite talk](https://i.imgur.com/SmIPUQtm.png)](https://www.youtube.com/watch?v=hXq5Bb40zZY)
 
 
 ### Ecosystem
 
-Some other things in the Vega/Vega-Lite ecosystem you may want to look at
+Some other things in the Vega/Vega-Lite ecosystem you may want to look at for getting started or learning more
 
 * [Vega Editor](https://vega.github.io/editor) - Wonderful editing tool (as mentioned above) for editing and sharing Vega/Vega-Lite data visualizations.
 * [Ozviz](http://ozviz.io) - Sister project to Oz: A Vega Editor like tool for sharing (and soon editing) hiccup with embedded Vega/Vega-Lite visualizations, as used with the `view!` function.
 * [Voyager](https://github.com/vega/voyager) - Also from the IDL, Voyager is a wonderful Tableau like (drag and drop) tool for exploring data and constructing exportable Vega/Vega-Lite visualizations.
 * [Vega Examples](https://vega.github.io/vega/examples) & [Vega-Lite Examples](https://vega.github.io/vega-lite/examples/) - A robust showcase of visualizations from which to draw inspiration and code.
 * [Vega home](https://vega.github.io/) - More great stuff from the IDL folks.
-* [Hanami](https://github.com/jsa-aerial/hanami) - Cool library from [Jon Anthony](https://github.com/jsa-aerial) with high level constructors for Vega/Vega-Lite data
 
 
 ## REPL Usage
@@ -143,7 +140,7 @@ For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/v!`:
 
 (require '[cheshire.core :as json])
 
-(def contour-plot (json/parse-string (slurp (clojure.java.io/resource "contour-lines.vega.json")))) 
+(def contour-plot (oz/load "contour-lines.vega.json"))
 (oz/v! contour-plot :mode :vega)
 ```
 
@@ -262,6 +259,58 @@ At present, these components do not take a second argument.
 The merging of spec maps described above applies prior to application of this reagent component.
 
 Eventually we'll be adding options for hooking into the signal dataflow graphs within these visualizations so that interactions in a Vega/Vega-Lite visualization can be used to inform other Reagent components in your app.
+
+
+## Loading documents & markdown support
+
+Oz now features a `load` function which accepts the following formats:
+
+* `edn`, `json`, `yaml`: directly parse into hiccup or Vega/Vega-Lite representations
+* `md`: loads a markdown file, with a notation for specifying Vega/Vega-Lite in code blocks tagged with the `vega`, `vega-lite` or `oz` class
+
+As example of the markdown syntax:
+
+    # An example markdown file
+
+    ```edn vega-lite
+    {:data {:url "data/cars.json"}
+     :mark "point"
+     :encoding {
+       :x {:field "Horsepower", :type "quantitative"}
+       :y {:field "Miles_per_Gallon", :type "quantitative"}
+       :color {:field "Origin", :type "nominal"}}}
+    ```
+
+The real magic here is in the code class specification `edn vega-lite`.
+It's possible to replace `edn` with `json` or `yaml`, and `vega` with `vega-lite` as appropriate.
+Additionally, these classes can be hyphenated for compatibility with editors/parsers that have problems with multiple class specifications (e.g. `edn-vega-lite`)
+
+Note that embedding all of your data into a vega/vega-lite spec directly as `:values` may be untenable for larger data sets.
+In these cases, the recommended solution is to post your data to a GitHub gist, or elsewhere online where you can refer to it using the `:url` syntax (e.g. `{:data {:url "https://your.data.url/path"} ...}`).
+
+One final note: in lieue of `vega` or `vega-lite` you can specify `oz` in order to embed oz-style hiccup forms which may or may not contain `[:vega ...]` or `[:vega-lite ...]` blocks.
+This allows you to embed nontrivial html in your markdown files as hiccup, when basic markdown just doesn't cut it, without having to resort to manually writing html.
+
+
+## Jupyter support
+
+Oz now also features Jupyter support for both the Clojupyter and IClojure kernels.
+See the `view!` method in the namespaces `oz.notebook.clojupyter` and `oz.notebook.iclojure` for usage.
+
+### Requiring in Clojupyter
+
+```clojure
+(require '[clojupyter.misc.helper :as helper])
+(helper/add-dependencies '[metasoarous/oz "x.x.x"])
+(require '[oz.notebook.clojupyter :as oz])
+
+;; Create spec, then
+(oz/view! spec)
+```
+
+### Requiring in IClojure
+
+TODO I'm actually not quite sure how the dependencies work for IClojure, but would greatly appreciate a PR with some details on how to get going if anyone cares to submit.
 
 
 ## Local development
