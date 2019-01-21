@@ -207,17 +207,6 @@
   (let [spec (merge-opts plot opts)]
     (publish! spec opts)))
 
-
-;; WIP code for building static SVG
-;(defn- browse-headless [url]
-  ;(let [settings (-> (com.machinepublishers.jbrowserdriver.Settings/builder)
-                     ;(.headScript nil)
-                     ;.build)]
-    ;(doto (com.machinepublishers.jbrowserdriver.JBrowserDriver. settings)
-      ;.init)
-    ;(.get url)))
-
-
 (defn- ^:no-doc live-embed
   "Embed a specific visualization; Currently private, may be public in future, and name may change."
   ([[mode spec]]
@@ -326,7 +315,7 @@
 (comment
   (export!
     (read "examples/test.md")
-    "test.html"))
+    "examples/test.html"))
 
 ;(do
 (comment
