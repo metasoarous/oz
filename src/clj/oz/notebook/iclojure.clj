@@ -18,7 +18,7 @@
     'unrepl/mime
     (if (map? spec)
       {:content-type "application/vnd.vegalite.v2+json"
-       :content (json/generate-string spec)}
+       :content spec}
       ;; otherwise assume hiccup, run embed code
       {:content-type "text/html"
        :content (hiccup/html (oz/embed spec))})))
