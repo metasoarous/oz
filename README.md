@@ -3,8 +3,7 @@
 Great and powerful data vizualizationz
 
 [![Clojars Project](https://img.shields.io/clojars/v/metasoarous/oz.svg)](https://clojars.org/metasoarous/oz)
-
-(Note: some features in this document are currently only available in the `1.5.0-SNAPSHOT` release; an official release should be coming in the next couple of days; stay tuned!)
+[![cljdoc badge](https://cljdoc.org/badge/metasoarous/oz)](https://cljdoc.org/d/metasoarous/oz)
 
 <br/>
 
