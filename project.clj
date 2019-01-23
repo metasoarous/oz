@@ -36,6 +36,8 @@
                  [irresponsible/tentacles "0.6.3"]]
   :plugins [[lein-cljsbuild "1.1.6"]]
   :source-paths ["src/clj" "src/cljs"]
+  ;; allows cljdoc to fetch README and such for additional documentation purposes
+  :scm {:name "git" :url "https://github.com/metasoarous/oz"}
   :clean-targets ^{:protect false} [:target-path :compile-path "resources/public/js"]
   :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}
   :repl-options {:init-ns user
