@@ -315,7 +315,7 @@ See the `view!` method in the namespaces `oz.notebook.clojupyter` and `oz.notebo
 (oz/view! spec)
 ```
 
-Take a look at the [example clojupyter notebook](https://github.com/metasoarous/oz/tree/master/examples/clojupyter-example.ipynb').
+Take a look at the [example clojupyter notebook](https://github.com/metasoarous/oz/tree/master/examples/clojupyter-example.ipynb).
 
 If you have docker installed you can run the following to build and run a jupyter container with clojupyter installed.
 
