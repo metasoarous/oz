@@ -32,6 +32,7 @@
                  [org.clojars.didiercrunch/clojupyter "0.1.5"]
                  [io.forward/yaml "1.0.9"]
                  [commonmark-hiccup "0.1.0"]
+                 [org.clojure/spec.alpha "0.2.176"]
                  [irresponsible/tentacles "0.6.3"]]
   :plugins [[lein-cljsbuild "1.1.6"]]
   :source-paths ["src/clj" "src/cljs"]
