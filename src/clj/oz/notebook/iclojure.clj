@@ -7,16 +7,13 @@
     [cheshire.core :as json]))
 
 
-;; Something fancy that remembers if its been setup? Probablematic just to always run?
-;(defonce -setup?
-  ;(setup!))
-
-
-(defn view! [spec]
-  ;; problematic to always run?
+(defn view!
+  "Display a vega or vega-lite spec from a Jupyter notebook using the IClojure Jupyter kernal."
+  [spec]
   (tagged-literal
     'unrepl/mime
     (if (map? spec)
+      ;; Don't know if this will work for vega yet
       {:content-type "application/vnd.vegalite.v2+json"
        :content spec}
       ;; otherwise assume hiccup, run embed code
