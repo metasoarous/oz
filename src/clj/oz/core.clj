@@ -303,7 +303,7 @@
   "Reads file and processes according to file type"
   [filename & {:as opts :keys [format]}]
   (let [contents (slurp filename)]
-    (case (or (name format)
+    (case (or (and format (name format))
               (last (string/split filename #"\.")))
       "md" (from-markdown contents)
       "edn" (edn/read-string contents)
