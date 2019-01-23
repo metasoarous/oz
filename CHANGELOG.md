@@ -2,10 +2,11 @@
 # CHANGELOG
 
 
-## 1.5.0 (alpha)
+## 1.5.0
 
 * add preliminary `oz.core/export!` functionality (live vega output in html file)
-* experimentatal clojupyter integration for notebook users
+* Jupyter notebook integration via clojupyter & iclojure kernels
+* add `oz.core/read` function, which parses markdown with a notation for embedding vega(lite) visualizations
 
 
 ## 1.4.1
