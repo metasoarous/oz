@@ -313,11 +313,12 @@
       "yaml" (yaml/parse-string contents))))
 
 
-;(do
+;(try
 (comment
   (export!
-    (read "examples/test.md")
-    "examples/test.html"))
+    (load "examples/test.md")
+    "examples/test.html")
+  (catch Exception e (.printStackTrace e)))
 
 ;(do
 (comment
