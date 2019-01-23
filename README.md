@@ -322,6 +322,8 @@ If you have docker installed you can run the following to build and run a jupyte
 sudo docker run --rm -p 8888:8888 kxxoling/jupyter-clojure-docker
 ```
 
+Based on my own tinkering and the reports of other users, the functionality of this integration is somewhat sensitive to version/environment details, so running from the docker image is the recommended way of getting things running for the moment.
+
 ### Requiring in IClojure
 
 ```clojure
