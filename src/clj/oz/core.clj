@@ -70,7 +70,7 @@
 (defn view!
   "More general view function which takes specs in hiccup form, where vega/vega-lite blocks can be
   passed as `[:vega-lite plot-data]` (e.g.), nested within arbitrary hiccup."
-  [spec & {:keys [data host port]
+  [spec & {:keys [host port]
            :or {port (:port @server/web-server_ 10666)
                 host "localhost"}}]
   (try
