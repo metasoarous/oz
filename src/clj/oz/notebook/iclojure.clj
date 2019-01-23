@@ -8,7 +8,7 @@
 
 
 (defn view!
-  "Display a vega or vega-lite spec from a Jupyter notebook using the IClojure Jupyter kernal."
+  "Display a vega or vega-lite spec from a Jupyter notebook using the IClojure Jupyter kernel."
   [spec]
   (tagged-literal
     'unrepl/mime

@@ -200,7 +200,7 @@
     (when return-full-gist
       gist)))
 
-(defn publish-plot!
+(defn ^:no-doc publish-plot!
   "Deprecated form of `publish!`"
   [plot & opts]
   (warnf "WARNING!!! DEPRECATED!!! Please call `publish!` instead.")
@@ -290,7 +290,7 @@
     block))
     
 
-(defn from-markdown
+(defn- ^:no-doc from-markdown
   "Process markdown string into a hiccup document"
   [md-string]
   (try

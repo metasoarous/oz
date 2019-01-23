@@ -32,7 +32,7 @@ Oz itself provides:
 * embed visualizations in Jupyter notebooks via the Clojupyter & IClojure kernels
 
 
-### Learning Vega & Vega-Lite
+### Learning Vega, Vega-Lite & Oz
 
 Because Oz is but a wrapper, really understanding how to use it requires understanding the core Vega & Vega-Lite.
 If you're new to the scene, it's worth taking a few minutes to orient yourself with [this mindblowing talk/demo](https://www.youtube.com/watch?v=9uaHRWj04D4) from the creators at the Interactive Data Lab (IDL) at University of Washington.
@@ -43,6 +43,9 @@ Watched the IDL talk and hungry for more content?
 Here's another which focuses on the philosophical ideas behind Vega & Vega-Lite, how they relate to Clojure, and how you can use the tools from Clojure using Oz.
 
 [![Seajure Clojure + Vega/Vega-Lite talk](https://i.imgur.com/SmIPUQtm.png)](https://www.youtube.com/watch?v=hXq5Bb40zZY)
+
+This Readme is the canonical entry point for learning about Oz.
+You may also want to check out the [clojdoc page](https://cljdoc.org/d/metasoarous/oz) (if you're not there already) for API & other docs, and look at the [examples directory](https://github.com/metasoarous/oz/tree/master/examples) of this project (references occassionally below).
 
 
 ### Ecosystem
@@ -269,7 +272,7 @@ Eventually we'll be adding options for hooking into the signal dataflow graphs w
 
 Oz now features a `load` function which accepts the following formats:
 
-* `edn`, `json`, `yaml`: directly parse into hiccup or Vega/Vega-Lite representations
+* `edn`, `json`, `yaml`: directly parse into hiccup &/or Vega/Vega-Lite representations
 * `md`: loads a markdown file, with a notation for specifying Vega/Vega-Lite in code blocks tagged with the `vega`, `vega-lite` or `oz` class
 
 As example of the markdown syntax:
@@ -310,6 +313,14 @@ See the `view!` method in the namespaces `oz.notebook.clojupyter` and `oz.notebo
 
 ;; Create spec, then
 (oz/view! spec)
+```
+
+Take a look at the [example clojupyter notebook](https://github.com/metasoarous/oz/tree/master/examples/clojupyter-example.ipynb').
+
+If you have docker installed you can run the following to build and run a jupyter container with clojupyter installed.
+
+```
+sudo docker run --rm -p 8888:8888 kxxoling/jupyter-clojure-docker
 ```
 
 ### Requiring in IClojure

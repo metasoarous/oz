@@ -16,11 +16,11 @@
 (timbre/set-level! :info)
 (enable-console-print!)
 
-(defn log [a-thing]
+(defn- ^:no-doc log [a-thing]
   (.log js/console a-thing))
 
 
-(defn render-vega-lite
+(defn ^:no-doc render-vega-lite
   ([spec elem]
    (when spec
      (let [spec (clj->js spec)
@@ -74,7 +74,7 @@
                       [:div#vis])}))
 
 
-(defn view-spec
+(defn ^:no-doc view-spec
   ;; should handle sharing data with nodes that need it?
   [spec]
   ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
