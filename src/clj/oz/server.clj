@@ -59,13 +59,13 @@
                                :session (if (session-uid req)
                                           (:session req)
                                           (assoc (:session req) :uid (unique-id)))
-                               :body (io/input-stream (io/resource "public/index.html"))} "text/html"))
+                               :body (io/input-stream (io/resource "oz/public/index.html"))} "text/html"))
   (GET "/token" req (json/generate-string {:csrf-token *anti-forgery-token*}))
   (GET  "/chsk" req
         (debugf "/chsk got: %s" req)
         (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
-  (route/resources "/")
+  (route/resources "/" {:root "oz/public"})
   (route/not-found "<h1>Nope</h1>"))
 
 (def main-ring-handler

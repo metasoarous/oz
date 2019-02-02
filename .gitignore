@@ -1,4 +1,4 @@
-/resources/public/js/compiled/**
+/resources/oz/public/js/compiled/**
 figwheel_server.log
 pom.xml
 pom.xml.asc
