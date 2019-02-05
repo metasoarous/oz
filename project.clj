@@ -38,7 +38,7 @@
   :source-paths ["src/clj" "src/cljs"]
   ;; allows cljdoc to fetch README and such for additional documentation purposes
   :scm {:name "git" :url "https://github.com/metasoarous/oz"}
-  :clean-targets ^{:protect false} [:target-path :compile-path "resources/public/js"]
+  :clean-targets ^{:protect false} [:target-path :compile-path "resources/oz/public/js"]
   :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}
   :repl-options {:init-ns user
                  :timeout 120000}
@@ -48,13 +48,13 @@
                         :figwheel {:on-jsload "oz.app/on-js-reload"}
                         :compiler {:main oz.app
                                    :asset-path "js/compiled/out"
-                                   :output-to "resources/public/js/compiled/oz.js"
-                                   :output-dir "resources/public/js/compiled/out"
+                                   :output-to "resources/oz/public/js/compiled/oz.js"
+                                   :output-dir "resources/oz/public/js/compiled/out"
                                    :source-map-timestamp true
                                    :preloads [devtools.preload]}}
                        {:id "min"
                         :source-paths ["src/cljs"]
-                        :compiler {:output-to "resources/public/js/compiled/oz.js"
+                        :compiler {:output-to "resources/oz/public/js/compiled/oz.js"
                                    :main oz.app
                                    :optimizations :advanced
                                    :pretty-print false}}]}
@@ -63,7 +63,7 @@
              ;; :server-port 3449 ;; default
              ;; :server-ip "127.0.0.1"
 
-             :css-dirs ["resources/public/css"]} ;; watch and update CSS
+             :css-dirs ["resources/oz/public/css"]} ;; watch and update CSS
 
              ;; Start an nREPL server into the running figwheel process
              ;; :nrepl-port 7888
