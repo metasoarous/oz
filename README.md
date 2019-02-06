@@ -303,35 +303,56 @@ This allows you to embed nontrivial html in your markdown files as hiccup, when 
 Oz now also features Jupyter support for both the Clojupyter and IClojure kernels.
 See the `view!` method in the namespaces `oz.notebook.clojupyter` and `oz.notebook.iclojure` for usage.
 
+![example notebook](doc/clojupyter.png)
+
+
 ### Requiring in Clojupyter
-
-```clojure
-(require '[clojupyter.misc.helper :as helper])
-(helper/add-dependencies '[metasoarous/oz "x.x.x"])
-(require '[oz.notebook.clojupyter :as oz])
-
-;; Create spec, then
-(oz/view! spec)
-```
 
 Take a look at the [example clojupyter notebook](https://github.com/metasoarous/oz/tree/master/examples/clojupyter-example.ipynb).
 
 If you have docker installed you can run the following to build and run a jupyter container with clojupyter installed.
 
 ```
-sudo docker run --rm -p 8888:8888 kxxoling/jupyter-clojure-docker
+docker run --rm -p 8888:8888 kxxoling/jupyter-clojure-docker
+```
+
+Note that if you get a permission related error, you may need to run this command like `sudo docker run ...`.
+
+Once you have a notebook up and running you can either import the [example clojupyter notebook](https://github.com/metasoarous/oz/tree/master/examples/clojupyter-example.ipynb) or manually add something like:
+
+```clojure
+(require '[clojupyter.misc.helper :as helper])
+(helper/add-dependencies '[metasoarous/oz "x.x.x"])
+(require '[oz.notebook.clojupyter :as oz])
+
+;; Create spec
+
+;; then...
+(oz/view! spec)
 ```
 
 Based on my own tinkering and the reports of other users, the functionality of this integration is somewhat sensitive to version/environment details, so running from the docker image is the recommended way of getting things running for the moment.
 
 ### Requiring in IClojure
 
+If you have docker installed you can get an IClojure environment up and running using:
+
+```
+docker run -p 8888:8888 cgrand/iclojure
+```
+
+As with Clojupyter, note that if you get a permission related error, you may need to run this command like `sudo docker run ...`.
+
+Once you have that running, you can:
+
 ```clojure
 /cp {:deps {metasoarous/oz {:mvn/version "x.x.x"}}}
 (require '[oz.notebook.iclojure :as oz])
 
-;; Create spec, then
-(oz/view! edn-spec)
+;; Create spec
+
+;; then...
+(oz/view! spec)
 ```
 
 ## Local development

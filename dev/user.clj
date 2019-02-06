@@ -8,8 +8,8 @@
 ;; Let Clojure warn you when it needs to reflect on types, or when it does math
 ;; on unboxed numbers. In both cases you should add type annotations to prevent
 ;; degraded performance.
-(set! *warn-on-reflection* true)
-(set! *unchecked-math* :warn-on-boxed)
+;(set! *warn-on-reflection* true)
+;(set! *unchecked-math* :warn-on-boxed)
 
 (defn run []
   (figwheel/start-figwheel!))
@@ -26,7 +26,7 @@
 
   ;; Start the plot server
   ;(do-it-fools!) ;; for figwheel dev
-  (oz/start-plot-server!)
+  (oz/start-plot-server! 3000)
   ;(stop!)
 
   ;; define a function for generating some dummy data
@@ -45,7 +45,9 @@
 
   ;; Render the plot to the 
   (oz/v! line-plot)
-  (oz/view! [:h1 "fuck you"])
+  (oz/view! [:div
+             [:h1 "Hello world"]
+             [:vega line-plot]])
 
   ;; We can also try publishing the plot like so (requires auth; see README.md for setup)
   (oz/publish! line-plot)
