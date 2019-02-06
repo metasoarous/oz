@@ -1,6 +1,10 @@
 
 # CHANGELOG
 
+## 1.5.4
+
+* documentation improvements
+
 ## 1.5.3
 
 * documentation improvements
