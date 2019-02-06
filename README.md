@@ -303,7 +303,7 @@ This allows you to embed nontrivial html in your markdown files as hiccup, when 
 Oz now also features Jupyter support for both the Clojupyter and IClojure kernels.
 See the `view!` method in the namespaces `oz.notebook.clojupyter` and `oz.notebook.iclojure` for usage.
 
-![example notebook](doc/clojupyter.png)
+![example notebook](doc/clojupyter.small.png)
 
 
 ### Requiring in Clojupyter
