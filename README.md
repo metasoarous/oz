@@ -1,4 +1,4 @@
-![oz](resources/public/oz.svg)
+![oz](resources/oz/public/oz.svg)
 
 Great and powerful data vizualizationz
 
