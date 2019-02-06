@@ -1,6 +1,14 @@
 
 # CHANGELOG
 
+## 1.5.3
+
+* documentation improvements
+* namespace resources/public as resources/oz/public to avoid resource clashes with Clojure CLI class path resolution
+
+## 1.5.1, 1.5.2
+
+* documentation improvements
 
 ## 1.5.0
 
