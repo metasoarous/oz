@@ -2,9 +2,9 @@
 # CHANGELOG
 
 
-## 1.5.6-SNAPSHOT
+## 1.5.6
 
-* trying to fix problem using IClojure kernel from Docker image
+* fix Java version errors with IClojure
 
 
 ## 1.5.4, 1.5.5
