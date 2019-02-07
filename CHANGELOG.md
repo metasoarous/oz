@@ -1,18 +1,27 @@
 
 # CHANGELOG
 
+
+## 1.5.6-SNAPSHOT
+
+* trying to fix problem using IClojure kernel from Docker image
+
+
 ## 1.5.4, 1.5.5
 
 * documentation improvements
+
 
 ## 1.5.3
 
 * documentation improvements
 * namespace resources/public as resources/oz/public to avoid resource clashes with Clojure CLI class path resolution
 
+
 ## 1.5.1, 1.5.2
 
 * documentation improvements
+
 
 ## 1.5.0
 
@@ -24,6 +33,7 @@
 ## 1.4.1
 
 * fix bad default home path for osx github cred file
+
 
 ## 1.4.0
 

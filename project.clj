@@ -1,4 +1,4 @@
-(defproject metasoarous/oz "1.5.5"
+(defproject metasoarous/oz "1.5.6-SNAPSHOT"
   :description "Great and powerful data visualizations in Clojure using Vega and Vega-lite"
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
@@ -30,6 +30,8 @@
                  [cljsjs/vega-tooltip "0.14.0-0"]
                  [markdown-to-hiccup "0.6.1"]
                  [org.clojars.didiercrunch/clojupyter "0.1.5"]
+                 ;; must be above yaml for jvm compilation fix
+                 [org.flatland/ordered "1.5.7"]
                  [io.forward/yaml "1.0.9"]
                  [commonmark-hiccup "0.1.0"]
                  [org.clojure/spec.alpha "0.2.176"]
