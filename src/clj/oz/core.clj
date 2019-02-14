@@ -248,7 +248,7 @@
          [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
          [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
          [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@4.4.0"}]
-         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.0-rc11"}]
+         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.0-rc12"}]
          [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-embed@3.28.0"}]]
         [:body
          (embed spec opts)
