@@ -9,6 +9,8 @@
   :jvm-opts ["-Dnashorn.args=--language=es6"]
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/clojurescript "1.10.439" :scope "provided"]
+                 ;; this appears to be necessary for fiwheel to work for some applications
+                 [org.clojure/tools.reader "1.3.2"]
                  [org.clojure/core.async "0.4.490"]
                  [cheshire "5.8.1"]
                  [clj-http "3.9.1"]
