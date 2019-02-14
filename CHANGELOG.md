@@ -2,6 +2,13 @@
 # CHANGELOG
 
 
+## 1.5.7-SNAPSHOT
+
+* fix oz logo in exported html
+* update vega-lite to rc12 in exported html, possibly fixing issue #48
+* dependency updates which seem to fix figwheel compatibility
+
+
 ## 1.5.6
 
 * fix Java version errors with IClojure
