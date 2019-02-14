@@ -243,7 +243,7 @@
         [:head
          [:meta {:charset "UTF-8"}]
          [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-         [:link {:rel "shortcut icon" :href "https://ozviz.io/oz.svg" :type "image/x-icon"}]
+         [:link {:rel "shortcut icon" :href "http://ozviz.io/oz.svg" :type "image/x-icon"}]
          [:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
          [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
          [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
