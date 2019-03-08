@@ -5,13 +5,29 @@ set -euf -o pipefail
 
 
 
+WILL_EXIT=""
 if ! generate-extern -h > /dev/null
 then
   echo "You need to have generate-extern installed in order to run this script"
   echo "If you'd like to install it, please try first running"
   echo "  npm install externs-generator"
+  WILL_EXIT="yes"
+fi
+
+if ! boot -h > /dev/null
+then
+  echo "You need to have boot installed in order to run this script"
+  echo "If you'd like to install it, please try first running"
+  echo '  sudo bash -c "cd /usr/local/bin && curl -fsSLo boot https://github.com/boot-clj/boot-bin/releases/download/latest/boot.sh && chmod 755 boot"'
+  WILL_EXIT="yes"
+fi
+
+
+if [ ! -z "$WILL_EXIT" ]
+then
   exit
 fi
+
 
 if echo $@ | grep "\-\-help" > /dev/null
 then
@@ -25,19 +41,19 @@ fi
 
 # For latest releases, see:
 # https://github.com/vega/vega/releases
-v_version="4.3.0"
+v_version="5.1.0"
 v_build_version="0"
 
 # https://github.com/vega/vega-lite/releases
-vl_version="3.0.0-rc8"
+vl_version="3.0.0-rc14"
 vl_build_version="0"
 
 # https://github.com/vega/vega-embed/releases
-ve_version="3.23.1"
+ve_version="4.0.0-rc1"
 ve_build_version="0"
 
 # https://github.com/vega/vega-tooltip/releases
-vt_version="0.13.0"
+vt_version="0.16.0"
 vt_build_version="0"
 
 
@@ -80,26 +96,36 @@ cd $VEGA_DISTS
 ## Vega
 ## ----
 
-zipfile=vega-v$v_version.zip
-# first clean up any old zips of the same version, to avoid naming conflicts
-rm -f vega.zip
+v_asset=vega-$v_version.js
+v_min_asset=vega-$v_version.min.js
+wget https://unpkg.com/vega@$v_version/build/vega.js -O $v_asset
+# TODO Hmm... not actually using the minified version right now; should look into this!
+wget https://unpkg.com/vega@$v_version/build/vega.min.js -O $v_min_asset
 
-# now actually download the file and compute checksums
-wget https://github.com/vega/vega/releases/download/v$v_version/vega.zip -O $zipfile
-v_checksum=$(md5sum $zipfile | grep -o "^[a-z0-9]*")
-echo vega checksum $v_checksum
+# compute new checksums
+v_checksum=$(md5sum $v_asset | grep -o "^[a-z0-9]*")
+v_min_checksum=$(md5sum $v_min_asset | grep -o "^[a-z0-9]*")
+echo v_checksum $v_checksum
+echo v_min_checksum $v_min_checksum
 
-# unzip and generate externs
-unzip -uo $zipfile
+# generate extens
 extfile=vega-$v_version.ext.js
-generate-extern -f vega.js -n vega -o $extfile
+generate-extern -f $v_asset -n vega -o $extfile
 cp $extfile $CLJSJS_PACKAGES_PATH/vega/resources/cljsjs/vega/common/vega.ext.js
 
-# update lib versions and checksums in build.boot, and try installing
+# update lib versions in build.boot
 cd $CLJSJS_PACKAGES_PATH/vega
 sed -i "s/def +lib-version+ \"[0-9a-z\.\-]*\"/def +lib-version+ \"$v_version\"/" build.boot
 sed -i "s/str +lib-version+ \"[0-9a-z\.\-]*\"/str +lib-version+ \"-$v_build_version\"/" build.boot
-sed -i "s/:checksum \"[0-9a-zA-Z]*\"/:checksum \"$v_checksum\"/" build.boot
+
+# update checksums in build.boot
+old_v_checksum=$(grep -m 1 ":checksum" build.boot | grep -o "\"[a-zA-Z0-9]*\"")
+old_v_min_checksum=$(grep -m 2 ":checksum" build.boot | tail -n 1 | grep -o "\"[a-zA-Z0-9]*\"")
+# update checksums
+sed -i "s/$old_v_checksum/\"$v_checksum\"/" build.boot
+sed -i "s/$old_v_min_checksum/\"$v_min_checksum\"/" build.boot
+
+# try installing
 boot package install target
 
 # Commit to a dedicated branch
@@ -169,7 +195,7 @@ echo ve_min_checksum $ve_min_checksum
 # generate and install externs
 extfile=vega-embed.$ve_version.ext.js
 # note that this call to generate-extern needs to have all three libs loaded to work
-generate-extern -f vega.js,vega-lite-$vl_version/build/vega-lite.js,$asset -n vegaEmbed -o $extfile
+generate-extern -f $v_asset,vega-lite-$vl_version/build/vega-lite.js,$asset -n vegaEmbed -o $extfile
 cp $extfile $CLJSJS_PACKAGES_PATH/vega-embed/resources/cljsjs/vega-embed/common/vega-embed.ext.js
 
 # update lib versions and checksums in build.boot, and try installing
@@ -197,18 +223,14 @@ cd $VEGA_DISTS
 # get assets
 asset=vega-tooltip-$vt_version.js
 min_asset=vega-tooltip-$vt_version.min.js
-css_asset=vega-tooltip-$vt_version.css
 wget https://unpkg.com/vega-tooltip@$vt_version/build/vega-tooltip.js -O $asset
 wget https://unpkg.com/vega-tooltip@$vt_version/build/vega-tooltip.min.js -O $min_asset
-wget https://unpkg.com/vega-tooltip@$vt_version/vega-tooltip.css -O $css_asset
 
 # compute checksums
 vt_checksum=$(md5sum $asset | grep -o "^[a-z0-9]*")
 vt_min_checksum=$(md5sum $min_asset | grep -o "^[a-z0-9]*")
-vt_css_checksum=$(md5sum $css_asset | grep -o "^[a-z0-9]*")
 echo vt_checksum $ve_checksum
 echo vt_min_checksum $ve_min_checksum
-echo vt_css_checksum $ve_min_checksum
 
 # generate and install externs
 extfile=vega-tooltip.$vt_version.ext.js
@@ -219,14 +241,12 @@ cp $extfile $CLJSJS_PACKAGES_PATH/vega-tooltip/resources/cljsjs/vega-tooltip/com
 cd $CLJSJS_PACKAGES_PATH/vega-tooltip
 sed -i "s/def +lib-version+ \"[0-9a-z\.\-]*\"/def +lib-version+ \"$vt_version\"/" build.boot
 sed -i "s/str +lib-version+ \"[0-9a-z\.\-]*\"/str +lib-version+ \"-$vt_build_version\"/" build.boot
-# note that this assumes the minified version comes second in the build process, and css third
+# note that this assumes the minified version comes second in the build process
 old_vt_checksum=$(grep -m 1 ":checksum" build.boot | grep -o "\"[a-zA-Z0-9]*\"")
 old_vt_min_checksum=$(grep -m 2 ":checksum" build.boot | tail -n 1 | grep -o "\"[a-zA-Z0-9]*\"")
-old_vt_css_checksum=$(grep -m 3 ":checksum" build.boot | tail -n 1 | grep -o "\"[a-zA-Z0-9]*\"")
 # update checksums
 sed -i "s/$old_vt_checksum/\"$vt_checksum\"/" build.boot
 sed -i "s/$old_vt_min_checksum/\"$vt_min_checksum\"/" build.boot
-sed -i "s/$old_vt_css_checksum/\"$vt_css_checksum\"/" build.boot
 # update dependencies
 sed -i "s/\[cljsjs\/vega \"[0-9a-zA-Z\.\-]*\"\]/[cljsjs\/vega \"$v_version-$v_build_version\"]/" build.boot 
 sed -i "s/\[cljsjs\/vega-lite \"[0-9a-zA-Z\.\-]*\"\]/[cljsjs\/vega-lite \"$vl_version-$vl_build_version\"]/" build.boot 
