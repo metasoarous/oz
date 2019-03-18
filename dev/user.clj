@@ -1,5 +1,5 @@
 (ns user
-  (:require [oz.server :refer [start! stop!]]
+  (:require [oz.server :as server]
             [oz.core :as oz]
             [cheshire.core :as json]
             [clojure.pprint :as pp]
@@ -16,7 +16,7 @@
 
 (defn do-it-fools! []
   (run)
-  (start!))
+  (server/start-plot-server!))
 
 (def browser-repl figwheel/cljs-repl)
 
@@ -27,7 +27,6 @@
   ;; Start the plot server
   ;(do-it-fools!) ;; for figwheel dev
   (oz/start-plot-server! 3000)
-  ;(stop!)
 
   ;; define a function for generating some dummy data
   (defn play-data [& names]

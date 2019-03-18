@@ -1,6 +1,7 @@
 (ns oz.core
   (:refer-clojure :exclude [load])
   (:require [oz.server :as server]
+            [oz.live :as live]
             [clj-http.client :as client]
             [aleph.http :as aleph]
             [clojure.string :as string]
@@ -40,11 +41,19 @@
   [m keys]
   (into {} (filter #((set keys) (first %)) m)))
 
+(defmacro ^:no-doc clone-var
+  "Clone the var pointed to by fsym into current ns such that arglists, name and doc metadata are preserned."
+  [fsym]
+  (let [v (resolve fsym)
+        m (submap (meta v) [:arglists :name :doc])
+        m (update m :arglists (fn [arglists] (list 'quote arglists)))]
+    `(def ~(vary-meta (:name m) (constantly m)) ~fsym)))
+
 
 ;; Set up plot server crap
 
-(def start-plot-server! ^{:doc "Start the oz plot server on localhost:10666 by default."}
-  server/start!)
+;; Defines out function for manually starting the plot server
+(clone-var server/start-plot-server!)
 
 (defonce ^{:private true} cookie-store (clj-http.cookies/cookie-store))
 (defonce ^{:private true} anti-forgery-token (atom nil))
@@ -71,11 +80,14 @@
   "More general view function which takes specs in hiccup form, where vega/vega-lite blocks can be
   passed as `[:vega-lite plot-data]` (e.g.), nested within arbitrary hiccup."
   [spec & {:keys [host port]
-           :or {port (:port @server/web-server_ 10666)
+           :or {port (:port @server/web-server_ server/default-port)
                 host "localhost"}}]
   (try
-    (prepare-server-for-view! port host)
-    (server/send-all! [::view-spec spec])
+    (prepare-server-for-view! (or port server/default-port) (or host "localhost"))
+    (server/send-all!
+      [::view-spec
+       ;; if we have a map, just try to pass it through as a vega form
+       (if (map? spec) [:vega spec] spec)])
     (catch Exception e
       (errorf "error sending plot to server: %s" (ex-data e)))))
 
@@ -85,7 +97,7 @@
   server running at `:host` and `:port` to be rendered."
   [spec & {:as opts
            :keys [data width height host port mode]
-           :or {port (:port @server/web-server_ 10666)
+           :or {port (:port @server/web-server_ server/default-port)
                 host "localhost"
                 mode :vega-lite}}]
   ;; Update spec opts, then send view
@@ -258,7 +270,7 @@
    
 
 (defn export!
-  "In alpha; Export spec to an html file. May have other options, including svg, jpg & pdf available"
+  "In alpha; Export spec to an html file. May eventually have other options, including svg, jpg & pdf available"
   [spec filepath & {:as opts :keys []}]
   (spit filepath (html spec opts)))
 
@@ -312,6 +324,39 @@
       "json" (json/parse-string contents keyword)
       "yaml" (yaml/parse-string contents))))
 
+
+
+;; Refer to the live-reload! function
+(clone-var live/live-reload!)
+(clone-var live/kill-watcher!)
+(clone-var live/kill-watchers!)
+
+
+;; For the live-view! function below
+(defn- view-file!
+  [{:keys [host port format]} filename context {:keys [kind file]}]
+  ;; ignore delete (some editors technically delete the file on every save!
+  (when (#{:modify :create} kind)
+    (let [contents (slurp filename)]
+      ;; if there are differences, then do the thing
+      (when-not (= contents
+                   (get-in @live/watchers [filename :last-contents]))
+        (log/info "Rerendering file:" filename)
+        ;; Evaluate the ns form, and whatever forms thereafter differ from the last time we succesfully ran
+        ;; Update last-forms in our state atom
+        (view! (load filename :format format) :host host :port port)
+        (swap! live/watchers assoc-in [filename :last-contents] contents)))))
+
+(defn live-view!
+  "Watch file for changes and apply `load` & `view!` to the contents"
+  [filename & {:keys [host port format] :as opts}]
+  (live/watch! filename (partial view-file! opts)))
+
+
+(comment
+  (live-view! "examples/test.md" :port 8888)
+  (kill-watchers!)
+  :end-comment)
 
 (comment
 ;(try

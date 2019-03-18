@@ -26,10 +26,10 @@
                  [com.cognitect/transit-clj  "0.8.313"]
                  [com.cognitect/transit-cljs "0.8.256"]
                  [reagent "0.8.1"]
-                 [cljsjs/vega "4.4.0-0"]
-                 [cljsjs/vega-lite "3.0.0-rc10-0"]
+                 [cljsjs/vega "5.1.0-0"]
+                 [cljsjs/vega-lite "3.0.0-rc14-0"]
                  [cljsjs/vega-embed "3.26.0-0"]
-                 [cljsjs/vega-tooltip "0.14.0-0"]
+                 [cljsjs/vega-tooltip "0.16.0-0"]
                  [markdown-to-hiccup "0.6.1"]
                  [org.clojars.didiercrunch/clojupyter "0.1.5"]
                  ;; must be above yaml for jvm compilation fix
@@ -37,7 +37,11 @@
                  [io.forward/yaml "1.0.9"]
                  [commonmark-hiccup "0.1.0"]
                  [org.clojure/spec.alpha "0.2.176"]
-                 [irresponsible/tentacles "0.6.3"]]
+                 [irresponsible/tentacles "0.6.3"]
+                 ;; hot reloading experiments
+                 [hawk "0.2.11"]]
+                 ;[timofreiberg/bultitude "0.3.0"]
+                 ;[org.clojure/tools.namespace "0.2.11"]]
   :plugins [[lein-cljsbuild "1.1.6"]]
   :source-paths ["src/clj" "src/cljs"]
   ;; allows cljdoc to fetch README and such for additional documentation purposes

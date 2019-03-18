@@ -19,6 +19,9 @@
    [clojure.java.io :as io])
   (:gen-class))
 
+
+(def default-port 10666)
+
 (timbre/set-level! :info)
 ;; (reset! sente/debug-mode?_ true)
 
@@ -124,16 +127,17 @@
   (stop-router!)
   (stop-web-server!))
 
-(defn start!
+(defn start-plot-server!
+  "Start the oz plot server (on localhost:10666 by default)."
   ([]
    (start-router!)
-   (start-web-server! 10666))
+   (start-web-server! default-port))
   ([& [port]]
    (start-router!)
-   (start-web-server! port)))
+   (start-web-server! (or port default-port))))
 
 (defn -main [& [port]]
   (if port
-    (start! (Integer/parseInt port))
-    (start!)))
+    (start-plot-server! (Integer/parseInt port))
+    (start-plot-server!)))
 
