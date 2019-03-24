@@ -255,6 +255,7 @@ boot package install target
 # Commit vega-tooltip and vega-embed changes together as vega-extras
 git checkout -B vega-extras-updates
 git add .
+git add ../vega-embed
 git commit -m "[vega-extras] update vega-embed & vega-tooltip versions" \
            -m "Full version set: vega -> $v_version-$v_build_version, vega-lite -> $vl_version-$vl_build_version, vega-embed -> $ve_version-$ve_build_version, vega-tooltip -> $vt_version-$vt_build_version."
 
