@@ -41,11 +41,11 @@ fi
 
 # For latest releases, see:
 # https://github.com/vega/vega/releases
-v_version="5.1.0"
+v_version="5.3.1"
 v_build_version="0"
 
 # https://github.com/vega/vega-lite/releases
-vl_version="3.0.0-rc14"
+vl_version="3.0.0-rc16"
 vl_build_version="0"
 
 # https://github.com/vega/vega-embed/releases
