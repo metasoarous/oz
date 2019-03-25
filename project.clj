@@ -47,10 +47,9 @@
   ;; allows cljdoc to fetch README and such for additional documentation purposes
   :scm {:name "git" :url "https://github.com/metasoarous/oz"}
   :clean-targets ^{:protect false} [:target-path :compile-path "resources/oz/public/js"]
-  :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}
   :repl-options {:init-ns user
                  :timeout 520000}
-  :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
+  ;:prep-tasks ["compile" ["cljsbuild" "once" "min"]]
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
                         :figwheel {:on-jsload "oz.app/on-js-reload"}
@@ -96,6 +95,34 @@
 
              ;; to configure a different figwheel logfile path
              ;; :server-logfile "tmp/logs/figwheel-logfile.log"
+
+  ;; Note; for the aliases below to work, you need uberjar not to delete the cljsbuild output, which it does automatically via lein clean.
+  ;; This means though that you should always uberjar with one of the below methods, to make sure you don't get some bad aot in your build/deploy.
+  ;; Lack of awareness of this setting is I think what was behind the old "always build cljs" prep-tasks setting from vizard.
+  :auto-clean false 
+  :aliases {
+            ;"doitfools" ["do" "clean" ["deploy" "clojars"]]
+            "jar!"
+            ^{:doc "Recompile sources and jar."}
+            ;; Nested vectors are supported for the "do" task
+            ["do" "clean"
+                  ["cljsbuild" "once" "min"]
+                  ["uberjar"]]
+            "deploy-snapshot!"
+            ^{:doc "Recompile sources, then deploy snapshot."}
+            ;; Nested vectors are supported for the "do" task
+            ["do" "clean"
+                  ["cljsbuild" "once" "min"]
+                  ["uberjar"]
+                  ["deploy" "clojars"]]
+            "deploy-release!"
+            ^{:doc "Recompile sources, then deploy release."}
+            ;; Nested vectors are supported for the "do" task
+            ["do" "clean"
+                  ["cljsbuild" "once" "min"]
+                  ["vcs" "tag"]
+                  ["uberjar"]
+                  ["deploy" "clojars"]]}
              
   :profiles {:dev
              {:dependencies [[alembic "0.3.2"]
