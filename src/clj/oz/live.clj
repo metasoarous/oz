@@ -13,7 +13,8 @@
 
 
 (defn watch! [filename f]
-  (if-not (get @watchers filename)
+  (when-not (get @watchers filename)
+    (f filename {} {:kind :created})
     (let [watcher
           (hawk/watch! [{:paths [filename]
                          :handler (fn [context event]
@@ -89,7 +90,7 @@
               ;final-form (atom nil)]
           ;; if there are differences, then do the thing
           (when (seq diff-forms)
-            (log/info (color-str ANSI_GREEN "Reloading file:" filename))
+            (log/info (color-str ANSI_GREEN "Reloading file: " filename))
             ;; Evaluate the ns form's reference forms
             (binding [*ns* (create-ns ns-sym)]
               (eval (concat '(do) reference-forms)))
@@ -116,14 +117,14 @@
                         (swap! successful-forms conj form)
                         ;; If long running, log out how long it took
                         (if (async/poll! long-running?)
-                          (println (color-str ANSI_YELLOW "Form processed in:" (/ (- (System/currentTimeMillis) t0) 1000.0) "s")))))
+                          (println (color-str ANSI_YELLOW "Form processed in: " (/ (- (System/currentTimeMillis) t0) 1000.0) "s")))))
                     (catch Exception e
                       (log/error (color-str ANSI_RED "Error processing form:\n" (ppstr form)))
                       (log/error e)
                       (throw e)))))
-              (log/info (color-str ANSI_GREEN "Done reloading file:" filename "\n"))
+              (log/info (color-str ANSI_GREEN "Done reloading file: " filename "\n"))
               (catch Exception e
-                (log/error (color-str ANSI_RED "Unable to process all of file:" filename "\n"))))
+                (log/error (color-str ANSI_RED "Unable to process all of file: " filename "\n"))))
             ;; Update last-forms in our state atom, only counting those forms which successfully ran
             (let [base-forms (take (- (count forms) (count diff-forms)) forms)
                   new-forms (concat base-forms @successful-forms)]
