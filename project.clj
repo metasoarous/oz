@@ -50,7 +50,7 @@
   :aliases {"doitfools" ["do" "clean" ["deploy" "clojars"]]}
   :repl-options {:init-ns user
                  :timeout 520000}
-  :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
+  ;:prep-tasks ["compile" ["cljsbuild" "once" "min"]]
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
                         :figwheel {:on-jsload "oz.app/on-js-reload"}
@@ -101,7 +101,7 @@
              {:dependencies [[binaryage/devtools "0.9.10"]
                              [figwheel-sidecar "0.5.18"]
                              [com.cemerick/piggieback "0.2.2"]]
-              :plugins [[lein-figwheel "0.5.11"]]
+              :plugins [[lein-figwheel "0.5.18"]]
               :source-paths ["dev"]}
               ;:repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
              :uberjar
