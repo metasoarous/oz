@@ -2,18 +2,19 @@
 # CHANGELOG
 
 
-## 1.5.7-SNAPSHOT
+## 1.6.0
 
-* improve documentation on `start-plot-server!` by properly cloning var
 * add `live-reload!` and `live-view!` functions for figwheel like coding experience
+* greatly improved embed performance via vega-embed update
+* improve documentation on `start-plot-server!` by properly cloning var
 * nil port to `view!` handled more elegantly
-* update js libs:
-  * cljsjs/vega -> "5.1.0-0"
-  * cljsjs/vega-lite -> "3.0.0-rc14-0"
-  * cljsjs/vega-tooltip -> "0.16.0-0"
 * fix oz logo in exported html
-* update vega-lite to rc12 in exported html, possibly fixing issue #48
 * dependency updates which seem to fix figwheel compatibility
+* update js libs:
+  * cljsjs/vega -> "5.3.1-0"
+  * cljsjs/vega-lite -> "3.0.0-rc16-0"
+  * cljsjs/vega-tooltip -> "0.16.0-0"
+  * cljsjs/vega-embed -> "4.0.0-rc1-0"
 
 
 ## 1.5.6

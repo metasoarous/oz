@@ -1,4 +1,4 @@
-(defproject metasoarous/oz "1.5.7-alpha1"
+(defproject metasoarous/oz "1.6.0"
   :description "Great and powerful data visualizations in Clojure using Vega and Vega-lite"
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
