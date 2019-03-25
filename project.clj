@@ -98,7 +98,8 @@
              ;; :server-logfile "tmp/logs/figwheel-logfile.log"
              
   :profiles {:dev
-             {:dependencies [[binaryage/devtools "0.9.10"]
+             {:dependencies [[alembic "0.3.2"]
+                             [binaryage/devtools "0.9.10"]
                              [figwheel-sidecar "0.5.18"]
                              [com.cemerick/piggieback "0.2.2"]]
               :plugins [[lein-figwheel "0.5.11"]]
