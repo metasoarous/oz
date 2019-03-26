@@ -10,6 +10,7 @@
 * nil port to `view!` handled more elegantly
 * fix oz logo in exported html
 * dependency updates which seem to fix figwheel compatibility
+* moved delay after starting server from specific setup step on view! to start-plot-server! to avoid vizs not showing up in scripts
 * update js libs:
   * cljsjs/vega -> "5.3.1-0"
   * cljsjs/vega-lite -> "3.0.0-rc16-0"

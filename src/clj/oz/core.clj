@@ -63,8 +63,7 @@
   ;; start the webserver if needed
   (when-not (server/web-server-started?)
     (infof "Starting up server on port" port)
-    (start-plot-server! port)
-    (Thread/sleep 7500))
+    (start-plot-server! port))
   (when-not @anti-forgery-token
     (when-let [token (:csrf-token
                       (json/parse-string
