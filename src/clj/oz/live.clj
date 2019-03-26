@@ -14,7 +14,8 @@
 
 (defn watch! [filename f]
   (when-not (get @watchers filename)
-    (f filename {} {:kind :created})
+    ;; Call the function on first watch, so that you don't have to do a no-op save to initialize things
+    (f filename {} {:kind :create})
     (let [watcher
           (hawk/watch! [{:paths [filename]
                          :handler (fn [context event]
