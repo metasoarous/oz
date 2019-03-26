@@ -78,24 +78,26 @@
 ;; Main view functions
 
 (defn view!
-  "More general view function which takes specs in hiccup form, where vega/vega-lite blocks can be
-  passed as `[:vega-lite plot-data]` (e.g.), nested within arbitrary hiccup."
-  [spec & {:keys [host port]
-           :or {port (:port @server/web-server_ server/default-port)
-                host "localhost"}}]
+  "View the given spec in a web browser. Specs for which map? is true are treated as single Vega-Lite/Vega specifications.
+  All other values are treated as hiccup, and are therefore expected to be a vector or other iterable.
+  This hiccup may contain Vega-Lite/Vega visualizations embedded like `[:vega-lite spec]` or `[:vega spec]`.
+  You may also specify `:host` and `:port`, for server settings, and a `:mode` option, defaulting to `:vega-lite`, with `:vega` the alternate option.
+  (Though I will note that Vega-Embed often catches when you pass a vega spec to a vega-lite component, and does the right thing with it.
+  However, this is not guaranteed behavior, so best not to depend on it (wink, nod))"
+  [spec & {:keys [host port mode]}]
   (try
-    (prepare-server-for-view! (or port server/default-port) (or host "localhost"))
+    (prepare-server-for-view! (or port (server/get-server-port) server/default-port) (or host "localhost"))
     (server/send-all!
       [::view-spec
        ;; if we have a map, just try to pass it through as a vega form
-       (if (map? spec) [:vega spec] spec)])
+       (if (map? spec) [(or mode :vega-lite) spec] spec)])
     (catch Exception e
       (errorf "error sending plot to server: %s" (ex-data e)))))
 
 
 (defn ^:no-doc v!
-  "Take a vega or vega-lite clojure map `spec` and POST it to an oz
-  server running at `:host` and `:port` to be rendered."
+  "Deprecated version of `view!`, which takes a single vega or vega-lite clojure map `spec`, as well as added `:data`,
+  `:width` and `:height` options, to be merged into spec priori to `view!`ing."
   [spec & {:as opts
            :keys [data width height host port mode]
            :or {port (:port @server/web-server_ server/default-port)
@@ -103,7 +105,7 @@
                 mode :vega-lite}}]
   ;; Update spec opts, then send view
   (let [spec (merge-opts spec opts)]
-    (view! [mode spec] :host host :port port)))
+    (view! spec :host host :port port :mode mode)))
 
 
 
