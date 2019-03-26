@@ -100,10 +100,10 @@
 
 (defonce web-server_ (atom nil))
 (defn web-server-started? [] @web-server_)
-(defn stop-web-server! [] (when-let [stop-fn @web-server_] (stop-fn)))
+(defn stop-web-server! [] (when-let [stop-fn (:stop-fn @web-server_)] (stop-fn)))
 (defn start-web-server! [& [port]]
   (stop-web-server!)
-  (let [port (or port 0) ; 0 => Choose any available port
+  (let [port (or port default-port) ; 0 => Choose any available port
         ring-handler (var main-ring-handler)
         [port stop-fn]
         (let [server (aleph/start-server ring-handler {:port port})
@@ -114,14 +114,17 @@
            (fn [] (.close ^java.io.Closeable server) (deliver p nil))])
         uri (format "http://localhost:%s/" port)]
     (infof "Web server is running at `%s`" uri)
-    (reset! web-server_ stop-fn)
+    (reset! web-server_ {:port port :stop-fn stop-fn})
     ; (clojure.java.browse/browse-url uri)
     (try
       (if (and (java.awt.Desktop/isDesktopSupported)
                (.isSupported (java.awt.Desktop/getDesktop) java.awt.Desktop$Action/BROWSE))
         (.browse (java.awt.Desktop/getDesktop) (java.net.URI. uri))
         (.exec (java.lang.Runtime/getRuntime) (str "xdg-open " uri)))
+      (Thread/sleep 7500)
       (catch java.awt.HeadlessException _))))
+(defn get-server-port [] (:port @web-server_))
+
 
 (defn stop! []
   (stop-router!)
@@ -130,11 +133,11 @@
 (defn start-plot-server!
   "Start the oz plot server (on localhost:10666 by default)."
   ([]
-   (start-router!)
-   (start-web-server! default-port))
+   (start-web-server! default-port)
+   (start-router!))
   ([& [port]]
-   (start-router!)
-   (start-web-server! (or port default-port))))
+   (start-web-server! (or port default-port))
+   (start-router!)))
 
 (defn -main [& [port]]
   (if port

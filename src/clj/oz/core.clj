@@ -61,7 +61,9 @@
 (defn- prepare-server-for-view!
   [port host]
   ;; start the webserver if needed
-  (when-not (server/web-server-started?)
+  (infof "preparing with " port)
+  (when (or (not= (server/get-server-port) port)
+            (not (server/web-server-started?)))
     (infof "Starting up server on port" port)
     (start-plot-server! port))
   (when-not @anti-forgery-token
