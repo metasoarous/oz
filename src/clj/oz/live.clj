@@ -157,7 +157,7 @@
 
 
 (comment
-  (live-reload! "dev/watchtest.clj")
   (kill-watchers!)
+  (live-reload! "dev/watchtest.clj")
   :end-comment)
 
