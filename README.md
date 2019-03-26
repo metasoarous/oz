@@ -10,25 +10,25 @@ Great and powerful data vizualizationz
 
 ## Overview
 
-Oz is a simple data visualization library for Clojure built around Vega & Vega-Lite.
+Oz is a data visualization and scientific document processing library for Clojure built around Vega-Lite & Vega.
 
-Vega and Vega-lite are declarative grammars for describing interactive data visualizations.
+Vega-Lite & Vega are declarative grammars for describing interactive data visualizations.
 Of note, they are based on the Grammar of Graphics, which served as the guiding light for the popular R `ggplot2` viz library.
-With Vega & Vega-Lite, we define visualizations by declaratively specifying how attributes of our data map to aesthetics properties of a visualization.
+With Vega & Vega-Lite, we define visualizations by declaratively specifying how attributes of our data map to aesthetic properties of a visualization.
 Vega-Lite in particular focuses on maximal productivity and leverage for day to day usage (and is the place to start), while Vega (to which Vega-Lite compiles) is ideal for more nuanced control.
-
 
 ### About oz specifically...
 
 Oz itself provides:
 
-* a REPL API for for pushing vega and vega-lite data to a browser window over a websocket (see `v!` and `view!`)
-* client side `vega` and `vega-lite` Reagent components
-* an API for composing vega & vega-lite together in the context of html as hiccup for document and dashboard generation
-* plot/document publishing/sharing features via GitHub gists, the IDL's live [vega editor](http://vega.github.io/editor), and [ozviz.io](http://ozviz.io).
-* load markdown, hiccup or Vega/Vega-Lite files from disk via the `load` function
-* write out self-contained html files with live/interactive visualizations embedded, via the `export!` function
-* embed visualizations in Jupyter notebooks via the Clojupyter & IClojure kernels
+* [`view!`](#repl-usage): Clojure API for for pushing Vega-Lite & Vega (+ hiccup) data to a browser window over a websocket
+* [`vega`, `vega-lite`](#as-client-side-reagent-components): Reagent component API for dynamic client side ClojureScript apps
+* [`publish!`](#sharing-features): create a GitHub gist with Vega-Lite & Vega (+ hiccup), and print a link to visualize it with either the IDL's live [vega editor](http://vega.github.io/editor) or the [ozviz.io](http://ozviz.io)
+* [`load`](#loading-specs): load markdown, hiccup or Vega/Vega-Lite files (+ combinations) from disk as EDN or JSON
+* [`export!`](#export): write out self-contained html files with live/interactive visualizations embedded
+* [`oz.notebook.<kernel>`](#notebook-support): embed Vega-Lite & Vega data (+ hiccup) in Jupyter notebooks via the Clojupyter & IClojure kernels
+* [`live-reload!`](#live-code-reloading): live clj code reloading (à la Figwheel), tuned for data-science hackery (only reruns from first changed form, a pleasant live-coding experience)
+* [`live-view!`](#live-code-reloading): similar Figwheel-inspired `live-view!` function for watching and `view!`ing `.md`, `.edn` and `.json` files with Vega-Lite & Vega (+ (or markdown hiccup))
 
 
 ### Learning Vega, Vega-Lite & Oz
@@ -75,9 +75,9 @@ Next, require oz and start the plot server as follows:
 
 (oz/start-plot-server!)
 ```
+
 This will fire up a browser window with a websocket connection for funneling view data back and forth.
 If you forget to call this function, it will be called for you when you create your first plot, but be aware
-
 that it will delay the first display, and it's possible you'll have to resend the plot on a slower
 computer.
 
@@ -91,10 +91,9 @@ Next we'll define a function for generating some dummy data
 ```
 
 
-### `oz/v!`
+### `oz/view!`
 
-The simplest function for displaying vega or vega-lite is `oz/v!`.
-It will display a single vega or vega-lite plot in any connected browser windows.
+The main function for displaying vega or vega-lite is `oz/view!`.
 
 For example, a simple line plot:
 
@@ -107,7 +106,7 @@ For example, a simple line plot:
    :mark "line"})
 
 ;; Render the plot
-(oz/v! line-plot)
+(oz/view! line-plot)
 ```
 
 Should render something like:
@@ -129,7 +128,7 @@ Another example:
               :color {:field "item"
                       :type "nominal"}}})
 
-(oz/v! stacked-bar)
+(oz/view! stacked-bar)
 ```
 
 This should render something like:
@@ -139,7 +138,7 @@ This should render something like:
 
 ### vega support
 
-For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/v!`:
+For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/view!`:
 
 ```clojure
 ;; load some example vega (this may only work from within a checkout of oz; haven't checked)
@@ -147,7 +146,7 @@ For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/v!`:
 (require '[cheshire.core :as json])
 
 (def contour-plot (oz/load "contour-lines.vega.json"))
-(oz/v! contour-plot :mode :vega)
+(oz/view! contour-plot :mode :vega)
 ```
 
 This should render like:
@@ -155,12 +154,9 @@ This should render like:
 ![contours plot](doc/contours.png)
 
 
-### `oz/view!`
+### Hiccup
 
-This is a more powerful function which will let you compose vega and vega-lite views together with other html, using hiccup notation.
-The idea is to provide some quick and dirty utilities for building composite view dashboards and scientific documents.
-
-For demonstration we'll combine the three plots above into one:
+We can also embed Vega-Lite & Vega visualizations within hiccup documents:
 
 ```clojure
 (def viz
@@ -178,14 +174,14 @@ For demonstration we'll combine the three plots above into one:
 (oz/view! viz)
 ```
 
-Note that the vega and vega-lite specs are described in the output vega as using the `:vega` and `:vega-lite` keys.
+Note that the Vega-Lite & Vega specs are described in the output vega as using the `:vega` and `:vega-lite` keys.
 
 You should now see something like this:
 
 ![composite view](doc/composite-view.png)
 
 Note that vega/vega-lite already have very powerful and impressive [plot concatenation](https://vega.github.io/vega-lite/docs/concat.html) features which allow for coupling of interactivity between plots in a viz.
-However, combing things through hiccup like this is nice for expedience, and for leverage over the full expressiveness of HTML (tables anyone?).
+However, combing things through hiccup like this is nice for expedience, gives one the ability to combine such visualizations in the context of HTML documents.
 
 Also note that while not illustrated above, you can specify multiple maps in these vectors, and they will be merged into one.
 So for example, you can do `[:vega-lite stacked-bar {:width 100}]` to override the width.
@@ -267,7 +263,7 @@ The merging of spec maps described above applies prior to application of this re
 Eventually we'll be adding options for hooking into the signal dataflow graphs within these visualizations so that interactions in a Vega/Vega-Lite visualization can be used to inform other Reagent components in your app.
 
 
-## Loading documents & markdown support
+## Loading specs
 
 Oz now features a `load` function which accepts the following formats:
 
@@ -298,7 +294,16 @@ One final note: in lieue of `vega` or `vega-lite` you can specify `hiccup` in or
 This allows you to embed nontrivial html in your markdown files as hiccup, when basic markdown just doesn't cut it, without having to resort to manually writing html.
 
 
-## Jupyter support
+## Export
+
+We can also export static HTML files which use `Vega-Embed` to render interactive Vega/Vega-Lite visualizations using the `oz/export!` function.
+
+```clojure
+(oz/export! spec "test.html")
+```
+
+
+## Notebook support
 
 Oz now also features Jupyter support for both the Clojupyter and IClojure kernels.
 See the `view!` method in the namespaces `oz.notebook.clojupyter` and `oz.notebook.iclojure` for usage.
@@ -354,6 +359,34 @@ Once you have that running, you can:
 ;; then...
 (oz/view! spec)
 ```
+
+
+## Live code reloading
+
+Oz now features Figwheel-like hot code reloading for Clojure-based data science workflows.
+To start this functionality, you specify from the REPL a file you would like to watch for changes, like so:
+
+```clojure
+(oz/live-reload! "live-reload-test.clj")
+```
+
+As soon as you run this, the code in the file will be executed in its entirety.
+Thereafter, if you save changes to the file, all forms starting from the first form with material changes will be re-evaluated.
+Additionally, whitespace changes are ignored, and namespace changes only trigger a recompile if there were other code changes in flight, or if there was an error during the last execution.
+We also try to do a good job of logging notifications as things are running so that you know what is running and how long things are taking for to execute long-running forms.
+
+Collectively all of these features give you the same magic of Figwheel's hot-code reloading experience, but geared towards the specific demands of a data scientist, or really anyone who needs to quickly hack together potentially long running jobs.
+
+Of import: Because the code evaluated with `live-reload!` is evaluated in a separate thread, you can't include any code which might try to set root bindings of a dynamic var.
+Fortunately, setting root var bindings isn't something I've ever needed to do in my data science workflow (nor should you), but of course, it's possible there are libraries out there that do this.
+Just be aware that it might come up.
+This seems to be a pretty fundamental Clojure limitation, but I'd be interested to hear from the oracles whether there's any chance of this being supported in a future version of Clojure.
+
+Please note that this functionality is still somewhat experimental, and I appreciate feedback at this early stage.
+So far it's been really wonderful in the project I've been testing it out in, and I hope that you're able to find it useful.
+
+There's also a related function, `oz/live-view!` which will similarly watch a file for changes, `oz/load!` it, then `oz/view!` it.
+
 
 ## Local development
 

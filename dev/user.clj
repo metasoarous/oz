@@ -11,11 +11,11 @@
 ;(set! *warn-on-reflection* true)
 ;(set! *unchecked-math* :warn-on-boxed)
 
-(defn run []
+(defn dev! []
   (figwheel/start-figwheel!))
 
 (defn do-it-fools! []
-  (run)
+  (dev!)
   (server/start-plot-server!))
 
 (def browser-repl figwheel/cljs-repl)
@@ -43,10 +43,11 @@
      :mark "line"})
 
   ;; Render the plot to the 
-  (oz/v! line-plot)
+  (oz/view! line-plot)
   (oz/view! [:div
-             [:h1 "Hello world"]
-             [:vega line-plot]])
+             [:h1 "Hello pepe"]
+             [:vega line-plot]]
+            :port 3000)
 
   ;; We can also try publishing the plot like so (requires auth; see README.md for setup)
   (oz/publish! line-plot)
@@ -65,14 +66,12 @@
                 :color {:field "item"
                         :type "nominal"}}})
 
-  ;; Render our new plot
-  (oz/v! stacked-bar)
-  (oz/publish! stacked-bar)
+  (oz/view! stacked-bar)
 
 
   ;; vega example
-  (def contour-plot (json/parse-string (slurp (clojure.java.io/resource "contour-lines.vega.json")))) 
-  (oz/v! contour-plot :mode :vega)
+  (def contour-plot (json/parse-string (slurp "examples/contour-lines.vega.json"))) 
+  (oz/view! contour-plot :mode :vega)
 
   ;; Note that to publish vega, you must set :mode
   (oz/publish! contour-plot :mode :vega)
@@ -95,6 +94,19 @@
   ;; And finally, we can publish this document to a github gist and load via ozviz.io
   (oz/publish! viz)
 
+  ;; Test out live reloading functionality
+
+  (oz/live-view! "examples/test.md")
+
+  ;; Then edit the file at `examples/test.md` and watch
+
+  ;; Can live reload code as well
+
+  (oz/kill-watchers!)
+  (oz/live-reload! "dev/watchtest.clj")
+
   :end-examples)
+
+
 
 
