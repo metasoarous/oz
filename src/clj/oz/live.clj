@@ -136,7 +136,8 @@
   "Watch a clj file for changes, and re-evaluate only those lines which have changed, together with all following lines.
   Is not sensitive to whitespace changes, and will also always rerun reference forms included in the ns declaration."
   [filename]
-  (log/info "Starting live reload on file:" filename)
+  (when-not (get @watchers filename)
+    (log/info "Starting live reload on file:" filename))
   (watch! filename reload-file!))
 
 
