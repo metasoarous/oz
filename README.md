@@ -21,13 +21,13 @@ Vega-Lite in particular focuses on maximal productivity and leverage for day to 
 
 Oz itself provides:
 
-* [`view!`](#repl-usage): Clojure API for for pushing Vega-Lite & Vega (+ hiccup) data to a browser window over a websocket
+* [`view!`](#repl-usage): Clojure REPL API for for pushing Vega-Lite & Vega (+ hiccup) data to a browser window over a websocket
 * [`vega`, `vega-lite`](#as-client-side-reagent-components): Reagent component API for dynamic client side ClojureScript apps
 * [`publish!`](#sharing-features): create a GitHub gist with Vega-Lite & Vega (+ hiccup), and print a link to visualize it with either the IDL's live [vega editor](http://vega.github.io/editor) or the [ozviz.io](http://ozviz.io)
 * [`load`](#loading-specs): load markdown, hiccup or Vega/Vega-Lite files (+ combinations) from disk as EDN or JSON
 * [`export!`](#export): write out self-contained html files with live/interactive visualizations embedded
 * [`oz.notebook.<kernel>`](#notebook-support): embed Vega-Lite & Vega data (+ hiccup) in Jupyter notebooks via the Clojupyter & IClojure kernels
-* [`live-reload!`](#live-code-reloading): live clj code reloading (à la Figwheel), tuned for data-science hackery (only reruns from first changed form, a pleasant live-coding experience)
+* [`live-reload!`](#live-code-reloading): live clj code reloading (à la Figwheel), tuned for data-science hackery (only reruns from first changed form, for a pleasant, performant live-coding experience)
 * [`live-view!`](#live-code-reloading): similar Figwheel-inspired `live-view!` function for watching and `view!`ing `.md`, `.edn` and `.json` files with Vega-Lite & Vega (+ (or markdown hiccup))
 
 
