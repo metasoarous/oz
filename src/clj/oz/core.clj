@@ -262,9 +262,9 @@
          [:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
          [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
          [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
-         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@5.3.1"}]
-         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.0-rc16"}]
-         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-embed@4.0.0-rc1"}]]
+         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@5.3.2"}]
+         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.2"}]
+         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-embed@4.0.0"}]]
         [:body
          (embed spec opts)
          [:div#vis-tooltip {:class "vg-tooltip"}]]])))

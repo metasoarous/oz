@@ -1,4 +1,4 @@
-(defproject metasoarous/oz "1.6.0-alpha1"
+(defproject metasoarous/oz "1.6.0-alpha2"
   :description "Great and powerful data visualizations in Clojure using Vega and Vega-lite"
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
@@ -26,10 +26,10 @@
                  [com.cognitect/transit-clj  "0.8.313"]
                  [com.cognitect/transit-cljs "0.8.256"]
                  [reagent "0.8.1"]
-                 [cljsjs/vega "5.3.1-0"]
-                 [cljsjs/vega-lite "3.0.0-rc16-0"]
-                 [cljsjs/vega-embed "4.0.0-rc1-0"]
-                 [cljsjs/vega-tooltip "0.16.0-0"]
+                 [cljsjs/vega "5.3.2-0"]
+                 [cljsjs/vega-lite "3.0.2-0"]
+                 [cljsjs/vega-embed "4.0.0-0"]
+                 [cljsjs/vega-tooltip "0.17.0-0"]
                  [markdown-to-hiccup "0.6.1"]
                  [org.clojars.didiercrunch/clojupyter "0.1.5"]
                  ;; must be above yaml for jvm compilation fix
