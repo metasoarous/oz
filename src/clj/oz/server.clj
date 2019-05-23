@@ -10,7 +10,7 @@
    [compojure.route :as route]
    [clojure.core.async :as async  :refer (<! <!! >! >!! put! chan go go-loop)]
    [taoensso.encore :as encore :refer (have have?)]
-   [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]
+   [taoensso.timbre :as log :refer (tracef debugf infof warnf errorf)]
    [taoensso.sente  :as sente]
    [aleph.http :as aleph]
    [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
@@ -22,7 +22,7 @@
 
 (def default-port 10666)
 
-(timbre/set-level! :info)
+(log/set-level! :info)
 ;; (reset! sente/debug-mode?_ true)
 
 (let [packer (sente-transit/get-transit-packer)
@@ -57,6 +57,9 @@
   [req]
   (get-in req [:session :uid]))
 
+
+(defonce current-build-dir (atom ""))
+
 (defroutes my-routes
   (GET  "/" req (content-type {:status 200
                                :session (if (session-uid req)
@@ -69,6 +72,12 @@
         (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
   (route/resources "/" {:root "oz/public"})
+  ;; TODO This won't work; needs to be dynamic, but isn't currently
+  (GET "*" req (content-type {:status 200
+                              :session (if (session-uid req)
+                                         (:session req)
+                                         (assoc (:session req) :uid (unique-id)))
+                              :body (io/input-stream (io/file (str @current-build-dir "/" (:* req))))}))
   (route/not-found "<h1>Nope</h1>"))
 
 (def main-ring-handler

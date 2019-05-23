@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [cljs.core.async :as async  :refer (<! >! put! chan)]
             [taoensso.encore :as encore :refer-macros (have have?)]
-            [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
+            [taoensso.timbre :as log :refer-macros (tracef debugf infof warnf errorf)]
             [taoensso.sente :as sente :refer (cb-success?)]
             [taoensso.sente.packers.transit :as sente-transit]
             [cljsjs.vega]
@@ -13,7 +13,7 @@
   (:require-macros
    [cljs.core.async.macros :as asyncm :refer (go go-loop)]))
 
-(timbre/set-level! :info)
+(log/set-level! :info)
 (enable-console-print!)
 
 (defn- ^:no-doc log [a-thing]

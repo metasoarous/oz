@@ -2,25 +2,60 @@
   (:require [hawk.core :as hawk]
             [taoensso.timbre :as log]
             [clojure.tools.reader :as reader]
+            [clojure.string :as string]
             [clojure.pprint :as pprint]
+            [clojure.java.io :as io]
             [clojure.core.async :as async]))
 
 
 (defn ppstr [x]
   (with-out-str (pprint/pprint x)))
 
+
+;; The oppressive regime (deep state)
+
 (defonce watchers (atom {}))
 
 
-(defn watch! [filename f]
-  (when-not (get @watchers filename)
+;; Some path helpers
+
+(defn canonical-path
+  [path-or-file]
+  (-> (io/file path-or-file)
+      (.getCanonicalFile)
+      (.getPath)))
+
+(defn strip-path-seps
+  [path]
+  (if (= (last path)
+         (java.io.File/separatorChar))
+    (strip-path-seps (apply str (drop-last path)))
+    path))
+
+(defn join-paths
+  [path1 path2]
+  (str (strip-path-seps path1)
+       (java.io.File/separatorChar)
+       path2))
+
+(defn relative-path
+  [path base]
+  (string/replace (canonical-path path)
+                  (canonical-path base)
+                  ""))
+
+
+;; watching process ns form
+
+(defn watch! [watch-path f]
+  (when-not (get @watchers watch-path)
     ;; Call the function on first watch, so that you don't have to do a no-op save to initialize things
-    (f filename {} {:kind :create})
+    (f watch-path {} {:kind :create :file (io/file watch-path)})
     (let [watcher
-          (hawk/watch! [{:paths [filename]
-                         :handler (fn [context event]
-                                    (f filename context event))}])]
-      (swap! watchers assoc-in [filename :watcher] watcher))))
+          (hawk/watch! [{:paths [watch-path]
+                         :handler (fn [context {:as event :keys [file]}]
+                                    (f watch-path context event))}])]
+      (swap! watchers assoc-in [watch-path :watcher] watcher))))
 
 
 (defn process-ns-form
@@ -60,10 +95,12 @@
        ANSI_RESET))
 
 
-(defn reload-file! [filename context {:keys [kind file]}]
-  ;; ignore delete (some editors technically delete the file on every save!
+
+(defn reload-file! [watch-path context {:keys [kind file]}]
+  ;; ignore delete (some editors technically delete the file on every save!)
   (when (#{:modify :create} kind)
-    (let [contents (slurp filename)
+    (let [filename (canonical-path file)
+          contents (slurp file)
           {:keys [last-contents last-forms]} (get @watchers filename)]
       ;; This has a couple purposes, vs just using the (seq diff-forms) below:
       ;; * forces at least a check if the file is changed at all before doing all the rest of the work below
@@ -86,7 +123,8 @@
                               (drop-while (fn [[f1 f2]] (= f1 f2)))
                               (map first))
               {:keys [ns-sym reference-forms]} (process-ns-form (first forms))
-              successful-forms (atom [])]
+              successful-forms (atom [])
+              final-result-chan (async/chan (async/sliding-buffer 1))]
               ;; eventually add a final-form evaluation?
               ;final-form (atom nil)]
           ;; if there are differences, then do the thing
@@ -114,6 +152,8 @@
                       (let [result (eval form)]
                         ;; put the result on the result chan, to let the go block above know we're done
                         (async/>!! result-chan :done)
+                        (when result
+                          (async/>!! final-result-chan result))
                         ;; keep track of successfully run forms, so we don't redo work that completed
                         (swap! successful-forms conj form)
                         ;; If long running, log out how long it took
@@ -128,14 +168,17 @@
                 (log/error (color-str ANSI_RED "Unable to process all of file: " filename "\n"))))
             ;; Update last-forms in our state atom, only counting those forms which successfully ran
             (let [base-forms (take (- (count forms) (count diff-forms)) forms)
-                  new-forms (concat base-forms @successful-forms)]
-              (swap! watchers assoc-in [filename :last-forms] new-forms))))))))
+                  new-forms (concat base-forms @successful-forms)
+                  final-result (async/poll! final-result-chan)]
+              (swap! watchers update merge filename {:last-forms new-forms :last-eval final-result})
+              final-result)))))))
 
 
 (defn live-reload!
   "Watch a clj file for changes, and re-evaluate only those lines which have changed, together with all following lines.
   Is not sensitive to whitespace changes, and will also always rerun reference forms included in the ns declaration."
   [filename]
+  ;; QUESTION What happens here when this is a path?
   (when-not (get @watchers filename)
     (log/info "Starting live reload on file:" filename))
   (watch! filename reload-file!))
@@ -143,6 +186,7 @@
 
 (defn kill-watcher!
   "Kill the corresponding watcher thread."
+  ;; TODO Need to get this to properly kill a whole dir of watchers?
   [filename]
   (hawk/stop! (get-in @watchers [filename :watcher]))
   (swap! watchers dissoc filename))
@@ -153,7 +197,10 @@
   ([] (kill-watchers! (keys @watchers)))
   ([filenames]
    (doseq [filename filenames]
-     (kill-watcher! filename))))
+     (try
+       (kill-watcher! filename)
+       (catch Exception e
+         :pass)))))
 
 
 (comment

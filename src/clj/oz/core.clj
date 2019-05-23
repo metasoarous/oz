@@ -8,9 +8,13 @@
             [clojure.set :as set]
             [clojure.edn :as edn]
             [clojure.pprint :as pp]
+            [clojure.java.io :as io]
             [cheshire.core :as json]
             [yaml.core :as yaml]
-            [markdown-to-hiccup.core :as markdown]
+            [markdown-to-hiccup.core :as md->hc]
+            [markdown-to-hiccup.decode :as md-decode]
+            [markdown.core :as md]
+            [hickory.core :as hickory]
             [hiccup.core :as hiccup]
             [taoensso.timbre :as log :refer (tracef debugf infof warnf errorf)]
             [tentacles.gists :as gists]))
@@ -117,10 +121,13 @@
 
 ;; Publishing code
 
+
+
+
 (defn- auth-args
   [args]
   (let [the-auth-args (submap args #{:auth :auth-token :client-id :access-token})
-        auth-file (or (:auth-file args) (str (System/getProperty "user.home") "/.oz/github-creds.edn"))]
+        auth-file (or (:auth-file args) (live/join-paths (System/getProperty "user.home") ".oz/github-creds.edn"))]
     (if (empty? the-auth-args)
       (try
         (edn/read-string (slurp auth-file))
@@ -234,6 +241,8 @@
    (let [id (str "viz-" (java.util.UUID/randomUUID))
          code (format "vegaEmbed('#%s', %s, %s);" id (json/generate-string spec) (json/generate-string {:mode mode}))]
      [:div
+       ;; TODO In the future this should be a precompiled version of whatever the viz renders as (svg), at least
+       ;; optionally
        [:div {:id id}]
        [:script {:type "text/javascript"} code]])))
 
@@ -254,28 +263,43 @@
   ([spec]
    (embed spec {})))
 
-
 (defn html
   ([spec opts]
-   (if (map? spec)
-     (html [:vega-lite spec])
-     (hiccup/html 
-       [:html
-        [:head
-         [:meta {:charset "UTF-8"}]
-         [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-         [:link {:rel "shortcut icon" :href "http://ozviz.io/oz.svg" :type "image/x-icon"}]
-         [:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
-         [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
-         [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
-         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@5.3.2"}]
-         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.2"}]
-         [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-embed@4.0.0"}]]
-        [:body
-         (embed spec opts)
-         [:div#vis-tooltip {:class "vg-tooltip"}]]])))
+   (let [metadata (or (meta spec) {})]
+     (log/info "metadata is" metadata)
+     (if (map? spec)
+       (html [:vega-lite spec])
+       (hiccup/html 
+         [:html
+          [:head
+           [:meta {:charset "UTF-8"}]
+           [:title (or (:title metadata) "Oz document")]
+           [:meta {:name "description" :content (or (:description metadata) "Oz document")}]
+           (when-let [author (:author metadata)]
+             [:meta {:name "author" :content author}])
+           (when-let [keywords (:keywords metadata)]
+             [:meta {:name "keywords" :content (string/join "," (into (set keywords) (:tags metadata)))}])
+           [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+           [:link {:rel "shortcut icon" :href "http://ozviz.io/oz.svg" :type "image/x-icon"}]
+           [:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
+           [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
+           [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
+           [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@5.3.2"}]
+           [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.2"}]
+           [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-embed@4.0.0"}]
+           ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
+           [:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]
+          [:body
+           (vec (embed spec opts))
+           [:div#vis-tooltip {:class "vg-tooltip"}]
+           [:script {:src "js/compiled/oz.js" :type "text/javascript"}]]]))))
   ([spec]
    (html spec {})))
+
+(comment
+  (spit "resources/oz/public/index.html"
+        (html [:div#app [:h2 "oz"] [:p "pay no attention"]]))
+  :end-comment)
    
 
 (defn export!
@@ -311,12 +335,18 @@
     block))
     
 
+
 (defn- ^:no-doc from-markdown
   "Process markdown string into a hiccup document"
   [md-string]
   (try
-    (let [hiccup (-> md-string markdown/md->hiccup (markdown/hiccup-in :html :body) rest)]
-      (->> hiccup (map process-md-block) (into [:div])))
+    (let [{:keys [metadata html]} (md/md-to-html-string-with-meta md-string)
+          hiccup (-> html hickory/parse hickory/as-hiccup first md->hc/component md-decode/decode)]
+          ;hiccup (-> html hickory/parse hickory/as-hiccup first md->hc/component)]
+          ;; TODO deal with encoding of html escape characters (see markdown->hc for this)!
+      (with-meta
+        (->> hiccup (map process-md-block) vec)
+        metadata))
     (catch Exception e
       (log/error "Unable to process markdown")
       (.printStackTrace e))))
@@ -362,6 +392,169 @@
   (live/watch! filename (partial view-file! opts)))
 
 
+(defn drop-extension
+  [relative-path]
+  (string/replace relative-path #"\.\w*$" ""))
+
+(defn html-extension
+  [relative-path]
+  (string/replace relative-path #"\.\w*$" ".html"))
+
+(defn- compute-out-path
+  [{:as spec :keys [from to out-path-fn]} path]
+  (let [out-path-fn (or out-path-fn drop-extension)
+        single-file? (= path from)
+        to-dir? (or (.isDirectory (io/file to))
+                    (= (last path) (java.io.File/separatorChar)))
+        relative-from-path (if single-file? path (live/relative-path path from))]
+    (if (and single-file? (not to-dir?))
+      ;; then we're just translating a single file with an explicit to path
+      to
+      ;; then we need to assume that we're exporting to a path which has a directory created for it
+      (live/join-paths (or to ".")
+                       (out-path-fn relative-from-path)))))
+
+
+(defn- ensure-out-dir
+  [out-path drop-last?]
+  (let [split-path (string/split out-path (re-pattern (java.io.File/separator)))
+        split-path (if drop-last? (drop-last split-path) split-path)
+        intermediate-paths (map-indexed
+                             (fn [i _]
+                               (string/join (java.io.File/separator) (take (inc i) split-path)))
+                             split-path)]
+    (doseq [path intermediate-paths]
+      (let [file (io/file path)]
+        (when-not (.isDirectory file)
+          (.mkdir file))))))
+
+
+(defn extension
+  [filename]
+  (last (string/split filename #"\.")))
+
+(def supported-filetypes
+  #{"md" "mds" "clj" "cljc" "cljs" "yaml" "json" "edn"})
+
+(def asset-filetypes
+  #{"jpg" "png" "svg" "css"})
+
+
+;; For keeping track of builds
+
+(defonce ^:private last-built-file (atom nil))
+@last-built-file
+
+(defn- build-and-view-file!
+  [{:as config :keys [live-view? host port force-update]}
+   {:as spec :keys [format from to out-path-fn template-fn html-template-fn as-assets?]}
+   filename context {:keys [kind file]}]
+  (when (and from (.isDirectory (io/file from)))
+    (ensure-out-dir to false))
+  (if-let [ext (and file (extension (.getPath file)))]
+    (cond
+      ;; Handle asset case; just copy things over directly
+      (or as-assets? (asset-filetypes ext))
+      (when-not (.isDirectory file)
+        (let [out-path (compute-out-path (assoc spec :out-path-fn identity)
+                                         (.getPath file))]
+          (ensure-out-dir out-path true)
+          (log/info "updating asset:" file)
+          (io/copy file (io/file out-path))))
+      ;; Handle the source file case
+      (supported-filetypes ext)
+      ;; ignore delete (some editors technically delete the file on every save!); also ignore dirs
+      (when (and (#{:modify :create} kind) file (not (.isDirectory file)))
+        (reset! last-built-file [(live/canonical-path file) spec])
+        (let [filename (.getPath file)
+              ext (extension filename)
+              contents (slurp filename)]
+          ;; if there are differences, then do the thing
+          (when-not (= contents
+                       (get-in @live/watchers [filename :last-contents]))
+            (log/info "Rerendering file:" filename)
+            (let [evaluation
+                  (cond
+                    ;; 
+                    (#{"clj" "cljc"} ext)
+                    (live/reload-file! filename context {:kind kind :file file})
+                    ;; how do we handle cljs?
+                    (#{"cljs"} ext)
+                    [:div "CLJS Coming soon!"]
+                    ;; loading of static files, like md or hiccup
+                    :else
+                    (load filename :format format))
+                  ;_ (log/info "step 1:" evaluation)
+                  evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))
+                  ;_ (log/info "step 2:" evaluation)
+                  out-path (compute-out-path spec filename)]
+              (ensure-out-dir out-path true)
+              (when live-view?
+                (log/info "Updating live view")
+                (view! evaluation :host host :port port))
+              (export! evaluation out-path)
+              (swap! live/watchers update filename (partial merge {:last-contents contents :last-eval evaluation})))))))))
+
+
+(def ^:private default-config
+  {:live? true
+   :live-view? true
+   :lazy? true
+   :port 5760
+   :host "localhost"})
+
+(def ^:private default-spec
+  {:out-path-fn drop-extension})
+
+
+
+(defn kill-builds!
+  "Not to be confused with Kill Bill..."
+  []
+  ;; for now this should suffice
+  (live/kill-watchers!))
+
+
+(defn- infer-buid-dir
+  [specs]
+  ;; not correct; mocking
+  (:to (first specs)))
+
+(defn build!
+  "Builds a static web site based on the content specified in specs. Each spec should be a mapping of paths, with additional
+  details about how to build data from one path to the other. Available spec keys are:
+    * `:from` - (required) Path from which to build
+    * `:to` - (required) Compiled files go here
+    * `:template-fn` - Function which takes Oz hiccup content and returns some new hiccup, presumably placing the content in question in some 
+    * `:middleware` - More general version of template-fn?
+
+  Additional options pertinent to the entire build process may be passed in:
+    * `:live?` - Watch the file files 
+    * `:lazy?` - If true, don't build anything until it changes; this is best for interactive/incremental updates and focused work.
+                 Set to false if you want to rebuild from scratch. (default true)
+    * `:live-view?` - Build with live view of most recently changed file (default true)
+  "
+  ;; lazy? - (This is one that it would be nice to merge in at the spec level)
+  ([specs & {:as config}]
+   (kill-builds!)
+   (if (map? specs)
+     (mapply build! [specs] config)
+     (let [full-config (merge default-config config)]
+       (reset! server/current-build-dir (or (:build-dir config) (infer-buid-dir specs)))
+       (doseq [spec specs]
+         (let [full-spec (merge default-spec spec)]
+           (live/watch! (:from spec) (partial build-and-view-file! full-config spec))))
+       ;; If we're running this the second time, we want to immediately rebuild the most recently compiled
+       ;; file, so that any new templates or whatever being passed in can be re-evaluated for it.
+       (when-let [[file spec] @last-built-file]
+         (let [new-spec (first (filter #(= (:from %) (:from spec)) specs))]
+           (log/info "Recompiling last viewed file:" file)
+           (build-and-view-file! full-config new-spec (:from spec) {} {:kind :create :file (io/file file)})))))))
+
+;(reset! last-built-file nil)
+;@last-built-file
+
+
 (comment
   (live-view! "examples/test.md" :port 8888)
   (kill-watchers!)
@@ -380,7 +573,7 @@
   (export!
     [:div
      [:h1 "Greetings, Earthling"]
-     [:p "Take us to the King of Kings. Thy kale chips set us free."]
+     [:p "Take us to your King of Kings. We demand tribute!."]
      [:h2 "Look, and behold"]
      [:vega-lite {:data {:values [{:a 2 :b 3} {:a 5 :b 2} {:a 7 :b 4}]}
                   :mark :point
