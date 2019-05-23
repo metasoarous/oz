@@ -61,10 +61,9 @@
 (defn- prepare-server-for-view!
   [port host]
   ;; start the webserver if needed
-  (infof "preparing with " port)
   (when (or (not= (server/get-server-port) port)
             (not (server/web-server-started?)))
-    (infof "Starting up server on port" port)
+    (log/info "Starting up server on port" port)
     (start-plot-server! port))
   (when-not @anti-forgery-token
     (when-let [token (:csrf-token
@@ -77,6 +76,10 @@
 
 ;; Main view functions
 
+(def mathjax-script
+  [:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}])
+
+
 (defn view!
   "View the given spec in a web browser. Specs for which map? is true are treated as single Vega-Lite/Vega specifications.
   All other values are treated as hiccup, and are therefore expected to be a vector or other iterable.
@@ -84,15 +87,18 @@
   You may also specify `:host` and `:port`, for server settings, and a `:mode` option, defaulting to `:vega-lite`, with `:vega` the alternate option.
   (Though I will note that Vega-Embed often catches when you pass a vega spec to a vega-lite component, and does the right thing with it.
   However, this is not guaranteed behavior, so best not to depend on it (wink, nod))"
-  [spec & {:keys [host port mode]}]
-  (try
-    (prepare-server-for-view! (or port (server/get-server-port) server/default-port) (or host "localhost"))
-    (server/send-all!
-      [::view-spec
-       ;; if we have a map, just try to pass it through as a vega form
-       (if (map? spec) [(or mode :vega-lite) spec] spec)])
-    (catch Exception e
-      (errorf "error sending plot to server: %s" (ex-data e)))))
+  [spec & {:keys [host port mode] :as opts}]
+  (let [port (or port (server/get-server-port) server/default-port)
+        host (or host "localhost")]
+    (try
+      (prepare-server-for-view! port host)
+      (let [hiccup-spec (if (map? spec) [(or mode :vega-lite) (conj spec mathjax-script)] (vec spec))]
+        ;; if we have a map, just try to pass it through as a vega form
+        (server/send-all! [::view-spec hiccup-spec]))
+      (catch Exception e
+        (log/error "error sending plot to server:" e)
+        (log/error "Try using a different port?")
+        (.printStackTrace e)))))
 
 
 (defn ^:no-doc v!
