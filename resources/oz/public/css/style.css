@@ -16,6 +16,7 @@
 
 body {
   padding: 30px;
+  line-height: 1.7;
 }
 
 div#app {
@@ -26,6 +27,7 @@ div#app {
 
 h1, h2, h3, h4 {
   font-family: "LatinModernRomanWOFF", serif;
+  line-height: 1.4;
   /*font-family: 'Open Sans', sans-serif;*/
 }
 
@@ -37,23 +39,29 @@ h1, h2, h3, h4 {
 }
 
 h1 {
-  font-size: 40px;
+  font-size: 50px;
   margin-top: 40px;
   margin-bottom: 20px;
 }
 
-h2, h3 {
-  margin-top: 35px;
+h2{
+  font-size: 30px;
+  margin-top: 50px;
+  margin-bottom: 15px;
+}
+
+h3 {
+  font-size: 23px;
+  margin-top: 40px;
   margin-bottom: 13px;
 }
 
-h2 {font-size: 30px;}
-h3 {font-size: 23px;}
 h4 {font-size: 18px;}
 
 code {
-  font-size: 16px;
-  color: grey;
+  line-height: 1.5;
+  font-size: 14.5px;
+  color: #606060;
   padding-right: 4px;
   padding-left: 4px;
 }
