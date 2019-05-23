@@ -377,6 +377,8 @@ We also try to do a good job of logging notifications as things are running so t
 
 Collectively all of these features give you the same magic of Figwheel's hot-code reloading experience, but geared towards the specific demands of a data scientist, or really anyone who needs to quickly hack together potentially long running jobs.
 
+Here's a quick video of this in action: <https://www.youtube.com/watch?v=yUTxm29fjT4>
+
 Of import: Because the code evaluated with `live-reload!` is evaluated in a separate thread, you can't include any code which might try to set root bindings of a dynamic var.
 Fortunately, setting root var bindings isn't something I've ever needed to do in my data science workflow (nor should you), but of course, it's possible there are libraries out there that do this.
 Just be aware that it might come up.
