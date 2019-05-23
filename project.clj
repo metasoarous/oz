@@ -30,7 +30,8 @@
                  [cljsjs/vega-lite "3.0.2-0"]
                  [cljsjs/vega-embed "4.0.0-0"]
                  [cljsjs/vega-tooltip "0.17.0-0"]
-                 [markdown-to-hiccup "0.6.1"]
+                 [markdown-clj "1.10.0"]
+                 [markdown-to-hiccup "0.6.2"]
                  [org.clojars.didiercrunch/clojupyter "0.1.5"]
                  ;; must be above yaml for jvm compilation fix
                  [org.flatland/ordered "1.5.7"]
