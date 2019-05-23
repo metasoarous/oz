@@ -555,21 +555,37 @@
 ;@last-built-file
 
 
-(comment
-  (live-view! "examples/test.md" :port 8888)
-  (kill-watchers!)
-  :end-comment)
+;; for purpose of examples below
+
+(defn- site-template
+  [spec]
+  [:div {:style {:max-width 900 :margin-left "auto" :margin-right "auto"}}
+   spec])
+
+(defn- blog-template
+  [spec]
+  (site-template
+    (let [{:as spec-meta :keys [title published-at tags]} (meta spec)]
+      [:div
+       [:h1 {:style {:line-height 1.35}} title]
+       [:p "Published on: " published-at]
+       [:p "Tags: " (string/join ", " tags)]
+       [:br]
+       spec])))
+
+
+;; Some examples for you
 
 (comment
-;(try
-  (export!
-    (load "examples/test.md")
-    "examples/test.html")
-  (catch Exception e (.printStackTrace e)))
+  ;; View a simple plot
+  (view!
+    {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
+     :mark :point
+     :encoding {:x {:field :a}
+                :y {:field :b}}}
+    :port 10666)
 
-
-;(do
-(comment
+  ;; View a more complex document
   (export!
     [:div
      [:h1 "Greetings, Earthling"]
@@ -581,6 +597,26 @@
                   :encoding {:x {:field "a"}
                              :y {:field "b"}}}]]
     ;; Should be using options for mode vega/vega-lite TODO
-    "test.html"))
+    "test.html")
+
+  ;; Run live view on a file, and see compiled changes real time
+  (live-view! "examples/test.md" :port 8888)
+  ;; Can kill file watchers manually if you want
+  (kill-watchers!)
+
+
+  ;; Run static site generation features
+  (build!
+    [{:from "examples/static-site/src/site/"
+      :to "examples/static-site/build/"
+      :template-fn site-template}
+     ;; If you have static assets, like datasets or imagines which need to be simply copied over
+     {:from "examples/static-site/src/assets/"
+      :to "examples/static-site/build/"
+      :as-assets? true}]
+    :port 2388
+    :build-dir "scratch/site-build/")
+
+  :end-comment)
 
 
