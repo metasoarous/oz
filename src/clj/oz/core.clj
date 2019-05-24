@@ -266,7 +266,6 @@
 (defn html
   ([spec opts]
    (let [metadata (or (meta spec) {})]
-     (log/info "metadata is" metadata)
      (if (map? spec)
        (html [:vega-lite spec])
        (hiccup/html 
@@ -327,9 +326,6 @@
                          :edn (edn/read-string src)
                          :json (json/parse-string src keyword)
                          :yaml (yaml/parse-string src))]
-              (log/info "classes" classes)
-              (log/info "viz-type" viz-type)
-              (log/info "src-type" src-type)
               (case viz-type
                 :hiccup data
                 (:vega :vega-lite) [viz-type data]))
