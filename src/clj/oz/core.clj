@@ -317,16 +317,19 @@
               classes (->> (string/split class #" ") (map keyword) set)]
           (if-not (empty? (set/intersection classes #{:vega :vega-lite :hiccup :edn-vega :edn-vega-lite :edn-hiccup :json-vega-lite :json-vega :json-hiccup :yaml-vega :yaml-vega-lite}))
             (let [viz-type (cond
-                             (set/intersection classes #{:vega :edn-vega :json-vega}) :vega
-                             (set/intersection classes #{:vega-lite :edn-vega-lite :json-vega-lite}) :vega-lite
-                             (set/intersection classes #{:hiccup :edn-hiccup :json-hiccup}) :hiccup)
+                             (seq (set/intersection classes #{:vega :edn-vega :json-vega})) :vega
+                             (seq (set/intersection classes #{:vega-lite :edn-vega-lite :json-vega-lite})) :vega-lite
+                             (seq (set/intersection classes #{:hiccup :edn-hiccup :json-hiccup})) :hiccup)
                   src-type (cond
-                             (set/intersection classes #{:edn :edn-vega :edn-vega-lite :edn-hiccup}) :edn
-                             (set/intersection classes #{:json :json-vega :json-vega-lite :json-hiccup}) :json)
+                             (seq (set/intersection classes #{:edn :edn-vega :edn-vega-lite :edn-hiccup})) :edn
+                             (seq (set/intersection classes #{:json :json-vega :json-vega-lite :json-hiccup})) :json)
                   data (case src-type
                          :edn (edn/read-string src)
                          :json (json/parse-string src keyword)
                          :yaml (yaml/parse-string src))]
+              (log/info "classes" classes)
+              (log/info "viz-type" viz-type)
+              (log/info "src-type" src-type)
               (case viz-type
                 :hiccup data
                 (:vega :vega-lite) [viz-type data]))
@@ -615,7 +618,7 @@
       :to "examples/static-site/build/"
       :as-assets? true}]
     :port 2388
-    :build-dir "scratch/site-build/")
+    :build-dir "examples/static-site/build")
 
   :end-comment)
 
