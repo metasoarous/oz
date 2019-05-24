@@ -390,6 +390,20 @@ So far it's been really wonderful in the project I've been testing it out in, an
 There's also a related function, `oz/live-view!` which will similarly watch a file for changes, `oz/load!` it, then `oz/view!` it.
 
 
+## Using Oz from Shadow-CLJS
+
+It is possible to use Oz with Shadow-CLJS but care must be taken that the right Vega and Vega-lite dependencies are provided to Oz. The Oz project depends on Vega and Vega Lite as packaged in CLJSJS. This enables Oz to be able to spin up a web server with Vega loaded from a normal Clojure application. Shadow-CLJS does not support CLJSJS, and requires JavaScript dependencies to be loadable with NPM. To use Oz from Shadow-CLJS,
+
+1. Ensure that you have Shadow-CLJS version 2.8.37 or later installed. Shadow-CLJS before version 2.8.37 did not include CLJSJS shims for Vega and Vega lite.
+2. Check what versions of Vega, Vega-Lite and Vega-Embed your Oz version requires by reading the Oz package CLJSJS dependencies on [Clojars][2]
+3. Install the required versions of Vega, Vega-Lite and Vega-Embed from NPM.
+
+Optionally, check out this [example project][1].
+
+[1]: https://github.com/teodorlu/reagent-shadow-oz-example
+[2]: https://clojars.org/metasoarous/oz/versions/
+
+
 ## Local development
 
 For development environment, `dev/utils.clj` has 
@@ -421,6 +435,7 @@ More to the point though, if you find yourself unable to do something you expect
 
 For more context and information, see the cljsjs [creating pacakages](https://github.com/cljsjs/packages/wiki/Creating-Packages), [updating packages](https://github.com/cljsjs/packages/wiki/Updating-packages) and [creating externs](https://github.com/cljsjs/packages/wiki/Creating-Externs) documentation.
 For convenience, I've automated much of this work in the script at `./bin/update-cljsjs.sh`.
+
 
 
 ## License
