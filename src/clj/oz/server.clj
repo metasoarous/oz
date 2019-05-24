@@ -5,7 +5,7 @@
    [ring.middleware.gzip :refer [wrap-gzip]]
    [ring.middleware.cljsjs :refer [wrap-cljsjs]]
    [ring.middleware.anti-forgery :refer (*anti-forgery-token*)]
-   [ring.util.response :refer (resource-response content-type)]
+   [ring.util.response :as response]
    [compojure.core :as comp :refer (defroutes GET POST)]
    [compojure.route :as route]
    [clojure.core.async :as async  :refer (<! <!! >! >!! put! chan go go-loop)]
@@ -61,11 +61,13 @@
 (defonce current-build-dir (atom ""))
 
 (defroutes my-routes
-  (GET  "/" req (content-type {:status 200
-                               :session (if (session-uid req)
-                                          (:session req)
-                                          (assoc (:session req) :uid (unique-id)))
-                               :body (io/input-stream (io/resource "oz/public/index.html"))} "text/html"))
+  (GET  "/" req (response/content-type
+                  {:status 200
+                   :session (if (session-uid req)
+                              (:session req)
+                              (assoc (:session req) :uid (unique-id)))
+                   :body (io/input-stream (io/resource "oz/public/index.html"))}
+                  "text/html"))
   (GET "/token" req (json/generate-string {:csrf-token *anti-forgery-token*}))
   (GET  "/chsk" req
         (debugf "/chsk got: %s" req)
@@ -73,11 +75,7 @@
   (POST "/chsk" req (ring-ajax-post req))
   (route/resources "/" {:root "oz/public"})
   ;; TODO This won't work; needs to be dynamic, but isn't currently
-  (GET "*" req (content-type {:status 200
-                              :session (if (session-uid req)
-                                         (:session req)
-                                         (assoc (:session req) :uid (unique-id)))
-                              :body (io/input-stream (io/file (str @current-build-dir "/" (:* req))))}))
+  (GET "*" req (response/file-response (str @current-build-dir "/" (-> req :params :*))))
   (route/not-found "<h1>Nope</h1>"))
 
 (def main-ring-handler
