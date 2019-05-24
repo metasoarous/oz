@@ -444,6 +444,19 @@
 (defonce ^:private last-built-file (atom nil))
 @last-built-file
 
+
+(def default-ignore-patterns
+  [#".*~$"
+   #"^\d*$"
+   #"^\..*\.sw\wx?$"])
+
+(defn- ignore?
+  [f]
+  (some
+    #(-> f io/file .getPath (string/split #"\/") last (->> (re-find %)))
+    default-ignore-patterns))
+
+
 (defn- build-and-view-file!
   [{:as config :keys [live-view? host port force-update]}
    {:as spec :keys [format from to out-path-fn template-fn html-template-fn as-assets?]}
@@ -454,7 +467,7 @@
     (cond
       ;; Handle asset case; just copy things over directly
       (or as-assets? (asset-filetypes ext))
-      (when-not (.isDirectory file)
+      (when (and (not (.isDirectory file)) (#{:modify :create} kind) (not (ignore? file)))
         (let [out-path (compute-out-path (assoc spec :out-path-fn identity)
                                          (.getPath file))]
           (ensure-out-dir out-path true)
@@ -542,6 +555,9 @@
        (reset! server/current-build-dir (or (:build-dir config) (infer-buid-dir specs)))
        (doseq [spec specs]
          (let [full-spec (merge default-spec spec)]
+           (doseq [src-file (file-seq (io/file (:from full-spec)))]
+             (let [config' (assoc full-config :live-view? false)]
+               (build-and-view-file! config' spec (.getPath src-file) nil {:kind :create :file src-file})))
            (live/watch! (:from spec) (partial build-and-view-file! full-config spec))))
        ;; If we're running this the second time, we want to immediately rebuild the most recently compiled
        ;; file, so that any new templates or whatever being passed in can be re-evaluated for it.
