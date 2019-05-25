@@ -251,6 +251,15 @@
        [:div {:id id}]
        [:script {:type "text/javascript"} code]])))
 
+
+
+(defn ^:no-doc map->style-string
+  [m]
+  (->> m
+       (map #(str (name (first %)) ": " (second %)))
+       (string/join "; ")))
+
+
 (defn ^:no-doc embed
   "Take hiccup or vega/lite spec and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
   When rendered, should present as live html page; Currently semi-private, may be made fully public in future."
@@ -261,9 +270,20 @@
    (if (map? spec)
      (embed-fn [mode spec])
      (clojure.walk/prewalk
-       (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
-                 (embed-fn x)
-                 x))
+       (fn [form]
+         (cond
+           ;; For vega or vega lite apply the embed-fn (TODO add :markdown elements to hiccup documents)
+           (and (vector? form) (#{:vega :vega-lite :leaflet-vega :leaflet-vega-lite :markdown} (first form)))
+           (embed-fn form)
+           ;; Make sure that any style attrs are properly case
+           (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style))
+           (do
+             (log/info "WOAH THERE G!!! Gotta czech")
+             (into [(first form)
+                    (update (second form) :style map->style-string)]
+                   (drop 2 form)))
+           ;; Else, leave form alone
+           :else form))
        spec)))
   ([spec]
    (embed spec {})))
