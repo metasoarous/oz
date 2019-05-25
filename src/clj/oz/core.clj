@@ -592,7 +592,7 @@
              ;; we don't want to display the file on these initial builds, only for most recent build
              (let [config' (assoc full-config :view? false)
                    dest-file (compute-out-path full-spec src-file)]
-               (when-not (and lazy? (.exists (io/file dest-file)))
+               (when (and (not lazy?) (not (.exists (io/file dest-file))))
                  (build-and-view-file! config' full-spec (:from full-spec) nil {:kind :create :file src-file}))))
            ;; Start watching files for changes
            (when live?
