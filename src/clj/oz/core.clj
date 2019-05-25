@@ -288,12 +288,13 @@
   ([spec]
    (embed spec {})))
 
+
 (defn html
   ([spec opts]
    (let [metadata (or (meta spec) {})]
      (if (map? spec)
        (html [:vega-lite spec])
-       (hiccup/html 
+       (hiccup/html
          [:html
           [:head
            [:meta {:charset "UTF-8"}]
