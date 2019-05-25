@@ -458,7 +458,7 @@
 
 
 (defn- build-and-view-file!
-  [{:as config :keys [live-view? host port force-update]}
+  [{:as config :keys [view? host port force-update]}
    {:as spec :keys [format from to out-path-fn template-fn html-template-fn as-assets?]}
    filename context {:keys [kind file]}]
   (when (and from (.isDirectory (io/file from)))
@@ -501,7 +501,7 @@
                   ;_ (log/info "step 2:" evaluation)
                   out-path (compute-out-path spec filename)]
               (ensure-out-dir out-path true)
-              (when live-view?
+              (when view?
                 (log/info "Updating live view")
                 (view! evaluation :host host :port port))
               (export! evaluation out-path)
@@ -510,13 +510,13 @@
 
 (def ^:private default-config
   {:live? true
-   :live-view? true
+   :view? true
    :lazy? true
    :port 5760
    :host "localhost"})
 
 (def ^:private default-spec
-  {:out-path-fn drop-extension})
+  {:out-path-fn html-extension})
 
 
 
@@ -527,10 +527,12 @@
   (live/kill-watchers!))
 
 
-(defn- infer-buid-dir
+(defn- infer-root-dir
   [specs]
   ;; not correct; mocking
-  (:to (first specs)))
+  (->> specs
+       (map (comp live/canonical-path :to))
+       (reduce live/greatest-common-path)))
 
 (defn build!
   "Builds a static web site based on the content specified in specs. Each spec should be a mapping of paths, with additional
@@ -538,27 +540,38 @@
     * `:from` - (required) Path from which to build
     * `:to` - (required) Compiled files go here
     * `:template-fn` - Function which takes Oz hiccup content and returns some new hiccup, presumably placing the content in question in some 
-    * `:middleware` - More general version of template-fn?
+    * `:out-path-fn` - Function used for naming compilation output
+    * `:as-assets?` - Pass through as a static assets (for images, css, json or edn data, etc)
+      - Note: by default, images, css, etc will pass through anyway
 
   Additional options pertinent to the entire build process may be passed in:
     * `:live?` - Watch the file files 
     * `:lazy?` - If true, don't build anything until it changes; this is best for interactive/incremental updates and focused work.
                  Set to false if you want to rebuild from scratch. (default true)
-    * `:live-view?` - Build with live view of most recently changed file (default true)
+    * `:view?` - Build with live view of most recently changed file (default true)
   "
   ;; lazy? - (This is one that it would be nice to merge in at the spec level)
+  ;; future: middleware?
   ([specs & {:as config}]
    (kill-builds!)
    (if (map? specs)
      (mapply build! [specs] config)
-     (let [full-config (merge default-config config)]
-       (reset! server/current-build-dir (or (:build-dir config) (infer-buid-dir specs)))
+     (let [{:as full-config :keys [lazy? live? view?]}
+           (merge default-config config)]
+       (reset! server/current-root-dir (or (:root-dir config) (infer-root-dir specs)))
        (doseq [spec specs]
          (let [full-spec (merge default-spec spec)]
+           ;; On first build, build out all of the results unless lazy? has been passed or we haven't built it
+           ;; yet
            (doseq [src-file (file-seq (io/file (:from full-spec)))]
-             (let [config' (assoc full-config :live-view? false)]
-               (build-and-view-file! config' spec (.getPath src-file) nil {:kind :create :file src-file})))
-           (live/watch! (:from spec) (partial build-and-view-file! full-config spec))))
+             ;; we don't want to display the file on these initial builds, only for most recent build
+             (let [config' (assoc full-config :view? false)
+                   dest-file (compute-out-path full-spec src-file)]
+               (when-not (and lazy? (.exists (io/file dest-file)))
+                 (build-and-view-file! config' full-spec (:from full-spec) nil {:kind :create :file src-file}))))
+           ;; Start watching files for changes
+           (when live?
+             (live/watch! (:from full-spec) (partial build-and-view-file! full-config full-spec)))))
        ;; If we're running this the second time, we want to immediately rebuild the most recently compiled
        ;; file, so that any new templates or whatever being passed in can be re-evaluated for it.
        (when-let [[file spec] @last-built-file]
@@ -629,8 +642,9 @@
      {:from "examples/static-site/src/assets/"
       :to "examples/static-site/build/"
       :as-assets? true}]
-    :port 2388
-    :build-dir "examples/static-site/build")
+    :lazy? false
+    :port 2388)
+    ;:root-dir "examples/static-site/build")
 
   :end-comment)
 

@@ -58,7 +58,7 @@
   (get-in req [:session :uid]))
 
 
-(defonce current-build-dir (atom ""))
+(defonce current-root-dir (atom ""))
 
 (defroutes my-routes
   (GET  "/" req (response/content-type
@@ -74,8 +74,7 @@
         (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
   (route/resources "/" {:root "oz/public"})
-  ;; TODO This won't work; needs to be dynamic, but isn't currently
-  (GET "*" req (response/file-response (str @current-build-dir "/" (-> req :params :*))))
+  (GET "*" req (response/file-response (str @current-root-dir "/" (-> req :params :*))))
   (route/not-found "<h1>Nope</h1>"))
 
 (def main-ring-handler

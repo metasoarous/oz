@@ -32,6 +32,18 @@
     (strip-path-seps (apply str (drop-last path)))
     path))
 
+(defn split-path
+  [path]
+  (string/split path #"\/"))
+
+(defn greatest-common-path
+  [path1 path2]
+  (->>
+    (map vector (split-path path1) (split-path path2))
+    (filter (partial apply =))
+    (map first)
+    (string/join (java.io.File/separatorChar))))
+
 (defn join-paths
   [path1 path2]
   (str (strip-path-seps path1)
