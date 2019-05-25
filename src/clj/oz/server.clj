@@ -136,7 +136,7 @@
   (stop-router!)
   (stop-web-server!))
 
-(defn start-plot-server!
+(defn start-server!
   "Start the oz plot server (on localhost:10666 by default)."
   ([]
    (start-web-server! default-port)
@@ -147,6 +147,6 @@
 
 (defn -main [& [port]]
   (if port
-    (start-plot-server! (Integer/parseInt port))
-    (start-plot-server!)))
+    (start-server! (Integer/parseInt port))
+    (start-server!)))
 

@@ -56,6 +56,12 @@
                   (canonical-path base)
                   ""))
 
+(defn ext
+  [file]
+  (-> (.getPath (io/file file))
+      (string/split #"\.")
+      (last)))
+
 
 ;; watching process ns form
 

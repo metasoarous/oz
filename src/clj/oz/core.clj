@@ -57,7 +57,12 @@
 ;; Set up plot server crap
 
 ;; Defines out function for manually starting the plot server
-(clone-var server/start-plot-server!)
+(clone-var server/start-server!)
+;; (Deprecated old API)
+(defn ^:no-doc start-plot-server!
+  [& args]
+  (log/warn "DEPRECATED! Please switch from start-plot-server! to start-server!")
+  (apply server/start-server! args))
 
 (defonce ^{:private true} cookie-store (clj-http.cookies/cookie-store))
 (defonce ^{:private true} anti-forgery-token (atom nil))
@@ -68,7 +73,7 @@
   (when (or (not= (server/get-server-port) port)
             (not (server/web-server-started?)))
     (log/info "Starting up server on port" port)
-    (start-plot-server! port))
+    (start-server! port))
   (when-not @anti-forgery-token
     (when-let [token (:csrf-token
                       (json/parse-string
