@@ -16,7 +16,8 @@
    [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
    [taoensso.sente.packers.transit :as sente-transit]
    [cheshire.core :as json]
-   [clojure.java.io :as io])
+   [clojure.java.io :as io]
+   [oz.live :as live])
   (:gen-class))
 
 
@@ -74,8 +75,19 @@
         (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
   (route/resources "/" {:root "oz/public"})
-  (GET "*" req (response/file-response (str @current-root-dir "/" (-> req :params :*))))
-  (route/not-found "<h1>Nope</h1>"))
+  (GET "*" req (let [reqpath (live/join-paths @current-root-dir (-> req :params :*))
+                     altpath (str reqpath ".html")]
+                 (cond
+                   ;; If the path exists, use that
+                   (.exists (io/file reqpath))
+                   (response/file-response reqpath)
+                   ;; If not, look for a `.html` version and if found serve that instead
+                   (.exists (io/file altpath))
+                   (response/content-type (response/file-response altpath) "text/html")
+                   ;; Otherwise, not found
+                   :else (response/redirect "/"))))
+  (route/not-found "<h1>There's no place like home</h1>"))
+
 
 (def main-ring-handler
   (-> my-routes
