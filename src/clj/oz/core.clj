@@ -277,11 +277,9 @@
            (embed-fn form)
            ;; Make sure that any style attrs are properly case
            (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style))
-           (do
-             (log/info "WOAH THERE G!!! Gotta czech")
-             (into [(first form)
-                    (update (second form) :style map->style-string)]
-                   (drop 2 form)))
+           (into [(first form)
+                  (update (second form) :style map->style-string)]
+                 (drop 2 form))
            ;; Else, leave form alone
            :else form))
        spec)))
@@ -430,7 +428,7 @@
   (let [out-path-fn (or out-path-fn drop-extension)
         single-file? (= path from)
         to-dir? (or (.isDirectory (io/file to))
-                    (= (last path) (java.io.File/separatorChar)))
+                    (= (last (.getPath (io/file path))) (java.io.File/separatorChar)))
         relative-from-path (if single-file? path (live/relative-path path from))]
     (if (and single-file? (not to-dir?))
       ;; then we're just translating a single file with an explicit to path
