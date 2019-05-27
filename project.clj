@@ -1,4 +1,4 @@
-(defproject metasoarous/oz "1.6.0-alpha2"
+(defproject metasoarous/oz "1.6.0-alpha3-SNAPSHOT"
   :description "Great and powerful data visualizations in Clojure using Vega and Vega-lite"
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
@@ -22,7 +22,8 @@
                  [bk/ring-gzip "0.3.0"]
                  [ring-cljsjs "0.1.0"]
                  [compojure "1.6.1"]
-                 [hiccup "1.0.5"]
+                 ;[hiccup "1.0.5"]
+                 [hiccup "2.0.0-alpha2"]
                  [com.cognitect/transit-clj  "0.8.313"]
                  [com.cognitect/transit-cljs "0.8.256"]
                  [reagent "0.8.1"]
