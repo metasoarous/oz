@@ -16,7 +16,7 @@
 
 (defn do-it-fools! []
   (dev!)
-  (server/start-plot-server!))
+  (oz/start-server!))
 
 (def browser-repl figwheel/cljs-repl)
 
@@ -26,7 +26,7 @@
 
   ;; Start the plot server
   ;(do-it-fools!) ;; for figwheel dev
-  (oz/start-plot-server! 3000)
+  (oz/start-server! 3000)
 
   ;; define a function for generating some dummy data
   (defn play-data [& names]
