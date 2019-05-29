@@ -76,14 +76,19 @@
   (POST "/chsk" req (ring-ajax-post req))
   (route/resources "/" {:root "oz/public"})
   (GET "*" req (let [reqpath (live/join-paths @current-root-dir (-> req :params :*))
-                     altpath (str reqpath ".html")]
+                     reqfile (io/file reqpath)
+                     altpath (str reqpath ".html")
+                     dirpath (live/join-paths reqpath "index.html")]
                  (cond
                    ;; If the path exists, use that
-                   (.exists (io/file reqpath))
+                   (and (.exists reqfile) (not (.isDirectory reqfile)))
                    (response/file-response reqpath)
                    ;; If not, look for a `.html` version and if found serve that instead
                    (.exists (io/file altpath))
                    (response/content-type (response/file-response altpath) "text/html")
+                   ;; If the path is a directory, check for index.html
+                   (and (.exists reqfile) (.isDirectory reqfile))
+                   (response/file-response dirpath)
                    ;; Otherwise, not found
                    :else (response/redirect "/"))))
   (route/not-found "<h1>There's no place like home</h1>"))
