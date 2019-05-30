@@ -88,6 +88,34 @@
 (def mathjax-script
   [:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}])
 
+(defn- apply-fn-component
+  "Takes a spec where the first argument is a function and applies it with the rest of the entries in spec.
+  If the result is itself a function (form-2 component, in Reagent speak), then returns result."
+  [form]
+  (let [result (apply (first form) (rest form))]
+    (if (fn? result)
+      ;; Then a form 2 component, so immediately call inner return fn
+      (apply result (rest form))
+      ;; otherwise, assume hiccup and return results
+      result)))
+
+
+(defn- prep-for-live-view
+  [spec {:keys [mode]}]
+  [:div
+    (if (map? spec)
+      [(or mode :vega-lite) spec]
+      (clojure.walk/prewalk
+        (fn [form]
+          (cond
+            ;; If we have a reagent style fn component, need to call and send just data
+            (and (vector? form) (fn? (first form))) 
+            (apply-fn-component form)
+            ;; Otherwise, just return spec
+            :else form))
+        spec))
+    mathjax-script])
+
 
 (defn view!
   "View the given spec in a web browser. Specs for which map? is true are treated as single Vega-Lite/Vega specifications.
@@ -101,7 +129,7 @@
         host (or host "localhost")]
     (try
       (prepare-server-for-view! port host)
-      (let [hiccup-spec (if (map? spec) [(or mode :vega-lite) (conj spec mathjax-script)] (vec spec))]
+      (let [hiccup-spec (prep-for-live-view spec opts)]
         ;; if we have a map, just try to pass it through as a vega form
         (server/send-all! [::view-spec hiccup-spec]))
       (catch Exception e
@@ -275,12 +303,15 @@
            ;; For vega or vega lite apply the embed-fn (TODO add :markdown elements to hiccup documents)
            (and (vector? form) (#{:vega :vega-lite :leaflet-vega :leaflet-vega-lite :markdown} (first form)))
            (embed-fn form)
-           ;; Make sure that any style attrs are properly case
-           (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style))
+           ;; Make sure that any style attrs are properly case (newer hiccup should do this, but for now)
+           (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style map?))
            (into [(first form)
                   (update (second form) :style map->style-string)]
                  (drop 2 form))
-           ;; Else, leave form alone
+           ;; If we see a function, call it with the args in form
+           (and (vector? form) (fn? (first form))) 
+           (apply-fn-component form)
+           ;; Else, assume hiccup and leave form alone
            :else form))
        spec)))
   ([spec]
@@ -573,6 +604,7 @@
     * `:lazy?` - If true, don't build anything until it changes; this is best for interactive/incremental updates and focused work.
                  Set to false if you want to rebuild from scratch. (default true)
     * `:view?` - Build with live view of most recently changed file (default true)
+    * `:root-dir` - Static assets will be served relative to this directory (defaults to greatest-common-path between all paths)
   "
   ;; lazy? - (This is one that it would be nice to merge in at the spec level)
   ;; future: middleware?
