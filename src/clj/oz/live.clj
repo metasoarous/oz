@@ -73,7 +73,8 @@
           (hawk/watch! [{:paths [watch-path]
                          :handler (fn [context {:as event :keys [file]}]
                                     (f watch-path context event))}])]
-      (swap! watchers assoc-in [watch-path :watcher] watcher))))
+      (swap! watchers assoc-in [watch-path :watcher] watcher)
+      ::success!)))
 
 
 (defn process-ns-form
