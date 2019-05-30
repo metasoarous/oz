@@ -3,7 +3,7 @@
 @font-face {
     font-family: "LatinModernRomanWOFF";
     /*src: url('https://www.albany.edu/~hammond/webfonts/lmroman12-regular.woff');*/
-    src: url('../../fonts/lmroman12-regular.woff');
+    src: url('http://ozviz.io/fonts/lmroman12-regular.woff');
 }
 
 /* for math fonts? */
@@ -17,12 +17,18 @@
 body {
   padding: 30px;
   line-height: 1.7;
+  font-family: 'Open Sans', sans-serif;
 }
 
 div#app {
   margin: 0;
   padding: 0;
   font-family: 'Open Sans', sans-serif;
+}
+
+blockquote {
+  font-style: italic;
+  color: #606060;
 }
 
 h1, h2, h3, h4 {
