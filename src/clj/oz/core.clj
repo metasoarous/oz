@@ -338,7 +338,7 @@
            [:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
            [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
            [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
-           [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@5.3.2"}]
+           [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@5.3.4"}]
            [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.2"}]
            [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-embed@4.0.0"}]
            ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
