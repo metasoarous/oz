@@ -648,14 +648,14 @@
 
 (defn- blog-template
   [spec]
-  (site-template
+  [site-template
     (let [{:as spec-meta :keys [title published-at tags]} (meta spec)]
       [:div
        [:h1 {:style {:line-height 1.35}} title]
        [:p "Published on: " published-at]
        [:p "Tags: " (string/join ", " tags)]
        [:br]
-       spec])))
+       spec])])
 
 
 ;; Some examples for you
@@ -684,10 +684,14 @@
     "test.html")
 
   ;; Run live view on a file, and see compiled changes real time
-  (live-view! "examples/test.md" :port 8888)
-  ;; Can kill file watchers manually if you want
   (kill-watchers!)
+  (live-view! "examples/test.md" :port 10666)
 
+
+  ;; Can kill file watchers and server manually if needed
+  ;(kill-watchers!)
+  ;(server/stop!)
+  ;(server/start-server! 2392)
 
   ;; Run static site generation features
   (build!
@@ -699,7 +703,8 @@
       :to "examples/static-site/build/"
       :as-assets? true}]
     :lazy? false
-    :port 2388)
+    :view? true
+    :port 10666)
     ;:root-dir "examples/static-site/build")
 
   :end-comment)
