@@ -27,7 +27,7 @@
                  [com.cognitect/transit-clj  "0.8.313"]
                  [com.cognitect/transit-cljs "0.8.256"]
                  [reagent "0.8.1"]
-                 [cljsjs/vega "5.3.2-0"]
+                 [cljsjs/vega "5.3.4-0"]
                  [cljsjs/vega-lite "3.0.2-0"]
                  [cljsjs/vega-embed "4.0.0-0"]
                  [cljsjs/vega-tooltip "0.17.0-0"]
