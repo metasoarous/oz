@@ -20,6 +20,11 @@
             [tentacles.gists :as gists]))
 
 
+(def vega-version "5.4.0")
+(def vega-lite-version "3.4.0")
+(def vega-embed-version "4.4.0")
+
+
 ;; Utils
 
 (defn- mapply
@@ -338,9 +343,9 @@
            [:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
            [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
            [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
-           [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega@5.3.4"}]
-           [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-lite@3.0.2"}]
-           [:script {:type "text/javascript" :src "https://cdn.jsdelivr.net/npm/vega-embed@4.0.0"}]
+           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega@" vega-version)}]
+           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-lite@" vega-lite-version)}]
+           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-embed@" vega-embed-version)}]
            ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
            [:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]
           [:body
