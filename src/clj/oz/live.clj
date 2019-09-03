@@ -71,7 +71,7 @@
     (f watch-path {} {:kind :create :file (io/file watch-path)})
     (let [watcher
           (hawk/watch! [{:paths [watch-path]
-                         :handler (fn [context {:as event :keys [file]}]
+                         :handler (fn [context event]
                                     (f watch-path context event))}])]
       (swap! watchers assoc-in [watch-path :watcher] watcher)
       ::success!)))
@@ -115,12 +115,12 @@
 
 
 
-(defn reload-file! [watch-path context {:keys [kind file]}]
+(defn reload-file! [_ _ {:keys [kind file]}]
   ;; ignore delete (some editors technically delete the file on every save!)
   (when (#{:modify :create} kind)
     (let [filename (canonical-path file)
           contents (slurp file)
-          {:keys [last-contents last-forms]} (get @watchers filename)]
+          {:keys [last-contents]} (get @watchers filename)]
       ;; This has a couple purposes, vs just using the (seq diff-forms) below:
       ;; * forces at least a check if the file is changed at all before doing all the rest of the work below
       ;;   (not sure how much perf benefit there is here)
@@ -161,7 +161,7 @@
                       long-running? (async/chan 1)]
                   ;; Create a timeout on the result, and log a "in processing" message if necessary
                   (async/go
-                    (let [[result chan] (async/alts! [result-chan timeout-chan])]
+                    (let [[_ chan] (async/alts! [result-chan timeout-chan])]
                       (when (= chan timeout-chan)
                         (log/info (color-str ANSI_YELLOW "Long running form being processed:\n" (ppstr form)))
                         (async/>! long-running? true))))
@@ -183,7 +183,7 @@
                       (log/error e)
                       (throw e)))))
               (log/info (color-str ANSI_GREEN "Done reloading file: " filename "\n"))
-              (catch Exception e
+              (catch Exception _
                 (log/error (color-str ANSI_RED "Unable to process all of file: " filename "\n"))))
             ;; Update last-forms in our state atom, only counting those forms which successfully ran
             (let [base-forms (take (- (count forms) (count diff-forms)) forms)
@@ -218,12 +218,12 @@
    (doseq [filename filenames]
      (try
        (kill-watcher! filename)
-       (catch Exception e
+       (catch Exception _
          :pass)))))
 
 
 (comment
   (kill-watchers!)
-  (live-reload! "dev/watchtest.clj")
+  (live-reload! "scratch/watchtest.clj")
   :end-comment)
 
