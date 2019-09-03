@@ -189,7 +189,7 @@
             (let [base-forms (take (- (count forms) (count diff-forms)) forms)
                   new-forms (concat base-forms @successful-forms)
                   final-result (async/poll! final-result-chan)]
-              (swap! watchers update merge filename {:last-forms new-forms :last-eval final-result})
+              (swap! watchers update filename #(merge % {:last-forms new-forms :last-eval final-result}))
               final-result)))))))
 
 
