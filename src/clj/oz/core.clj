@@ -90,7 +90,7 @@
 
 ;; Main view functions
 
-(def mathjax-script
+(def ^:private mathjax-script
   [:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}])
 
 (defn- apply-fn-component
@@ -451,11 +451,11 @@
   (live/watch! filename (partial view-file! opts)))
 
 
-(defn drop-extension
+(defn- drop-extension
   [relative-path]
   (string/replace relative-path #"\.\w*$" ""))
 
-(defn html-extension
+(defn- html-extension
   [relative-path]
   (string/replace relative-path #"\.\w*$" ".html"))
 
@@ -488,14 +488,14 @@
           (.mkdir file))))))
 
 
-(defn extension
+(defn- extension
   [filename]
   (last (string/split filename #"\.")))
 
-(def supported-filetypes
+(def ^:private supported-filetypes
   #{"md" "mds" "clj" "cljc" "cljs" "yaml" "json" "edn"})
 
-(def asset-filetypes
+(def ^:private asset-filetypes
   #{"jpg" "png" "svg" "css"})
 
 
@@ -505,7 +505,7 @@
 @last-built-file
 
 
-(def default-ignore-patterns
+(def ^:private default-ignore-patterns
   [#".*~$"
    #"^\d*$"
    #"^\..*\.sw\wx?$"])
