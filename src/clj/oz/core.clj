@@ -16,7 +16,7 @@
             [markdown.core :as md]
             [hickory.core :as hickory]
             [hiccup.core :as hiccup]
-            [taoensso.timbre :as log :refer (tracef debugf infof warnf errorf)]
+            [taoensso.timbre :as log]
             [tentacles.gists :as gists]))
 
 
@@ -170,7 +170,7 @@
       (try
         (edn/read-string (slurp auth-file))
         (catch Exception e
-          (errorf "Unable to find/parse github authorization file `~/.oz/github-creds.edn`. Please review the output of `(doc oz/publish!)` for auth instructions.")
+          (log/errorf "Unable to find/parse github authorization file `~/.oz/github-creds.edn`. Please review the output of `(doc oz/publish!)` for auth instructions.")
           (throw e)))
       the-auth-args)))
 
@@ -269,7 +269,7 @@
 (defn ^:no-doc publish-plot!
   "Deprecated form of `publish!`"
   [plot & opts]
-  (warnf "WARNING!!! DEPRECATED!!! Please call `publish!` instead.")
+  (log/warnf "WARNING!!! DEPRECATED!!! Please call `publish!` instead.")
   (let [spec (merge-opts plot opts)]
     (publish! spec opts)))
 
