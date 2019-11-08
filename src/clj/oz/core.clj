@@ -473,14 +473,24 @@
       (live/join-paths (or to ".")
                        (out-path-fn relative-from-path)))))
 
+(defn- file-separator
+  "This function returns the platform specific file separator
+   and handles some platform specific issues as they arise.
+
+   One particular issue is that the value returned by the File
+   API on windows '\\' breaks the re-pattern function."
+  []
+  (let [separator (java.io.File/separator)]
+    ;; Windows, replace with double escape.
+    (string/replace separator "\\" "\\\\")))
 
 (defn- ensure-out-dir
   [out-path drop-last?]
-  (let [split-path (string/split out-path (re-pattern (java.io.File/separator)))
+  (let [split-path (string/split out-path (re-pattern (file-separator)))
         split-path (if drop-last? (drop-last split-path) split-path)
         intermediate-paths (map-indexed
                              (fn [i _]
-                               (string/join (java.io.File/separator) (take (inc i) split-path)))
+                               (string/join (file-separator) (take (inc i) split-path)))
                              split-path)]
     (doseq [path intermediate-paths]
       (let [file (io/file path)]
