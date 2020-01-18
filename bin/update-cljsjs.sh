@@ -33,6 +33,14 @@ if echo $@ | grep "\-\-help" > /dev/null
 then
   echo "Run like"
   echo "   ./bin/update-cljsjs.sh"
+  echo ""
+  echo "AVAILABLE OPTIONS:"
+  echo "  --help"
+  echo "  --skip-pull"
+  echo ""
+  echo "AVAILABLE ENV VARIABLES:"
+  echo "  CLJSJS_PACKAGES_PATH: Where to store cljsjs/packages checkout"
+  echo "  CLJSJS_PACKAGES_FORK: Set if you have a github fork"
   exit
 fi
 
@@ -41,20 +49,28 @@ fi
 
 # For latest releases, see:
 # https://github.com/vega/vega/releases
-v_version="5.3.4"
+v_version="5.9.0"
 v_build_version="0"
 
 # https://github.com/vega/vega-lite/releases
-vl_version="3.1.0"
+vl_version="4.0.2"
 vl_build_version="0"
 
 # https://github.com/vega/vega-embed/releases
-ve_version="4.0.0"
+ve_version="6.0.0"
 ve_build_version="0"
 
 # https://github.com/vega/vega-tooltip/releases
-vt_version="0.17.0"
+vt_version="0.20.0"
 vt_build_version="0"
+
+# https://github.com/nyurik/vega-spec-injector
+vsi_version="0.0.2"
+vsi_build_version="0"
+
+## https://github.com/nyurik/leaflet-vega
+#lv_version="0.8.6"
+#lv_build_version="0"
 
 
 # store current directory
@@ -76,8 +92,45 @@ fi
 cd $CLJSJS_PACKAGES_PATH
 
 # Make sure we're up to date, just in case
-git checkout master
-git pull origin master
+# Is there a reason we wouldn't always want to do this?
+# Yes... sometimes you don't want to because you have local changes that haven't been merged into origin
+# mastered yet.
+# We should probably have options for specifying what remote/branch (or local) you want to base on.
+
+
+if echo $@ | grep "\-\-local-changes" > /dev/null
+then
+  echo "Skipping pull"
+  uncommitted_changes=$(git diff)
+  if [[ ! -z $uncommitted_changes ]]; then
+    echo "Stashing changes"
+    git stash
+  fi
+  echo "Checking out master"
+  git checkout master
+  echo "Fetching origin/master"
+  git fetch
+  echo "Merging origin/master"
+  git merge origin/master
+  if [[ ! -z $uncommitted_changes ]]; then
+    echo "Applying stash"
+    git stash apply
+
+    # Actually, I'm not sure that we want to do this; We probably want these changes to show up in each of the
+    # projects on a 1 by 1 basis.
+    #echo "Adding togit"
+    #git add *
+    #git status
+    #echo "There are changes in the working directory of cljsjs-packages which need to be commited."
+    #echo "Please enter a commit message:"
+    #read commit_message
+    #git commit -m "$commit_message"
+  fi
+else
+  echo "Pulling latest master"
+  git checkout master
+  git pull origin
+fi
 
 
 
@@ -128,12 +181,19 @@ sed -i "s/$old_v_min_checksum/\"$v_min_checksum\"/" build.boot
 # try installing
 boot package install target
 
+
 # Commit to a dedicated branch
 git checkout -B vega-updates
 git add .
-git commit -m "[vega] update vega version to $v_version-$v_build_version"
+VEGA_UPDATES=$(git diff --cached)
+if [[ ! -z $VEGA_UPDATES ]]
+then
+  git commit -m "[vega] update vega version to $v_version-$v_build_version"
+fi
 
 cd $VEGA_DISTS
+
+echo "DONE building vega"
 
 
 
@@ -141,39 +201,66 @@ cd $VEGA_DISTS
 ## Vega-Lite
 ## ---------
 
-zipfile=vega-lite-v$vl_version.zip
-# first clean up any old zips of the same version, to avoid naming conflicts
-rm -f $zipfile
+# asset filenames
+vl_asset=vega-lite-$vl_version.js
+vl_min_asset=vega-lite-$vl_version.min.js
 
-# now actually download the file and compute checksums
-wget https://github.com/vega/vega-lite/archive/v$vl_version.zip -O $zipfile
-vl_checksum=$(md5sum $zipfile | grep -o "^[a-z0-9]*")
+wget https://unpkg.com/vega-lite@$vl_version/build/vega-lite.js -O $vl_asset
+wget https://unpkg.com/vega-lite@$vl_version/build/vega-lite.min.js -O $vl_min_asset
+
+vl_checksum=$(md5sum $vl_asset | grep -o "^[a-z0-9]*")
+vl_min_checksum=$(md5sum $vl_min_asset | grep -o "^[a-z0-9]*")
 echo vega-lite checksum $vl_checksum
+echo vega-lite min checksum $vl_min_checksum
 
+echo Generating vega-lite externs
 # unzip and generate externs
-unzip -uo $zipfile
 extfile=vega-lite.$vl_version.ext.js
-generate-extern -f vega-lite-$vl_version/build/vega-lite.js -n vl -o $extfile
+echo generate-extern -f $vl_asset -n vl -o $extfile
+generate-extern -f $vl_asset -n vegaLite -o $extfile
 cp $extfile $CLJSJS_PACKAGES_PATH/vega-lite/resources/cljsjs/vega-lite/common/vega-lite.ext.js
+echo Done generating vega-lite externs
 
 # update lib versions and checksums in build.boot, and try installing
 cd $CLJSJS_PACKAGES_PATH/vega-lite
 sed -i "s/def +lib-version+ \"[0-9a-zA-Z\.\-]*\"/def +lib-version+ \"$vl_version\"/" build.boot
 sed -i "s/str +lib-version+ \"[0-9a-zA-Z\.\-]*\"/str +lib-version+ \"-$vl_build_version\"/" build.boot
-sed -i "s/:checksum \"[0-9a-zA-Z]*\"/:checksum \"$vl_checksum\"/" build.boot
+
+old_vl_checksum=$(grep -m 1 ":checksum" build.boot | grep -o "\"[a-zA-Z0-9]*\"")
+old_vl_min_checksum=$(grep -m 2 ":checksum" build.boot | tail -n 1 | grep -o "\"[a-zA-Z0-9]*\"")
+
+echo "old_vl_checksum:" $old_vl_checksum
+echo "old_vl_min_checksum:" $old_vl_min_checksum
+
+# update checksums
+sed -i "s/$old_vl_checksum/\"$vl_checksum\"/" build.boot
+sed -i "s/$old_vl_min_checksum/\"$vl_min_checksum\"/" build.boot
+
+echo "done sedding on checksums"
+
 # update dependencies
+echo sed -i "s/\[cljsjs\/vega \"[0-9a-zA-Z\.\-]*\"\]/[cljsjs\/vega \"$v_version-$v_build_version\"]/" build.boot 
 sed -i "s/\[cljsjs\/vega \"[0-9a-zA-Z\.\-]*\"\]/[cljsjs\/vega \"$v_version-$v_build_version\"]/" build.boot 
+
+echo "done sedding on dependency versions"
+
 boot package install target
 
 # Commit to a dedicated branch
 git checkout -B vega-lite-updates
 git add .
-git commit -m "[vega-lite] update vega-lite version to $vl_version-$vl_build_version" \
-           -m "Full version set: vega -> $v_version-$v_build_version, vega-lite -> $vl_version-$vl_build_version."
+VEGA_LITE_UPDATES=$(git diff --cached)
+if [[ ! -z $VEGA_LITE_UPDATES ]]
+then
+  echo "Committing VEGA LITE"
+  git commit -m "[vega-lite] update vega-lite version to $vl_version-$vl_build_version" \
+             -m "Full version set: vega -> $v_version-$v_build_version, vega-lite -> $vl_version-$vl_build_version."
+fi
 
 # go back
 cd $VEGA_DISTS
 
+echo "DONE building vega-lite"
 
 
 
@@ -195,7 +282,7 @@ echo ve_min_checksum $ve_min_checksum
 # generate and install externs
 extfile=vega-embed.$ve_version.ext.js
 # note that this call to generate-extern needs to have all three libs loaded to work
-generate-extern -f $v_asset,vega-lite-$vl_version/build/vega-lite.js,$asset -n vegaEmbed -o $extfile
+generate-extern -f $v_asset,$vl_asset,$asset -n vegaEmbed -o $extfile
 cp $extfile $CLJSJS_PACKAGES_PATH/vega-embed/resources/cljsjs/vega-embed/common/vega-embed.ext.js
 
 # update lib versions and checksums in build.boot, and try installing
@@ -252,12 +339,23 @@ sed -i "s/\[cljsjs\/vega \"[0-9a-zA-Z\.\-]*\"\]/[cljsjs\/vega \"$v_version-$v_bu
 sed -i "s/\[cljsjs\/vega-lite \"[0-9a-zA-Z\.\-]*\"\]/[cljsjs\/vega-lite \"$vl_version-$vl_build_version\"]/" build.boot 
 boot package install target
 
+
+
 # Commit vega-tooltip and vega-embed changes together as vega-extras
 git checkout -B vega-extras-updates
 git add .
 git add ../vega-embed
-git commit -m "[vega-extras] update vega-embed & vega-tooltip versions" \
-           -m "Full version set: vega -> $v_version-$v_build_version, vega-lite -> $vl_version-$vl_build_version, vega-embed -> $ve_version-$ve_build_version, vega-tooltip -> $vt_version-$vt_build_version."
+VEGA_EXTRAS_UPDATES=$(git diff --cached)
+if [[ ! -z $VEGA_EXTRAS_UPDATES ]]
+then
+  echo "Committing VEGA EXTRAS"
+  git commit -m "[vega-extras] update vega-embed & vega-tooltip versions" \
+             -m "Full version set: vega -> $v_version-$v_build_version, vega-lite -> $vl_version-$vl_build_version, vega-embed -> $ve_version-$ve_build_version, vega-tooltip -> $vt_version-$vt_build_version."
+fi
+
+cd $VEGA_DISTS
+
+
 
 
 
@@ -266,6 +364,8 @@ git commit -m "[vega-extras] update vega-embed & vega-tooltip versions" \
 
 #echo "premature exit"
 #exit
+
+cd $CLJSJS_PACKAGES_PATH
 
 # If we have this fork env variable, we push to the fork
 if [[ ! -z ${CLJSJS_PACKAGES_FORK+x} ]]
@@ -290,6 +390,22 @@ echo "  The cljsjs/packages repo at $CLJSJS_PACKAGES_PATH now has the following 
 if [[ ! -z ${CLJSJS_PACKAGES_FORK+x} ]]
 then
   echo "  These branches have now been pushed to your fork at: $CLJSJS_PACKAGES_FORK"
+  echo ""
+
+  # Adapted from https://serverfault.com/questions/417241/extract-repository-name-from-github-url-in-bash
+  github_re="^(https|git)(:\/\/|@)github.com[\/:]([^\/:]+)\/(.+).git$"
+
+  if [[ $CLJSJS_PACKAGES_FORK =~ $github_re ]]; then    
+    protocol=${BASH_REMATCH[1]}
+    separator=${BASH_REMATCH[2]}
+    user=${BASH_REMATCH[3]}
+    repo=${BASH_REMATCH[4]}
+    echo "  You can create PRs for these at:"
+    echo "    https://github.com/$user/$repo/pull/new/vega-updates"
+    echo "    https://github.com/$user/$repo/pull/new/vega-lite-updates"
+    echo "    https://github.com/$user/$repo/pull/new/vega-extras-updates"
+    exit
+  fi
 else
   echo ""
   echo "  If you rerun with the CLJSJS_PACKAGES_FORK environment variable set to your fork of cljsjs/packages, this script will automatically push these branches there upon completion."
@@ -301,6 +417,5 @@ fi
 echo ""
 echo "  The final step is to review the changes to make sure they look sane, then to create pull requests from each of these branches to https://github.com/cljsjs/packages."
 echo ""
-
 
 
