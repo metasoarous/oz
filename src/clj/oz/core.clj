@@ -300,6 +300,20 @@
        (string/join "; ")))
 
 
+;; Questions:
+;; * Do I want to pass in through stdin or through a file?
+;; * Do I want to write out through a file or through stdout?
+;; * Do png, svg & pdf have file output options or just export!?
+;; * Follow pattern in clojurescript of dropping kw namespace? need to write to json from clj here...
+;; * Combine png/svg etc into single `vg-cli` fn?
+;; * What about opts style?
+
+
+;; * Why am I getting back "" for png?
+
+
+;(json/encode {:this {:that/the "hell"}})
+
 (defn- tmp-filename
   [ext]
   (str (java.io.File/createTempFile (str (java.util.UUID/randomUUID)) (str "." (name ext)))))
@@ -307,8 +321,7 @@
 
 (defn- vg-cli
   "Takes either spec or the contents of spec-filename, and uses the vega/vega-lite cli tools to translate to the specified format.
-  If both spec and spec-filename are present, writes spec to spec-filename for running cli tool (otherwise, a tmp file is used).
-  By default,"
+  If both spec and spec-filename are present, writes spec to spec-filename for running cli tool (otherwise, a tmp file is used)."
   ([{:keys [spec scale seed format mode spec-filename output-filename return-output?]
      :or {format :svg mode :vega-lite return-output? true}}]
    {:pre [(#{:vega-lite :vega} mode)
@@ -341,6 +354,10 @@
   (fn [_ from to]
     [from to]))
 
+(defmethod convert [:vega-lite :vega]
+  [spec from to]
+  (json/decode (vg-cli {:spec spec :mode from :format to})))
+
 (defmethod convert [:vega-lite :pdf]
   [spec _ _]
   (convert (convert spec :vega-lite :vega)
@@ -357,7 +374,7 @@
    ;:encoding {:x {:field :a}
               ;:y {:field :b}}}
   ;:vega-lite
-  ;:svg)
+  ;:pdf)
 
 (defn ^:no-doc embed
   "Take hiccup or vega/lite spec and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
