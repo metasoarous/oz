@@ -357,6 +357,59 @@ cd $VEGA_DISTS
 
 
 
+## Leaflet vega
+## ------------
+
+
+vsi_version="0.0.2"
+vsi_build_version="0"
+
+vsi_asset=vegaSpecInjector-$vsi_version.js
+vsi_min_asset=vegaSpecInjector-$vsi_version.min.js
+
+# get assets
+wget https://unpkg.com/vega-spec-injector@$vsi_version/dist/vegaSpecInjector.js -O $vsi_asset
+wget https://unpkg.com/vega-spec-injector@$vsi_version/dist/vegaSpecInjector.min.js -O $vsi_min_asset
+
+## compute checksums
+vsi_checksum=$(md5sum $vsi_asset | grep -o "^[a-z0-9]*")
+vsi_min_checksum=$(md5sum $vsi_min_asset | grep -o "^[a-z0-9]*")
+echo vsi_checksum $vsi_checksum
+echo vsi_min_checksum $vsi_min_checksum
+
+## generate and install externs
+vsi_extfile=vegaSpecInjector.$vsi_version.ext.js
+generate-extern -f $vsi_asset -n vegaSpecInjector -o $vsi_extfile
+cp $vsi_extfile $CLJSJS_PACKAGES_PATH/vega-spec-injector/resources/cljsjs/vega-spec-injector/common/vega-spec-injector.ext.js
+
+## update lib versions and checksums in build.boot, and try installing
+cd $CLJSJS_PACKAGES_PATH/vega-spec-injector/
+sed -i "s/def +lib-version+ \"[0-9a-z\.\-]*\"/def +lib-version+ \"$vsi_version\"/" build.boot
+sed -i "s/str +lib-version+ \"[0-9a-z\.\-]*\"/str +lib-version+ \"-$vsi_build_version\"/" build.boot
+
+# note that this assumes the minified version comes second in the build process
+old_vsi_checksum=$(grep -m 1 ":checksum" build.boot | grep -o "\"[a-zA-Z0-9]*\"")
+old_vsi_min_checksum=$(grep -m 2 ":checksum" build.boot | tail -n 1 | grep -o "\"[a-zA-Z0-9]*\"")
+ 
+# update checksums
+sed -i "s/$old_vsi_checksum/\"$vsi_checksum\"/" build.boot
+sed -i "s/$old_vsi_min_checksum/\"$vsi_min_checksum\"/" build.boot
+
+boot package install target
+
+# Commit vega-tooltip and vega-embed changes together as vega-extras
+git checkout -B vega-spec-injector-updates
+git add .
+VEGA_SPEC_INJECTOR_UPDATES=$(git diff --cached)
+if [[ ! -z $VEGA_SPEC_INJECTOR_UPDATES ]]; then
+  echo "Commit VEGA SPEC INJECTOR UPDATES"
+  git commit -m "[vega-spec-injector] update vega-spec-injector to $vsi_version"
+fi
+
+cd $VEGA_DISTS
+
+
+
 
 
 # Finishing up
@@ -374,6 +427,7 @@ then
   git push -f $CLJSJS_PACKAGES_FORK vega-updates:vega-updates
   git push -f $CLJSJS_PACKAGES_FORK vega-lite-updates:vega-lite-updates
   git push -f $CLJSJS_PACKAGES_FORK vega-extras-updates:vega-extras-updates
+  git push -f $CLJSJS_PACKAGES_FORK vega-spec-injector-updates:vega-spec-injector-updates
 fi
 
 
@@ -404,6 +458,7 @@ then
     echo "    https://github.com/$user/$repo/pull/new/vega-updates"
     echo "    https://github.com/$user/$repo/pull/new/vega-lite-updates"
     echo "    https://github.com/$user/$repo/pull/new/vega-extras-updates"
+    echo "    https://github.com/$user/$repo/pull/new/vega-spec-injector-updates"
     exit
   fi
 else
