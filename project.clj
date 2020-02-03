@@ -1,5 +1,5 @@
-(defproject metasoarous/oz "1.6.0-alpha5"
-  :description "Great and powerful data visualizations in Clojure using Vega and Vega-lite"
+(defproject metasoarous/oz "1.6.0-alpha6-SNAPSHOT"
+  :description "Great and powerful data visualizations and scientific documents in Clojure using Vega and Vega-lite"
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
   :url "http://github.com/metasoarous/oz"
@@ -102,21 +102,19 @@
   ;; Note; for the aliases below to work, you need uberjar not to delete the cljsbuild output, which it does automatically via lein clean.
   ;; This means though that you should always uberjar with one of the below methods, to make sure you don't get some bad aot in your build/deploy.
   ;; Lack of awareness of this setting is I think what was behind the old "always build cljs" prep-tasks setting from vizard.
-  :auto-clean false 
+  ;:auto-clean false 
   :aliases {
             ;"doitfools" ["do" "clean" ["deploy" "clojars"]]
             "jar!"
             ^{:doc "Recompile sources and jar."}
             ;; Nested vectors are supported for the "do" task
             ["do" "clean"
-                  ["cljsbuild" "once" "min"]
-                  ["uberjar"]]
+                  ["cljsbuild" "once" "min"]]
             "deploy-snapshot!"
             ^{:doc "Recompile sources, then deploy snapshot."}
             ;; Nested vectors are supported for the "do" task
             ["do" "clean"
                   ["cljsbuild" "once" "min"]
-                  ["uberjar"]
                   ["deploy" "clojars"]]
             "deploy-release!"
             ^{:doc "Recompile sources, then deploy release."}
@@ -124,7 +122,6 @@
             ["do" "clean"
                   ["cljsbuild" "once" "min"]
                   ["vcs" "tag"]
-                  ["uberjar"]
                   ["deploy" "clojars"]]}
              
   :profiles {:dev
@@ -133,11 +130,7 @@
                              [figwheel-sidecar "0.5.18"]
                              [com.cemerick/piggieback "0.2.2"]]
               :plugins [[lein-figwheel "0.5.18"]]
-              :source-paths ["dev"]}
-              ;:repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
-             :uberjar
-             {:source-paths ^:replace ["src/clj"]
-              :omit-source true
-              :aot :all}}
+              :source-paths ["dev"]}}
+              ;:repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}}
   :main ^:skip-aot oz.server)
 
