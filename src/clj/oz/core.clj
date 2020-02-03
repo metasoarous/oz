@@ -23,9 +23,9 @@
            java.util.UUID))
 
 
-(def vega-version "5.4.0")
-(def vega-lite-version "3.4.0")
-(def vega-embed-version "4.4.0")
+(def vega-version "5.9.0")
+(def vega-lite-version "4.0.2")
+(def vega-embed-version "6.0.0")
 
 
 (defn- vega-cli-installed? [mode]
