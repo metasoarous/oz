@@ -102,7 +102,7 @@
   ;; Note; for the aliases below to work, you need uberjar not to delete the cljsbuild output, which it does automatically via lein clean.
   ;; This means though that you should always uberjar with one of the below methods, to make sure you don't get some bad aot in your build/deploy.
   ;; Lack of awareness of this setting is I think what was behind the old "always build cljs" prep-tasks setting from vizard.
-  ;:auto-clean false 
+  :auto-clean false 
   :aliases {
             ;"doitfools" ["do" "clean" ["deploy" "clojars"]]
             "jar!"
