@@ -1,5 +1,5 @@
-(defproject metasoarous/oz "1.6.0-alpha5"
-  :description "Great and powerful data visualizations in Clojure using Vega and Vega-lite"
+(defproject metasoarous/oz "1.6.0-alpha6"
+  :description "Great and powerful data visualizations and scientific documents in Clojure using Vega and Vega-lite"
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
   :url "http://github.com/metasoarous/oz"
@@ -27,10 +27,10 @@
                  [com.cognitect/transit-clj  "0.8.313"]
                  [com.cognitect/transit-cljs "0.8.256"]
                  [reagent "0.8.1"]
-                 [cljsjs/vega "5.4.0-0"]
-                 [cljsjs/vega-lite "3.4.0-0"]
-                 [cljsjs/vega-embed "4.0.0-0"]
-                 [cljsjs/vega-tooltip "0.18.1-0"]
+                 [cljsjs/vega "5.9.0-0"]
+                 [cljsjs/vega-lite "4.0.2-0"]
+                 [cljsjs/vega-embed "6.0.0-0"]
+                 [cljsjs/vega-tooltip "0.20.0-0"]
                  [markdown-clj "1.10.0"]
                  [hickory "0.7.1"]
                  [markdown-to-hiccup "0.6.2"]
@@ -109,14 +109,12 @@
             ^{:doc "Recompile sources and jar."}
             ;; Nested vectors are supported for the "do" task
             ["do" "clean"
-                  ["cljsbuild" "once" "min"]
-                  ["uberjar"]]
+                  ["cljsbuild" "once" "min"]]
             "deploy-snapshot!"
             ^{:doc "Recompile sources, then deploy snapshot."}
             ;; Nested vectors are supported for the "do" task
             ["do" "clean"
                   ["cljsbuild" "once" "min"]
-                  ["uberjar"]
                   ["deploy" "clojars"]]
             "deploy-release!"
             ^{:doc "Recompile sources, then deploy release."}
@@ -124,7 +122,6 @@
             ["do" "clean"
                   ["cljsbuild" "once" "min"]
                   ["vcs" "tag"]
-                  ["uberjar"]
                   ["deploy" "clojars"]]}
              
   :profiles {:dev
@@ -133,11 +130,7 @@
                              [figwheel-sidecar "0.5.18"]
                              [com.cemerick/piggieback "0.2.2"]]
               :plugins [[lein-figwheel "0.5.18"]]
-              :source-paths ["dev"]}
-              ;:repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
-             :uberjar
-             {:source-paths ^:replace ["src/clj"]
-              :omit-source true
-              :aot :all}}
+              :source-paths ["dev"]}}
+              ;:repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}}
   :main ^:skip-aot oz.server)
 

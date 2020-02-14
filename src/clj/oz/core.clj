@@ -9,6 +9,7 @@
             [clojure.edn :as edn]
             [clojure.pprint :as pp]
             [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [cheshire.core :as json]
             [yaml.core :as yaml]
             [markdown-to-hiccup.core :as md->hc]
@@ -17,12 +18,20 @@
             [hickory.core :as hickory]
             [hiccup.core :as hiccup]
             [taoensso.timbre :as log]
-            [tentacles.gists :as gists]))
+            [tentacles.gists :as gists])
+  (:import java.io.File
+           java.util.UUID))
 
 
-(def vega-version "5.4.0")
-(def vega-lite-version "3.4.0")
-(def vega-embed-version "4.4.0")
+(def vega-version "5.9.0")
+(def vega-lite-version "4.0.2")
+(def vega-embed-version "6.0.0")
+
+
+(defn- vega-cli-installed? [mode]
+  (case mode
+    :vega-lite (= 0 (:exit (shell/sh "vl2svg" "--help")))
+    :vega      (= 0 (:exit (shell/sh "vg2svg" "--help")))))
 
 
 ;; Utils
@@ -160,8 +169,6 @@
 ;; Publishing code
 
 
-
-
 (defn- auth-args
   [args]
   (let [the-auth-args (submap args #{:auth :auth-token :client-id :access-token})
@@ -292,6 +299,82 @@
        (map #(str (name (first %)) ": " (second %)))
        (string/join "; ")))
 
+
+;; Questions:
+;; * Do I want to pass in through stdin or through a file?
+;; * Do I want to write out through a file or through stdout?
+;; * Do png, svg & pdf have file output options or just export!?
+;; * Follow pattern in clojurescript of dropping kw namespace? need to write to json from clj here...
+;; * Combine png/svg etc into single `vg-cli` fn?
+;; * What about opts style?
+
+
+;; * Why am I getting back "" for png?
+
+
+;(json/encode {:this {:that/the "hell"}})
+
+(defn- tmp-filename
+  [ext]
+  (str (java.io.File/createTempFile (str (java.util.UUID/randomUUID)) (str "." (name ext)))))
+  
+
+(defn- vg-cli
+  "Takes either spec or the contents of spec-filename, and uses the vega/vega-lite cli tools to translate to the specified format.
+  If both spec and spec-filename are present, writes spec to spec-filename for running cli tool (otherwise, a tmp file is used)."
+  ([{:keys [spec scale seed format mode spec-filename output-filename return-output?]
+     :or {format :svg mode :vega-lite return-output? true}}]
+   {:pre [(#{:vega-lite :vega} mode)
+          (#{:png :pdf :svg :vega} format)
+          (or spec spec-filename)]}
+   (if (vega-cli-installed? mode)
+     (let [short-mode (case (keyword mode) :vega-lite "vl" :vega "vg")
+           ext (name (if (= format :vega) :vg format))
+           spec-filename (or spec-filename (tmp-filename (str short-mode ".json")))
+           output-filename (or output-filename (tmp-filename ext))
+           command (str short-mode 2 ext)
+           ;; Write out the spec file, and run the vega(-lite) cli command
+           _ (when spec
+               (spit spec-filename (json/encode spec)))
+           {:keys [out exit err]} (shell/sh command spec-filename output-filename)] 
+       (log/info "input:" spec-filename)
+       (log/info "output:" output-filename)
+       (if (= exit 0)
+         (when return-output?
+           (slurp output-filename))
+         (do
+           (log/error "Problem creating output")
+           (log/error err)
+           err)))
+     (log/error "Vega CLI not installed! Please run `npm install -g vega vega-lite vega-cli` and try again. (Note: You may have to run with `sudo` depending on your npm setup.)"))))
+     ;; Todo; should be throwing
+
+
+(defmulti ^:private convert
+  (fn [_ from to]
+    [from to]))
+
+(defmethod convert [:vega-lite :vega]
+  [spec from to]
+  (json/decode (vg-cli {:spec spec :mode from :format to})))
+
+(defmethod convert [:vega-lite :pdf]
+  [spec _ _]
+  (convert (convert spec :vega-lite :vega)
+           :vega
+           :pdf))
+
+(defmethod convert :default
+  [spec from to]
+  (vg-cli {:spec spec :mode from :format to}))
+
+;(convert
+  ;{:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
+   ;:mark :point
+   ;:encoding {:x {:field :a}
+              ;:y {:field :b}}}
+  ;:vega-lite
+  ;:pdf)
 
 (defn ^:no-doc embed
   "Take hiccup or vega/lite spec and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
@@ -512,7 +595,7 @@
 ;; For keeping track of builds
 
 (defonce ^:private last-built-file (atom nil))
-@last-built-file
+;@last-built-file
 
 
 (def ^:private default-ignore-patterns
