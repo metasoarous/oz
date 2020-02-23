@@ -21,11 +21,13 @@
 
 
 (defn ^:no-doc render-vega-lite
-  ([spec elem]
+  ([spec elem] (render-vega-lite spec elem {}))
+  ([spec elem opts]
    (when spec
      (let [spec (clj->js spec)
-           opts {:renderer "canvas"
-                 :mode "vega-lite"}]
+           opts (merge {:renderer "canvas"
+                        :mode "vega-lite"}
+                       opts)]
        (-> (js/vegaEmbed elem spec (clj->js opts))
            (.then (fn [res]
                     #_(log res)
@@ -33,42 +35,47 @@
            (.catch (fn [err]
                      (log err))))))))
 
-(defn render-vega [spec elem]
-  (when spec
-    (let [spec (clj->js spec)
-          opts {:renderer "canvas"
-                :mode "vega"}]
-      (-> (js/vegaEmbed elem spec (clj->js opts))
-          (.then (fn [res]
-                   #_(log res)
-                   (. js/vegaTooltip (vega (.-view res) spec))))
-          (.catch (fn [err]
-                    (log err)))))))
+(defn render-vega
+  ([spec elem] (render-vega spec elem {}))
+  ([spec elem opts]
+   (when spec
+     (let [spec (clj->js spec)
+           opts (merge {:renderer "canvas"
+                        :mode "vega"}
+                       opts)]
+       (-> (js/vegaEmbed elem spec (clj->js opts))
+           (.then (fn [res]
+                    #_(log res)
+                    (. js/vegaTooltip (vega (.-view res) spec))))
+           (.catch (fn [err]
+                     (log err))))))))
 
 (defn vega-lite
   "Reagent component that renders vega-lite."
-  [spec]
-  (r/create-class
-   {:display-name "vega-lite"
-    :component-did-mount (fn [this]
-                           (render-vega-lite spec (r/dom-node this)))
-    :component-will-update (fn [this [_ new-spec]]
-                             (render-vega-lite new-spec (r/dom-node this)))
-    :reagent-render (fn [spec]
-                      [:div#vis])}))
+  ([spec] (vega-lite spec {}))
+  ([spec opts]
+   (r/create-class
+    {:display-name "vega-lite"
+     :component-did-mount (fn [this]
+                            (render-vega-lite spec (r/dom-node this) opts))
+     :component-will-update (fn [this [_ new-spec]]
+                              (render-vega-lite new-spec (r/dom-node this) opts))
+     :reagent-render (fn [spec]
+                       [:div#vis])})))
 
 
 (defn vega
   "Reagent component that renders vega"
-  [spec]
-  (r/create-class
-   {:display-name "vega"
-    :component-did-mount (fn [this]
-                           (render-vega spec (r/dom-node this)))
-    :component-will-update (fn [this [_ new-spec]]
-                             (render-vega new-spec (r/dom-node this)))
-    :reagent-render (fn [spec]
-                      [:div#vis])}))
+  ([spec] (vega spec {}))
+  ([spec opts]
+   (r/create-class
+    {:display-name "vega"
+     :component-did-mount (fn [this]
+                            (render-vega spec (r/dom-node this) opts))
+     :component-will-update (fn [this [_ new-spec]]
+                              (render-vega new-spec (r/dom-node this) opts))
+     :reagent-render (fn [spec]
+                       [:div#vis])})))
 
 
 (defn ^:no-doc view-spec
