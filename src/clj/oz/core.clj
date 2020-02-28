@@ -10,6 +10,7 @@
             [clojure.pprint :as pp]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
+            [clojure.spec.alpha :as s]
             [cheshire.core :as json]
             [yaml.core :as yaml]
             [markdown-to-hiccup.core :as md->hc]
@@ -154,7 +155,7 @@
 
 (defn ^:no-doc v!
   "Deprecated version of `view!`, which takes a single vega or vega-lite clojure map `spec`, as well as added `:data`,
-  `:width` and `:height` options, to be merged into spec priori to `view!`ing."
+  `:width` and `:height` options, to be merged into spec prior to `view!`ing."
   [spec & {:as opts
            :keys [data width height host port mode]
            :or {port (:port @server/web-server_ server/default-port)
@@ -406,41 +407,113 @@
    (embed spec {})))
 
 
+(s/def ::hiccup
+  (s/and vector?
+         #(let [x (first %)]
+            (or (keyword x) (string? x)))))
+
+(s/def ::title string?)
+(s/def ::description string?)
+(s/def ::author string?)
+(s/def ::tags (s/coll-of string?))
+(s/def ::keywords (s/coll-of string?))
+
+(s/def ::header-extras ::hiccup)
+         
+(s/def ::omit-styles? boolean?)
+(s/def ::omit-charset? boolean?)
+(s/def ::omit-vega-libs? boolean?)
+;; Leaving these options out for now
+;(s/def ::omit-mathjax? boolean?)
+;(s/def ::omit-js-libs? boolean?)
+
+(s/def ::shortcut-icon-url string?)
+                       
+(s/def ::html-opts
+  (s/keys :opt-un [::title ::description ::tags ::keywords ::header-extras ::omit-styles? ::omit-charset? ::omit-mathjax?]))
+
+
+(s/def ::mode #{:vega :vega-lite})
+;; This one should be deprecated ^
+;; Should maybe only allow :viz-mode when not obviously applicable to the viz (such as embed or view)
+
+(s/def ::viz-mode #{:vega :vega-lite})
+
+(defn- shortcut-icon [url]
+  [:link {:rel "shortcut icon"
+          :href url
+          :type "image/x-icon"}])
+
+;; which should take precedance in general? meta or html-opts?
+;; What about if it's something that could theoretically get merged? like keywords/tags?
+
+;; Might be worth exposing this in the future, but uncertain whether this is a good idea for now
+(defn- wrap-html
+  [spec {:as opts :keys [title description author shortcut-icon-url keywords header-extras omit-styles? omit-shortcut-icon? omit-charset? omit-vega-libs?]}]
+  (let [metadata (or (meta spec) {})
+        opts (reduce
+               (fn [opts' k]
+                 (assoc opts' k (or (get opts' k)
+                                    (get metadata k))))
+               opts
+               [:title :description :author :keywords])
+        keywords (into (set (:keywords opts))
+                       (:tags metadata))]
+    [:html
+     (vec
+       (concat
+         ;; Should we have a separate function for constructing the head?
+         [:head
+           (when-not omit-charset?
+             [:meta {:charset "UTF-8"}])
+           [:title (or (:title opts) "Oz document")]
+           [:meta {:name "description" :content (or (:description opts) "Oz document")}]
+           (when-let [author (:author opts)]
+             [:meta {:name "author" :content author}])
+           (when keywords
+             [:meta {:name "keywords" :content (string/join "," keywords)}])
+           [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+           (when-not omit-shortcut-icon?
+             (shortcut-icon (or shortcut-icon-url "http://ozviz.io/oz.svg")))]
+         ;; QUESTION Possible to embed these directly?
+         (when-not omit-styles?
+           [[:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
+            [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
+            [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}]]) 
+         ;; TODO Ideally we wouldn't need these, and inclusion of the compiled oz target should be enough; However,
+         ;; we're not currently actually included that in html export, so this is necessary for now.
+         ;; Everntually though...
+         (when-not omit-vega-libs?
+           [[:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega@" vega-version)}]
+            [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-lite@" vega-lite-version)}]
+            [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-embed@" vega-embed-version)}]])
+         ;; Not allowing this option for now;
+         ;(when-not omit-js-libs?
+         ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
+         [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]))
+     [:body
+       (vec (embed spec opts))
+       [:div#vis-tooltip {:class "vg-tooltip"}]
+       ;; TODO This shouldn't be included as such for exported html content (I think it raises a warning)
+       [:script {:src "js/compiled/oz.js" :type "text/javascript"}]]]))
+
+
 (defn html
   ([spec opts]
-   (let [metadata (or (meta spec) {})]
-     (if (map? spec)
-       (html [:vega-lite spec])
-       (hiccup/html
-         [:html
-          [:head
-           [:meta {:charset "UTF-8"}]
-           [:title (or (:title metadata) "Oz document")]
-           [:meta {:name "description" :content (or (:description metadata) "Oz document")}]
-           (when-let [author (:author metadata)]
-             [:meta {:name "author" :content author}])
-           (when-let [keywords (:keywords metadata)]
-             [:meta {:name "keywords" :content (string/join "," (into (set keywords) (:tags metadata)))}])
-           [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-           [:link {:rel "shortcut icon" :href "http://ozviz.io/oz.svg" :type "image/x-icon"}]
-           [:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
-           [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
-           [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}] 
-           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega@" vega-version)}]
-           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-lite@" vega-lite-version)}]
-           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-embed@" vega-embed-version)}]
-           ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
-           [:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]
-          [:body
-           (vec (embed spec opts))
-           [:div#vis-tooltip {:class "vg-tooltip"}]
-           [:script {:src "js/compiled/oz.js" :type "text/javascript"}]]]))))
+   (if (map? spec)
+     (html [:vega-lite spec] opts)
+     (hiccup/html (wrap-html spec opts))))
   ([spec]
    (html spec {})))
 
 (comment
+  ;; WARNING!!!
+  ;; This isn't quite right; We shouldn't be including the vega-lite & vega stuff in the output
+  ;; We should have html fn toggles for these things
+  ;; Also, this should probably be an official build target; Or could just uncomment?
   (spit "resources/oz/public/index.html"
-        (html [:div#app [:h2 "oz"] [:p "pay no attention"]]))
+        (html [:div#app [:h2 "oz"] [:p "pay no attention"]]
+              {:omit-vega-libs? true}))
   :end-comment)
    
 
