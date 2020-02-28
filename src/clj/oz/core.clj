@@ -417,9 +417,9 @@
 (s/def ::author string?)
 (s/def ::tags (s/coll-of string?))
 (s/def ::keywords (s/coll-of string?))
-
-(s/def ::header-extras ::hiccup)
+(s/def ::shortcut-icon-url string?)
          
+(s/def ::omit-shortcut-icon? boolean?)
 (s/def ::omit-styles? boolean?)
 (s/def ::omit-charset? boolean?)
 (s/def ::omit-vega-libs? boolean?)
@@ -427,10 +427,11 @@
 ;(s/def ::omit-mathjax? boolean?)
 ;(s/def ::omit-js-libs? boolean?)
 
-(s/def ::shortcut-icon-url string?)
+
+(s/def ::header-extras ::hiccup)
                        
 (s/def ::html-opts
-  (s/keys :opt-un [::title ::description ::tags ::keywords ::header-extras ::omit-styles? ::omit-charset? ::omit-mathjax?]))
+  (s/keys :opt-un [::title ::description ::author ::keywords ::shortcut-icon-url ::omit-shortcut-icon? ::omit-styles? ::omit-charset? ::omit-vega-libs? ::header-extras]))
 
 
 (s/def ::mode #{:vega :vega-lite})
@@ -448,8 +449,9 @@
 ;; What about if it's something that could theoretically get merged? like keywords/tags?
 
 ;; Might be worth exposing this in the future, but uncertain whether this is a good idea for now
-(defn- wrap-html
-  [spec {:as opts :keys [title description author shortcut-icon-url keywords header-extras omit-styles? omit-shortcut-icon? omit-charset? omit-vega-libs?]}]
+(defn- html-head
+  "Construct a header as hiccup, given the html opts and spec metadata"
+  [spec {:as opts :keys [title description author keywords shortcut-icon-url omit-shortcut-icon? omit-styles? omit-charset? omit-vega-libs? header-extras]}]
   (let [metadata (or (meta spec) {})
         opts (reduce
                (fn [opts' k]
@@ -459,43 +461,48 @@
                [:title :description :author :keywords])
         keywords (into (set (:keywords opts))
                        (:tags metadata))]
-    [:html
-     (vec
-       (concat
-         ;; Should we have a separate function for constructing the head?
-         [:head
-           (when-not omit-charset?
-             [:meta {:charset "UTF-8"}])
-           [:title (or (:title opts) "Oz document")]
-           [:meta {:name "description" :content (or (:description opts) "Oz document")}]
-           (when-let [author (:author opts)]
-             [:meta {:name "author" :content author}])
-           (when keywords
-             [:meta {:name "keywords" :content (string/join "," keywords)}])
-           [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-           (when-not omit-shortcut-icon?
-             (shortcut-icon (or shortcut-icon-url "http://ozviz.io/oz.svg")))]
-         ;; QUESTION Possible to embed these directly?
-         (when-not omit-styles?
-           [[:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
-            [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
-            [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}]]) 
-         ;; TODO Ideally we wouldn't need these, and inclusion of the compiled oz target should be enough; However,
-         ;; we're not currently actually included that in html export, so this is necessary for now.
-         ;; Everntually though...
-         (when-not omit-vega-libs?
-           [[:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega@" vega-version)}]
-            [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-lite@" vega-lite-version)}]
-            [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-embed@" vega-embed-version)}]])
-         ;; Not allowing this option for now;
-         ;(when-not omit-js-libs?
-         ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
-         [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]))
-     [:body
-       (vec (embed spec opts))
-       [:div#vis-tooltip {:class "vg-tooltip"}]
-       ;; TODO This shouldn't be included as such for exported html content (I think it raises a warning)
-       [:script {:src "js/compiled/oz.js" :type "text/javascript"}]]]))
+    (vec
+      (concat
+        ;; Should we have a separate function for constructing the head?
+        [:head
+          (when-not omit-charset?
+            [:meta {:charset "UTF-8"}])
+          [:title (or (:title opts) "Oz document")]
+          [:meta {:name "description" :content (or (:description opts) "Oz document")}]
+          (when-let [author (:author opts)]
+            [:meta {:name "author" :content author}])
+          (when keywords
+            [:meta {:name "keywords" :content (string/join "," keywords)}])
+          [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+          (when-not omit-shortcut-icon?
+            (shortcut-icon (or shortcut-icon-url "http://ozviz.io/oz.svg")))]
+        ;; QUESTION Possible to embed these directly?
+        (when-not omit-styles?
+          [[:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
+           [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
+           [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}]]) 
+        ;; TODO Ideally we wouldn't need these, and inclusion of the compiled oz target should be enough; However,
+        ;; we're not currently actually included that in html export, so this is necessary for now.
+        ;; Everntually though...
+        (when-not omit-vega-libs?
+          [[:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega@" vega-version)}]
+           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-lite@" vega-lite-version)}]
+           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-embed@" vega-embed-version)}]])
+        ;; Not allowing this option for now;
+        ;(when-not omit-js-libs?
+        ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
+        [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]))))
+
+;; Would like to expose this in the future, but not certain about the name/api
+(defn- wrap-html
+  [spec opts]
+  [:html
+   (html-head spec opts)
+   [:body
+     (vec (embed spec opts))
+     [:div#vis-tooltip {:class "vg-tooltip"}]
+     ;; TODO This shouldn't be included as such for exported html content (I think it raises a warning)
+     [:script {:src "js/compiled/oz.js" :type "text/javascript"}]]])
 
 
 (defn html
