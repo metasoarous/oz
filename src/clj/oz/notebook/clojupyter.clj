@@ -17,10 +17,10 @@
   requirejs.config({
     baseUrl: 'https://cdn.jsdelivr.net/npm/',
     paths: {
-      'vega-embed':  'vega-embed@3?noext',
+      'vega-embed':  'vega-embed@4?noext',
       'vega-lib': 'vega-lib?noext',
-      'vega-lite': 'vega-lite@2?noext',
-      'vega': 'vega@3?noext'
+      'vega-lite': 'vega-lite@3?noext',
+      'vega': 'vega@5?noext'
     }
   });
   require(['vega-embed'], function(vegaEmbed) {
