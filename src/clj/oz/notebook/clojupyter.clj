@@ -1,7 +1,7 @@
 (ns oz.notebook.clojupyter
   "Experimental support for rendering vega in Jupyter with Clojupyter"
   (:require
-    ;[oz.core :as oz]
+    [oz.core :as oz]
     ;[lazy-require.core :as lreq]
     [hiccup.core :as hiccup]
     [clojupyter.protocol.mime-convertible :as mc]
@@ -10,17 +10,17 @@
 
 
 (def require-string
-  "
+  (str "
 <div>
   <div id='uuid-%s'></div>
   <script>
   requirejs.config({
     baseUrl: 'https://cdn.jsdelivr.net/npm/',
     paths: {
-      'vega-embed':  'vega-embed@3?noext',
+      'vega-embed':  'vega-embed@" oz/vega-embed-version "?noext',
       'vega-lib': 'vega-lib?noext',
-      'vega-lite': 'vega-lite@2?noext',
-      'vega': 'vega@3?noext'
+      'vega-lite': 'vega-lite@" oz/vega-lite-version "?noext',
+      'vega': 'vega@" oz/vega-version "?noext'
     }
   });
   require(['vega-embed'], function(vegaEmbed) {
@@ -31,7 +31,7 @@
   });
   </script>
 </div>
-  ")
+  "))
 
 
 (defn- uuid [] (str (java.util.UUID/randomUUID)))

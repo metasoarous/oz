@@ -37,8 +37,8 @@
   ;; Define a simple plot, inlining the data
   (def line-plot
     {:data {:values (play-data "monkey" "slipper" "broom")}
-     :encoding {:x {:field "time"}
-                :y {:field "quantity"}
+     :encoding {:x {:field "time" :type "quantitative"}
+                :y {:field "quantity" :type "quantitative"}
                 :color {:field "item" :type "nominal"}}
      :mark "line"})
 
