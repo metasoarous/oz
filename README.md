@@ -263,6 +263,7 @@ The merging of spec maps described above applies prior to application of this re
 
 Eventually we'll be adding options for hooking into the signal dataflow graphs within these visualizations so that interactions in a Vega/Vega-Lite visualization can be used to inform other Reagent components in your app.
 
+Please note that when using oz.core client side, the `:data` entry in your vega spec map should not be `nil` (for example you're loading data into a reagent atom which has not been populated yet). Instead prefer an empty sequence ``()` to avoid hard to diagnose errors in the browser. 
 
 ## Loading specs
 
