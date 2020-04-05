@@ -42,7 +42,8 @@
                  [org.clojure/spec.alpha "0.2.176"]
                  [irresponsible/tentacles "0.6.3"]
                  ;; hot reloading experiments
-                 [hawk "0.2.11"]]
+                 [hawk "0.2.11"]
+                 [vg-cli "0.0.1"]]
                  ;[timofreiberg/bultitude "0.3.0"]
                  ;[org.clojure/tools.namespace "0.2.11"]]
   :plugins [[lein-cljsbuild "1.1.6"]]
