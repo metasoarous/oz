@@ -146,7 +146,7 @@ For vega instead of vega-lite, you can also specify `:mode :vega` to `oz/view!`:
 
 (require '[cheshire.core :as json])
 
-(def contour-plot (oz/load "contour-lines.vega.json"))
+(def contour-plot (oz/load "examples/contour-lines.vega.json"))
 (oz/view! contour-plot :mode :vega)
 ```
 
