@@ -111,12 +111,14 @@
             ^{:doc "Recompile sources and jar."}
             ;; Nested vectors are supported for the "do" task
             ["do" "clean"
-                  ["cljsbuild" "once" "min"]]
+                  ["cljsbuild" "once" "min"]
+                  ["jar"]]
             "deploy-snapshot!"
             ^{:doc "Recompile sources, then deploy snapshot."}
             ;; Nested vectors are supported for the "do" task
             ["do" "clean"
                   ["cljsbuild" "once" "min"]
+                  ["jar"]
                   ["deploy" "clojars"]]
             "deploy-release!"
             ^{:doc "Recompile sources, then deploy release."}
@@ -124,6 +126,7 @@
             ["do" "clean"
                   ["cljsbuild" "once" "min"]
                   ["vcs" "tag"]
+                  ["jar"]
                   ["deploy" "clojars"]]}
              
   :profiles {:dev
