@@ -1,6 +1,5 @@
 /resources/oz/public/js/compiled/**
 figwheel_server.log
-pom.xml
 pom.xml.asc
 *jar
 /lib/
