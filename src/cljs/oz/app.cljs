@@ -59,7 +59,7 @@
   [{:as ev-msg :keys [?data]}]
   (let [[id msg] ?data]
     (case id
-      :oz.core/view-spec (swap! app-state assoc :view-spec msg)
+      :oz.core/view-doc (swap! app-state assoc :view-spec msg)
       (debugf "Push event from server: %s" ?data))))
 
 

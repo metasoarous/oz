@@ -17,3 +17,4 @@ cljsjs-vega-dists
 .lein-failures
 .cljs_rhino_repl
 scratch
+trace.edn

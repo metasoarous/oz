@@ -1,0 +1,4 @@
+{
+ ;; WIP
+ :deps true
+ :src-paths ["src"]}

@@ -1,5 +1,5 @@
 (ns oz.core
-  (:refer-clojure :exclude [load])
+  (:refer-clojure :exclude [load compile])
   (:require [oz.server :as server]
             [oz.live :as live]
             [clj-http.client :as client]
@@ -19,42 +19,191 @@
             [hickory.core :as hickory]
             [hiccup.core :as hiccup]
             [taoensso.timbre :as log]
-            [tentacles.gists :as gists])
+            [tentacles.gists :as gists]
+            [clojure.test :as t :refer [deftest is]]
+            [clojure.spec.gen.alpha :as gen]
+            [respeced.test :as rt])
   (:import java.io.File
            java.util.UUID))
 
+
+(defn- apply-opts
+  "utility function for applying kw-args"
+  [f & args]
+  (apply f (concat (butlast args) (flatten (into [] (last args))))))
+
+  
+
+(defn sample
+  ([spec]
+   (gen/sample (s/gen spec)))
+  ([spec n]
+   (gen/sample (s/gen spec) n)))
+
+(defn spy
+  [x]
+  (println x)
+  x)
+
+
+;; Speccing out domain
+
+(s/def ::vega-cli-mode #{:vega :vega-lite})
+
+;; Still feels to me like we're missing something big semantically here as far as the difference between a
+;; mode and a format
+
+(s/def ::mode
+  (s/with-gen keyword?
+    #(s/gen #{:vega :vega-lite :hiccup})))
+
+(s/def ::format
+  (s/with-gen keyword?
+    #(s/gen #{:edn :json :yaml :html :pdf :png :svg})))
+
+(s/def ::from
+  (s/with-gen
+    (s/or :mode ::mode :format ::format)
+    #(s/gen #{:edn :json :yaml :hiccup :vega :vega-lite}))) ;; add html & svg?
+
+(s/def ::to
+  (s/with-gen
+    (s/or :mode ::mode :format ::format)
+    #(s/gen #{:edn :json :yaml :hiccup :vega :svg :html})))
+
+
+(declare load)
+
+(defn example-generator
+  [mode]
+  (s/gen
+    (->>
+      (file-seq (clojure.java.io/file (str "examples/" (name mode))))
+      (remove #(.isDirectory %))
+      (map str)
+      (map load)
+      set)))
+
+(s/def ::vega-lite
+  (s/with-gen map?
+    (fn [] (example-generator :vega-lite))))
+
+(s/def ::vega
+  (s/with-gen map?
+    (fn [] (example-generator :vega))))
+
+(s/def ::vega-like
+  (s/or :vega-lite ::vega-lite :vega ::vega))
+
+(deftest exercise-vega
+  (is (sample ::vega))
+  (is (s/exercise ::vega-like)))
+
+(s/def ::tag
+  (s/with-gen
+    (s/or :keyword keyword? :string string?)
+    (fn [] (s/gen #{:div :h1 :p :code :foo :bar}))))
+
+(s/def ::hiccup
+  (s/with-gen
+    (s/and
+      vector?
+      (s/cat :tag ::tag :body (s/* any?)))
+    (fn []
+      (gen/fmap
+        (fn [form]
+          (vec form))
+        (s/gen (s/cat :tag ::tag :body (s/* any?)))))))
+
+;; Translate to tests?
+(deftest exercise-hiccup
+  (is (s/exercise ::hiccup))
+  (is (s/conform ::hiccup [:div {:styles {}} [:h1 "some shit"] [:p "ya know?"]])))
+
+
+(s/def ::document (s/or :hiccup ::hiccup :vega map?))
+
+(deftest exercise-document
+  (is (s/exercise ::document)))
+
+(s/def ::input-filename string?)
+(s/def ::output-filename string?)
+(s/def ::return-result? boolean?)
+
+
+; Spec for vega-cli
+
+(s/def ::vega-cli-opts
+  (s/keys :req-un [(or ::vega-like ::input-filename) ::to]
+          :opt-un [::from ::return-result? ::output-filename]))
+
+(deftest exercise-vega-cli-opts
+  (is (s/exercise ::vega-cli-opts)))
+
+
+(s/def ::title string?)
+(s/def ::description string?)
+(s/def ::author string?)
+(s/def ::tags (s/coll-of string?))
+(s/def ::keywords (s/coll-of string?))
+(s/def ::shortcut-icon-url string?)
+         
+(s/def ::omit-shortcut-icon? boolean?)
+(s/def ::omit-styles? boolean?)
+(s/def ::omit-charset? boolean?)
+(s/def ::omit-vega-libs? boolean?)
+;; Leaving these options out for now
+;(s/def ::omit-mathjax? boolean?)
+;(s/def ::omit-js-libs? boolean?)
+
+(s/def ::header-extras ::hiccup)
 
 (def vega-version "5.9.0")
 (def vega-lite-version "4.0.2")
 (def vega-embed-version "6.0.0")
 
 
-(defn- vega-cli-installed? [mode]
+(s/fdef vega-cli-installed?
+        :args (s/cat :mode ::vega-cli-mode)
+        :ret boolean?
+        :fn (fn [{:keys [args ret]}]
+              ret))
+
+(def installed-clis
+  (atom {}))
+
+(defn -check-vega-cli-installed? [mode]
   (case mode
     :vega-lite (= 0 (:exit (shell/sh "vl2svg" "--help")))
     :vega      (= 0 (:exit (shell/sh "vg2svg" "--help")))))
+  
+(defn- vega-cli-installed? [mode]
+  ;; First checks the installed-clis cache, then epirically checks via cli call
+  (or (get @installed-clis mode)
+      (let [status (-check-vega-cli-installed? mode)]
+        ;; updating cache means once we install, we don't have to run cli check anymore
+        (swap! installed-clis mode status)
+        status)))
 
+(deftest test-vega-cli-installed?
+  (is (= true (rt/check-call `vega-cli-installed? [:vega])))
+  (is (= true (rt/check-call `vega-cli-installed? [:vega-lite]))))
 
 ;; Utils
 
-(defn- mapply
-  "utility function for applying kw-args"
-  [f & args]
-  (apply f (concat (butlast args) (flatten (into [] (last args))))))
+(defn- doc-type [doc]
+  (if (sequential? doc) :ozviz :vega))
 
-(defn- spec-type [spec]
-  (if (sequential? spec) :ozviz :vega))
-
-(def ^{:private true} vega-spec-opts
+(def ^{:private true} vega-doc-opts
   #{:data :width :height :datasets})
 
 (defn- merge-opts
   "Merge relevant api opts into vega data structure, removing entries with nil values"
-  [spec opts]
+  [doc opts]
   (->> opts
-       (filter (comp vega-spec-opts first))
+       (filter (comp vega-doc-opts first))
        (remove (comp nil? second))
-       (into spec)))
+       (into doc)))
 
 (defn- submap
   [m keys]
@@ -71,8 +220,11 @@
 
 ;; Set up plot server crap
 
+
 ;; Defines out function for manually starting the plot server
+(declare start-server!) ;; for linting
 (clone-var server/start-server!)
+
 ;; (Deprecated old API)
 (defn ^:no-doc start-plot-server!
   [& args]
@@ -104,7 +256,7 @@
   [:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}])
 
 (defn- apply-fn-component
-  "Takes a spec where the first argument is a function and applies it with the rest of the entries in spec.
+  "Takes a hiccup-form where the first argument is a function and applies it with the rest of the entries in form
   If the result is itself a function (form-2 component, in Reagent speak), then returns result."
   [form]
   (let [result (apply (first form) (rest form))]
@@ -115,38 +267,414 @@
       result)))
 
 
+(s/def ::tag-compiler
+  (s/with-gen
+    (s/fspec :args (s/cat :form ::hiccup) :ret any?)
+    (fn []
+      (s/gen
+        #{(fn [[_ & rest]] [:blah [:zippy "Never gonna give you up"] rest])
+          (fn [_] [:elided "nothing to see here"])}))))
+          
+
+(s/def ::tag-compilers
+  (s/map-of ::tag ::tag-compiler))
+
+(deftest exercise-tag-compiler
+  (is (s/exercise ::tag-compiler)))
+
+;; TODO QUESTION
+;; This is probably not quite right; We should probably err on the side of requiring these args for now
+
+(s/def ::base-compile-opts
+  (s/keys :opt-un [::to ::from ::mode ::tag-compilers]))
+
+;; We use this multimethod for the underlying implementation
+
+(defmulti compile-args-spec
+  (fn [[_ {:keys [from mode to]}]]
+    [(or from mode) to]))
+
+;; Warning! Changing the defmulti above doesn't take on reload! Have to restart repl :-/
+(s/def ::compile-args
+  (s/multi-spec compile-args-spec (fn retag [genval _] genval)))
+
+
+
+(defmulti to-spec :to)
+(defmethod to-spec :default
+  [{:keys [to]}]
+  (keyword 'oz.core (or to :hiccup)))
+
+
+(s/fdef compile*
+  :args ::compile-args
+  :fn (fn [{:keys [args ret]}]
+        (let [[_ opts] args]
+          (s/valid? (to-spec opts) ret))))
+
+
+(defn- compiler-key
+  [doc {:keys [from mode to]}]
+  [(or from mode (cond (vector? doc) :hiccup (map? doc) :vega-lite))
+   (or to :hiccup)])
+
+(defmulti ^:no-doc compile*
+  "General purpose compilation function which turns things from one data structure into another"
+  {:arglists '([doc {:keys [from mode to]}])}
+  compiler-key)
+
+;; QUESTION How do we merge the tag-compilers options for html compilation embedding?
+;; * merge in options as we go when we are compiling to html?
+;;   -> :to html should be the one in charge of embed type compilers
+;;   -> :to html should be the one in charge of wrap-html when needed
+
+
+;(rt/successful? (rt/check `compile {} {:num-tests 10}))
+
+
+;; Questions:
+;; * Do I want to pass in through stdin or through a file?
+;; * Do I want to write out through a file or through stdout?
+;; * Do png, svg & pdf have file output options or just export!?
+
+;; * Why am I getting back "" for png?
+
+
+;(json/encode {:this {:that/the "hell"}})
+
+(defn- tmp-filename
+  [ext]
+  (str (java.io.File/createTempFile (str (java.util.UUID/randomUUID)) (str "." (name ext)))))
+
+
+;; QUESTION What do we call the abstract `:vega-doc` here?
+
+(defn vega-cli
+  "Takes either doc or the contents of input-filename, and uses the vega/vega-lite cli tools to translate to the specified format.
+  If both doc and input-filename are present, writes doc to input-filename for running cli tool (otherwise, a tmp file is used).
+  This var is semi-public; It's under consideration for fully public inclusion, but consider it alpha for now."
+  ([{:keys [vega-doc from to mode input-filename output-filename return-result?] ;; TODO may add seed and scale eventually
+     :or {to :svg mode :vega-lite return-result? true}}]
+   {:pre [(#{:vega-lite :vega} (or from mode))
+          (#{:png :pdf :svg :vega} to)
+          (or vega-doc input-filename)]}
+   (let [mode (or from mode)]
+     (if (vega-cli-installed? mode)
+       (let [short-mode (case (keyword mode) :vega-lite "vl" :vega "vg")
+             ext (name (if (= to :vega) :vg to))
+             input-filename (or input-filename (tmp-filename (str short-mode ".json")))
+             output-filename (or output-filename (tmp-filename ext))
+             command (str short-mode 2 ext)
+             ;; Write out the vega-doc file, and run the vega(-lite) cli command
+             _ (when vega-doc
+                 (spit input-filename (json/encode vega-doc)))
+             {:keys [out exit err]} (shell/sh command input-filename output-filename)] 
+         (log/info "input:" input-filename)
+         (log/info "output:" output-filename)
+         (if (= exit 0)
+           (when return-result?
+             (cond-> (slurp output-filename)
+               (= to :vega) (json/parse-string)))
+           (do
+             (log/error "Problem creating output")
+             (log/error err)
+             err)))
+       (log/error "Vega CLI not installed! Please run `npm install -g vega vega-lite vega-cli` and try again. (Note: You may have to run with `sudo` depending on your npm setup.)")))))
+       ;; Todo; should be throwing
+
+
+
+;; Vega-Lite compilations
+
+(defmethod compile-args-spec [:vega-lite :png]
+  [_] (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+
+(defmethod compile* [:vega-lite :png]
+  ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
+
+(defmethod compile-args-spec [:vega-lite :svg]
+  [_] (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+(defmethod compile* [:vega-lite :svg]
+  ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
+
+(defmethod compile-args-spec [:vega-lite :vega]
+  [_] (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+(defmethod compile* [:vega-lite :vega]
+  ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
+
+
+;; Vega compilations
+
+(defmethod compile-args-spec [:vega :png]
+  [_] (s/alt :doc ::vega :opts ::vega-cli-opts))
+(defmethod compile* [:vega :png]
+  ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
+
+(defmethod compile-args-spec [:vega :svg]
+  [_] (s/cat :doc ::vega :opts ::vega-cli-opts))
+(defmethod compile* [:vega :svg]
+  ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
+
+(defmethod compile-args-spec [:vega :pdf]
+  [_] (s/cat :doc ::vega :opts ::vega-cli-opts))
+(defmethod compile* [:vega :pdf]
+  ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
+
+;(sample (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+
+
+;; For Vega-Lite the cli doesn't let us 
+
+;; TODO QUESTION
+;; This is almost right; But the language around which opts it applies to is not clear yet
+;(s/def ::nested-vega-opts ::vega-cli-opts)
+
+(defmethod compile-args-spec [:vega-lite :pdf]
+  ;; Here we go; This is interesting; This exposes why this can't always be so simple. Because the same args
+  ;; might get interpretted in multiple ways; Like usage of the output filename stuff
+  ;; Basically, we need to s/merge in with the a nested option; But which direction should this take? TODO QUESTION
+  ;[_] (s/cat :doc ::vega-lite (s/merge ::vega-cli-opts (s/keys :opt-un [::nested-vega-opts]))))
+  ;; As written below, it may not be incorrect, but files may be getting overwritten between steps or weird
+  ;; things happen?
+  [_] (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+;(sample (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+(defmethod compile* [:vega-lite :pdf]
+  ([doc opts]
+   (compile*
+     (compile* doc (merge opts {:from :vega-lite :to :vega}))
+     (merge opts {:from :vega :to :pdf}))))
+
+
+;; Defining tag-compilers
+
+(defn- compiled-form
+  "Processes a form according to the given processors map, which maps tag keywords
+  to a function for transforming the form."
+  [[tag & _ :as form] processors]
+  (let [tag (keyword tag)]
+    (if-let [processor (get processors tag)]
+      (processor form)
+      form)))
+
+(s/fdef apply-tag-compilers
+        :args (s/cat :doc ::hiccup :compilers ::tag-compilers)
+        :ret ::hiccup)
+
+(defn- apply-tag-compilers
+  [doc
+   compilers]
+  (clojure.walk/prewalk
+    (fn [form]
+      (cond
+        ;; If we see a function, call it with the args in form
+        (and (vector? form) (fn? (first form))) 
+        (apply-fn-component form)
+        ;; apply compilers
+        (vector? form)
+        (compiled-form form compilers)
+        ;; Else, assume hiccup and leave form alone
+        :else form))
+    doc))
+
+(deftest test-apply-tag-compilers
+  (is (rt/successful? (rt/check `apply-tag-compilers {} {:num-tests 5}))))
+
+
+;; Spec out transformations once ingested into hiccup
+
+;; we'll see how this lives up as a general concept
+
+(s/def ::hiccup-opts
+  (s/keys :req-un [::tag-compilers]))
+
+;; TODO Sort out:
+;; It sorta bugs me that the application of the tag compilers has to happen in two places (both the hiccup ->
+;; hiccup, and the :default, both below).
+;; This suggests we may not have the right model here yet
+;; Maybe its fine that these things are 
+
+(defmethod compile-args-spec [:hiccup :hiccup]
+  [_] (s/cat :doc ::hiccup :opts ::hiccup-opts))
+;(sample(s/cat :doc ::hiccup :opts ::hiccup-opts))
+
+(defmethod compile* [:hiccup :hiccup]
+  ([doc {:as opts :keys [tag-compilers]}]
+   (apply-tag-compilers doc tag-compilers)))
+
+(defmethod compile-args-spec :default
+  [_] (s/cat :doc ::document :opts ::base-compile-opts))
+;(sample (s/cat :doc ::document :opts ::base-compile-opts))
+
+
+(s/def ::compiler-key
+  (s/cat :from ::from :to ::to))
+
+
+;; All of this available/registered business is not particularly performant-savy
+;; Is it worth making this a materialized view?
+;; This may require an abstracted format registration process
+
+(defn- available-compiler-keys []
+  (->> (methods compile*)
+       keys
+       (map #(s/conform ::compiler-key %))
+       (remove #{::s/invalid})))
+
+;; QUESTION; Keep public?
+(defn registered-from-formats []
+  (->> (available-compiler-keys) (map first) set))
+(defn registered-to-formats []
+  (->> (available-compiler-keys) (map second) set))
+
+(defn- registered-from-format? [format]
+  (some #{format} (registered-from-formats)))
+
+(defn- registered-to-format? [format]
+  (some #{format} (registered-to-formats)))
+
+
+(s/def ::registered-from-format
+  (s/with-gen registered-from-format?
+    #(set (registered-from-formats))))
+
+(s/def ::registered-to-format
+  (s/with-gen registered-to-format?
+    #(set (registered-to-formats))))
+
+
+(s/def ::registered-compiler-key
+  (s/and ::compiler-key
+         (s/cat :from ::registered-from-format
+                :to ::registered-to-format)))
+
+
+;; Do we 
+
+(defmethod compile* :default
+  ([doc {:as opts :keys [tag-compilers]}]
+   (let [key (compiler-key doc opts)]
+     (println "key is:" key)
+     (assert (s/valid? ::registered-compiler-key key))
+     (let [[from to] key]
+       (cond-> doc
+         (not= :hiccup from) (compile* (merge opts {:from from :to :hiccup}))
+         tag-compilers       (compile* (merge opts {:from :hiccup :to :hiccup}))
+         (not= :hiccup to)   (compile* (-> opts (merge {:from :hiccup :to to}) (dissoc :tag-compilers))))))))
+
+(comment
+  (s/conform ::compiler-key [:hiccup :html])
+
+  (def bi (java.awt.image.BufferedImage. 16 16 java.awt.image.BufferedImage/TYPE_INT_ARGB))
+  (with-open [in (io/input-stream "testing.png")
+              out (io/output-stream "bloop.png")])
+  (into [] (io/input-stream "testing.png"))
+  :end-comment)
+
+(defn file->bytes [file]
+  (with-open [xin (io/input-stream file)
+              xout (java.io.ByteArrayOutputStream.)]
+    (io/copy xin xout)
+    (.toByteArray xout)))
+
+(defn bytes->file
+  [file bytes]
+  (with-open [out (io/output-stream file)]
+    (.write out bytes)))
+
+(comment
+  ;; Are we doing this right? We're getting back a string instead of a map...
+  (compile
+    {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
+     :mark :point
+     :encoding {:x {:field :a}
+                :y {:field :b}}}
+    {:from :vega-lite
+     :to :png})
+  (vega-cli
+    {:vega-doc
+      {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
+       :mark :point
+       :encoding {:x {:field :a}
+                  :y {:field :b}}}
+     :to :png
+     :output-filename "testing.png"
+     :return-result? false})
+  (io/copy (io/file "testing.png") (io/file "blerp.png"))
+  (compile
+    [:div [:poop "yo dawg"]]
+    {:tag-compilers {:poop (fn [_] [:blah "BLOOP"])}
+     :to :html})
+  (rt/successful? (rt/check `compile {} {:num-tests 10}))
+  (sample ::compile-args 1)
+  :done-comment)
+
+
+(s/fdef compile
+  :args ::compile-args
+  :fn (fn [{:keys [args ret]}]
+        (let [[_ opts] args]
+          (s/valid? (to-spec opts) ret))))
+
+
+(defn compile
+  "General purpose compilation function. Uses `:from` and `:to` parameters"
+  {:arglists '([doc & {:keys [from mode to tag-compilers]}])}
+  ([doc {:as opts :keys [mode]}]
+   ;; Support mode or from to `compile`, but require compile* registrations to use `:from`
+   ;; This is maybe why we _do_ need this function
+   (compile* doc (merge {:from (or mode :hiccup) :to :hiccup} opts))))
+
+(deftest exercise-compile-args
+  (is (s/exercise ::compile-args)))
+
+(deftest test-compile
+  (is (rt/successful? (rt/check `compile {} {:num-tests 2}))))
+
+;(t/run-tests)
+
+(comment
+  (compile
+    {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
+     :mark :point
+     :encoding {:x {:field :a}
+                :y {:field :b}}}
+    {:from :vega-lite
+     :to :pdf})
+  :done-comment)
+
+
 (defn- prep-for-live-view
-  [spec {:keys [mode]}]
+  [doc {:keys [mode]}]
   [:div
-    (if (map? spec)
-      [(or mode :vega-lite) spec]
+    (if (map? doc)
+      [(or mode :vega-lite) doc]
       (clojure.walk/prewalk
         (fn [form]
           (cond
             ;; If we have a reagent style fn component, need to call and send just data
             (and (vector? form) (fn? (first form))) 
             (apply-fn-component form)
-            ;; Otherwise, just return spec
+            ;; Otherwise, just return doc
             :else form))
-        spec))
+        doc))
     mathjax-script])
 
 
 (defn view!
-  "View the given spec in a web browser. Specs for which map? is true are treated as single Vega-Lite/Vega specifications.
+  "View the given doc in a web browser. Docs for which map? is true are treated as single Vega-Lite/Vega visualizations.
   All other values are treated as hiccup, and are therefore expected to be a vector or other iterable.
-  This hiccup may contain Vega-Lite/Vega visualizations embedded like `[:vega-lite spec]` or `[:vega spec]`.
+  This hiccup may contain Vega-Lite/Vega visualizations embedded like `[:vega-lite doc]` or `[:vega doc]`.
   You may also specify `:host` and `:port`, for server settings, and a `:mode` option, defaulting to `:vega-lite`, with `:vega` the alternate option.
-  (Though I will note that Vega-Embed often catches when you pass a vega spec to a vega-lite component, and does the right thing with it.
-  However, this is not guaranteed behavior, so best not to depend on it (wink, nod))"
-  [spec & {:keys [host port mode] :as opts}]
+  (Though I will note that Vega-Embed often catches when you pass a vega doc to a vega-lite component, and does the right thing with it.
+  However, this is not guaranteed behavior, so best not to depend on it)"
+  [doc & {:keys [host port mode] :as opts}]
   (let [port (or port (server/get-server-port) server/default-port)
         host (or host "localhost")]
     (try
       (prepare-server-for-view! port host)
-      (let [hiccup-spec (prep-for-live-view spec opts)]
+      (let [hiccup-doc (prep-for-live-view doc opts)]
         ;; if we have a map, just try to pass it through as a vega form
-        (server/send-all! [::view-spec hiccup-spec]))
+        (server/send-all! [::view-doc hiccup-doc]))
       (catch Exception e
         (log/error "error sending plot to server:" e)
         (log/error "Try using a different port?")
@@ -154,21 +682,20 @@
 
 
 (defn ^:no-doc v!
-  "Deprecated version of `view!`, which takes a single vega or vega-lite clojure map `spec`, as well as added `:data`,
-  `:width` and `:height` options, to be merged into spec prior to `view!`ing."
-  [spec & {:as opts
-           :keys [data width height host port mode]
-           :or {port (:port @server/web-server_ server/default-port)
-                host "localhost"
-                mode :vega-lite}}]
-  ;; Update spec opts, then send view
-  (let [spec (merge-opts spec opts)]
-    (view! spec :host host :port port :mode mode)))
+  "Deprecated version of `view!`, which takes a single vega or vega-lite clojure map `viz`, as well as added `:data`,
+  `:width` and `:height` options, to be merged into viz prior to `view!`ing."
+  [viz & {:as opts
+          :keys [data width height host port mode]
+          :or {port (:port @server/web-server_ server/default-port)
+               host "localhost"
+               mode :vega-lite}}]
+  ;; Update viz opts, then send view
+  (let [viz (merge-opts viz opts)]
+    (view! viz :host host :port port :mode mode)))
 
 
 
 ;; Publishing code
-
 
 (defn- auth-args
   [args]
@@ -183,7 +710,7 @@
       the-auth-args)))
 
 (defn gist!
-  "Create a gist with the given spec.
+  "Create a gist with the given doc
 
   Requires authentication, which must be provided by one of the following opts:
   * `:auth`: a Github auth token the form \"username:password\"
@@ -200,11 +727,11 @@
   
   Additional options:
   * `:public`: default false
-  * `:description`: auto generated based on spec"
-  [spec & {:as opts
-           :keys [name description public]
-           :or {public false}}]
-  (let [type (spec-type spec)
+  * `:description`: auto generated based on doc"
+  [doc & {:as opts
+          :keys [name description public]
+          :or {public false}}]
+  (let [type (doc-type doc)
         name (or name
                (case type
                  :ozviz "ozviz-document.edn"
@@ -213,12 +740,12 @@
                       (case type
                         :ozviz "Ozviz document; To load go to https://ozviz.io/#/gist/<gist-id>."
                         :vega "Vega/Vega-Lite viz; To load go to https://vega.github.io/editor"))
-        spec-string (case type
-                      :ozviz (pr-str spec)
-                      :vega (json/generate-string spec))
+        doc-string (case type
+                     :ozviz (pr-str doc)
+                     :vega (json/generate-string doc))
         create-gist-opts (merge {:description description :public public}
                                 (auth-args opts))
-        gist (gists/create-gist {name spec-string} create-gist-opts)]
+        gist (gists/create-gist {name doc-string} create-gist-opts)]
     gist))
 
 ;; Testing out
@@ -241,7 +768,7 @@
 
 
 (defn publish!
-  "Publish spec via gist! and print out the corresponding vega-editor or ozviz.io url.
+  "Publish doc via gist! and print out the corresponding vega-editor or ozviz.io url.
 
   Requires authentication, which must be provided by one of the following opts:
   * `:auth`: a Github auth token the form \"username:password\"
@@ -258,17 +785,17 @@
   
   Additional options:
   * `:public`: default false
-  * `:description`: auto generated based on spec
+  * `:description`: auto generated based on doc
   * `:return-full-gist`: return the full tentacles gist api response data"
-  [spec & {:as opts
-           :keys [mode return-full-gist]
-           :or {mode :vega-lite}}]
-  (let [gist (mapply gist! spec opts)
+  [doc & {:as opts
+          :keys [mode return-full-gist]
+          :or {mode :vega-lite}}]
+  (let [gist (apply-opts gist! doc opts)
         gist-url (:url gist)]
     (println "Gist url:" (:html_url gist))
     (println "Raw gist url:" gist-url)
     ;; Should really merge these into gist and return as data...
-    (case (spec-type spec)
+    (case (doc-type doc)
       :ozviz (println "Ozviz url:" (ozviz-url gist-url))
       :vega (println "Vega editor url:" (vega-editor-url gist :mode mode)))
     (when return-full-gist
@@ -278,14 +805,15 @@
   "Deprecated form of `publish!`"
   [plot & opts]
   (log/warnf "WARNING!!! DEPRECATED!!! Please call `publish!` instead.")
-  (let [spec (merge-opts plot opts)]
-    (publish! spec opts)))
+  (let [doc (merge-opts plot opts)]
+    (publish! doc opts)))
 
 (defn- ^:no-doc live-embed
-  "Embed a specific visualization; Currently private, may be public in future, and name may change."
-  ([[mode spec]]
+  "Embed a single Vega-Lite/Vega visualization as hiccup representing a live/interactive embedding as hiccup;
+  Currently private, may be public in future, and name may change."
+  ([[mode doc]]
    (let [id (str "viz-" (java.util.UUID/randomUUID))
-         code (format "vegaEmbed('#%s', %s, %s);" id (json/generate-string spec) (json/generate-string {:mode mode}))]
+         code (format "vegaEmbed('#%s', %s, %s);" id (json/generate-string doc) (json/generate-string {:mode mode}))]
      [:div
        ;; TODO In the future this should be a precompiled version of whatever the viz renders as (svg), at least
        ;; optionally
@@ -301,98 +829,29 @@
        (string/join "; ")))
 
 
-;; Questions:
-;; * Do I want to pass in through stdin or through a file?
-;; * Do I want to write out through a file or through stdout?
-;; * Do png, svg & pdf have file output options or just export!?
-;; * Follow pattern in clojurescript of dropping kw namespace? need to write to json from clj here...
-;; * Combine png/svg etc into single `vg-cli` fn?
-;; * What about opts style?
 
-
-;; * Why am I getting back "" for png?
-
-
-;(json/encode {:this {:that/the "hell"}})
-
-(defn- tmp-filename
-  [ext]
-  (str (java.io.File/createTempFile (str (java.util.UUID/randomUUID)) (str "." (name ext)))))
-  
-
-(defn- vg-cli
-  "Takes either spec or the contents of spec-filename, and uses the vega/vega-lite cli tools to translate to the specified format.
-  If both spec and spec-filename are present, writes spec to spec-filename for running cli tool (otherwise, a tmp file is used)."
-  ([{:keys [spec scale seed format mode spec-filename output-filename return-output?]
-     :or {format :svg mode :vega-lite return-output? true}}]
-   {:pre [(#{:vega-lite :vega} mode)
-          (#{:png :pdf :svg :vega} format)
-          (or spec spec-filename)]}
-   (if (vega-cli-installed? mode)
-     (let [short-mode (case (keyword mode) :vega-lite "vl" :vega "vg")
-           ext (name (if (= format :vega) :vg format))
-           spec-filename (or spec-filename (tmp-filename (str short-mode ".json")))
-           output-filename (or output-filename (tmp-filename ext))
-           command (str short-mode 2 ext)
-           ;; Write out the spec file, and run the vega(-lite) cli command
-           _ (when spec
-               (spit spec-filename (json/encode spec)))
-           {:keys [out exit err]} (shell/sh command spec-filename output-filename)] 
-       (log/info "input:" spec-filename)
-       (log/info "output:" output-filename)
-       (if (= exit 0)
-         (when return-output?
-           (slurp output-filename))
-         (do
-           (log/error "Problem creating output")
-           (log/error err)
-           err)))
-     (log/error "Vega CLI not installed! Please run `npm install -g vega vega-lite vega-cli` and try again. (Note: You may have to run with `sudo` depending on your npm setup.)"))))
-     ;; Todo; should be throwing
-
-
-(defmulti ^:private convert
-  (fn [_ from to]
-    [from to]))
-
-(defmethod convert [:vega-lite :vega]
-  [spec from to]
-  (json/decode (vg-cli {:spec spec :mode from :format to})))
-
-(defmethod convert [:vega-lite :pdf]
-  [spec _ _]
-  (convert (convert spec :vega-lite :vega)
-           :vega
-           :pdf))
-
-(defmethod convert :default
-  [spec from to]
-  (vg-cli {:spec spec :mode from :format to}))
-
-;(convert
-  ;{:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
-   ;:mark :point
-   ;:encoding {:x {:field :a}
-              ;:y {:field :b}}}
-  ;:vega-lite
-  ;:pdf)
+(defn embed
+  ([doc opts]
+   (apply-tag-compilers doc (:processors opts)))
+  ([doc]
+   (embed doc {})))
 
 (defn ^:no-doc embed
-  "Take hiccup or vega/lite spec and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
+  "Take hiccup or vega/lite doc and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
   When rendered, should present as live html page; Currently semi-private, may be made fully public in future."
-  ([spec {:as opts :keys [embed-fn mode] :or {embed-fn live-embed mode :vega-lite}}]
-   ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
+  ([doc {:as opts :keys [embed-fn mode] :or {embed-fn live-embed mode :vega-lite}}]
+   ;; prewalk doc, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
    ;; rendering using the components above. Leave regular hiccup unchanged).
    ;; TODO finish writing; already hooked in below so will break now
-   (if (map? spec)
-     (embed-fn [mode spec])
+   (if (map? doc)
+     (embed-fn [mode doc])
      (clojure.walk/prewalk
        (fn [form]
          (cond
            ;; For vega or vega lite apply the embed-fn (TODO add :markdown elements to hiccup documents)
            (and (vector? form) (#{:vega :vega-lite :leaflet-vega :leaflet-vega-lite :markdown} (first form)))
            (embed-fn form)
-           ;; Make sure that any style attrs are properly case (newer hiccup should do this, but for now)
+           ;; Make sure that any style attrs are properly cast (newer hiccup should do this, but for now)
            (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style map?))
            (into [(first form)
                   (update (second form) :style map->style-string)]
@@ -402,43 +861,13 @@
            (apply-fn-component form)
            ;; Else, assume hiccup and leave form alone
            :else form))
-       spec)))
-  ([spec]
-   (embed spec {})))
+       doc)))
+  ([doc]
+   (embed doc {})))
 
-
-(s/def ::hiccup
-  (s/and vector?
-         #(let [x (first %)]
-            (or (keyword x) (string? x)))))
-
-(s/def ::title string?)
-(s/def ::description string?)
-(s/def ::author string?)
-(s/def ::tags (s/coll-of string?))
-(s/def ::keywords (s/coll-of string?))
-(s/def ::shortcut-icon-url string?)
-         
-(s/def ::omit-shortcut-icon? boolean?)
-(s/def ::omit-styles? boolean?)
-(s/def ::omit-charset? boolean?)
-(s/def ::omit-vega-libs? boolean?)
-;; Leaving these options out for now
-;(s/def ::omit-mathjax? boolean?)
-;(s/def ::omit-js-libs? boolean?)
-
-
-(s/def ::header-extras ::hiccup)
                        
-(s/def ::html-opts
-  (s/keys :opt-un [::title ::description ::author ::keywords ::shortcut-icon-url ::omit-shortcut-icon? ::omit-styles? ::omit-charset? ::omit-vega-libs? ::header-extras]))
-
-
-(s/def ::mode #{:vega :vega-lite})
-;; This one should be deprecated ^
-;; Should maybe only allow :viz-mode when not obviously applicable to the viz (such as embed or view)
-
-(s/def ::viz-mode #{:vega :vega-lite})
+;(s/def ::html-opts
+  ;(s/keys :opt-un [::title ::description ::author ::keywords ::shortcut-icon-url ::omit-shortcut-icon? ::omit-styles? ::omit-charset? ::omit-vega-libs? ::header-extras]))
 
 (defn- shortcut-icon [url]
   [:link {:rel "shortcut icon"
@@ -450,9 +879,9 @@
 
 ;; Might be worth exposing this in the future, but uncertain whether this is a good idea for now
 (defn- html-head
-  "Construct a header as hiccup, given the html opts and spec metadata"
-  [spec {:as opts :keys [title description author keywords shortcut-icon-url omit-shortcut-icon? omit-styles? omit-charset? omit-vega-libs? header-extras]}]
-  (let [metadata (or (meta spec) {})
+  "Construct a header as hiccup, given the html opts and doc metadata"
+  [doc {:as opts :keys [title description author keywords shortcut-icon-url omit-shortcut-icon? omit-styles? omit-charset? omit-vega-libs? header-extras]}]
+  (let [metadata (or (meta doc) {})
         opts (reduce
                (fn [opts' k]
                  (assoc opts' k (or (get opts' k)
@@ -495,39 +924,56 @@
 
 ;; Would like to expose this in the future, but not certain about the name/api
 (defn- wrap-html
-  [spec opts]
+  [doc opts]
   [:html
-   (html-head spec opts)
+   (html-head doc opts)
    [:body
-     (vec (embed spec opts))
+     (vec (embed doc opts))
      [:div#vis-tooltip {:class "vg-tooltip"}]
      ;; TODO This shouldn't be included as such for exported html content (I think it raises a warning)
      [:script {:src "js/compiled/oz.js" :type "text/javascript"}]]])
 
 
 (defn html
-  ([spec opts]
-   (if (map? spec)
-     (html [:vega-lite spec] opts)
-     (hiccup/html (wrap-html spec opts))))
-  ([spec]
-   (html spec {})))
+  ([doc opts]
+   (if (map? doc)
+     (html [:vega-lite doc] opts)
+     (hiccup/html (wrap-html doc opts))))
+  ([doc]
+   (html doc {})))
 
 (comment
   ;; WARNING!!!
-  ;; This isn't quite right; We shouldn't be including the vega-lite & vega stuff in the output
-  ;; We should have html fn toggles for these things
-  ;; Also, this should probably be an official build target; Or could just uncomment?
+  ;; This isn't quite right; We need to be using global references for the stylesheets and fonts, or embedding
+  ;; them somehow. But would be good to eventually do something like this as propper build target, or just as
+  ;; uncommented code, so that vega versions and such are always up to date.
   (spit "resources/oz/public/index.html"
         (html [:div#app [:h2 "oz"] [:p "pay no attention"]]
               {:omit-vega-libs? true}))
   :end-comment)
    
+;(defn shit
+  ;([x y]
+   ;(println x y))
+  ;([x & {:as opts}]
+   ;(println x opts)))
+;(shit :this :that)
 
-(defn export!
-  "In alpha; Export spec to an html file. May eventually have other options, including svg, jpg & pdf available"
-  [spec filepath & {:as opts :keys []}]
-  (spit filepath (html spec opts)))
+(defmulti export!
+  {:arglists '([doc filepath & {:as opts :keys [to]}])}
+  (fn [_ _ & {:keys [to]}]
+    to))
+
+;(defmulti export!
+  ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
+  ;[doc filepath & {:as opts}])
+  
+
+;;; This should also be a defmulti
+;(defn export!
+  ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
+  ;[doc filepath & {:as opts :keys [to]}]
+  ;(spit filepath (html doc opts)))
 
 
 (defn- process-md-block
@@ -613,7 +1059,6 @@
   [filename & {:keys [host port format] :as opts}]
   (live/watch! filename (partial view-file! opts)))
 
-
 (defn- drop-extension
   [relative-path]
   (string/replace relative-path #"\.\w*$" ""))
@@ -623,7 +1068,7 @@
   (string/replace relative-path #"\.\w*$" ".html"))
 
 (defn- compute-out-path
-  [{:as spec :keys [from to out-path-fn]} path]
+  [{:as build-spec :keys [from to out-path-fn]} path]
   (let [out-path-fn (or out-path-fn drop-extension)
         single-file? (= path from)
         to-dir? (or (.isDirectory (io/file to))
@@ -692,7 +1137,7 @@
 
 (defn- build-and-view-file!
   [{:as config :keys [view? host port force-update]}
-   {:as spec :keys [format from to out-path-fn template-fn html-template-fn as-assets?]}
+   {:as build-spec :keys [format from to out-path-fn template-fn html-template-fn as-assets?]}
    filename context {:keys [kind file]}]
   (when (and from (.isDirectory (io/file from)))
     (ensure-out-dir to false))
@@ -701,7 +1146,7 @@
       ;; Handle asset case; just copy things over directly
       (or as-assets? (asset-filetypes ext))
       (when (and (not (.isDirectory file)) (#{:modify :create} kind) (not (ignore? file)))
-        (let [out-path (compute-out-path (assoc spec :out-path-fn identity)
+        (let [out-path (compute-out-path (assoc build-spec :out-path-fn identity)
                                          (.getPath file))]
           (ensure-out-dir out-path true)
           (log/info "updating asset:" file)
@@ -710,7 +1155,7 @@
       (supported-filetypes ext)
       ;; ignore delete (some editors technically delete the file on every save!); also ignore dirs
       (when (and (#{:modify :create} kind) file (not (.isDirectory file)))
-        (reset! last-built-file [(live/canonical-path file) spec])
+        (reset! last-built-file [(live/canonical-path file) build-spec])
         (let [filename (.getPath file)
               ext (extension filename)
               contents (slurp filename)]
@@ -732,7 +1177,7 @@
                   ;_ (log/info "step 1:" evaluation)
                   evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))
                   ;_ (log/info "step 2:" evaluation)
-                  out-path (compute-out-path spec filename)]
+                  out-path (compute-out-path build-spec filename)]
               (ensure-out-dir out-path true)
               (when view?
                 (log/info "Updating live view")
@@ -748,7 +1193,7 @@
    :port 5760
    :host "localhost"})
 
-(def ^:private default-spec
+(def ^:private default-build-spec
   {:out-path-fn html-extension})
 
 
@@ -761,15 +1206,15 @@
 
 
 (defn- infer-root-dir
-  [specs]
+  [build-specs]
   ;; not correct; mocking
-  (->> specs
+  (->> build-specs
        (map (comp live/canonical-path :to))
        (reduce live/greatest-common-path)))
 
 (defn build!
-  "Builds a static web site based on the content specified in specs. Each spec should be a mapping of paths, with additional
-  details about how to build data from one path to the other. Available spec keys are:
+  "Builds a static web site based on the content specified in specs. Each build-spec should be a mapping of paths, with additional
+  details about how to build data from one path to the other. Available build-spec keys are:
     * `:from` - (required) Path from which to build
     * `:to` - (required) Compiled files go here
     * `:template-fn` - Function which takes Oz hiccup content and returns some new hiccup, presumably placing the content in question in some 
@@ -784,56 +1229,57 @@
     * `:view?` - Build with live view of most recently changed file (default true)
     * `:root-dir` - Static assets will be served relative to this directory (defaults to greatest-common-path between all paths)
   "
-  ;; lazy? - (This is one that it would be nice to merge in at the spec level)
+  ;; lazy? - (This is one that it would be nice to merge in at the build-spec level)
   ;; future: middleware?
-  ([specs & {:as config}]
+  ([build-specs & {:as config}]
    (kill-builds!)
-   (if (map? specs)
-     (mapply build! [specs] config)
+   (if (map? build-specs)
+     (apply-opts build! [build-specs] config)
      (let [{:as full-config :keys [lazy? live? view?]}
            (merge default-config config)]
-       (reset! server/current-root-dir (or (:root-dir config) (infer-root-dir specs)))
-       (doseq [spec specs]
-         (let [full-spec (merge default-spec spec)]
+       (reset! server/current-root-dir (or (:root-dir config) (infer-root-dir build-specs)))
+       (doseq [build-spec build-specs]
+         (let [full-spec (merge default-build-spec build-spec)]
            ;; On first build, build out all of the results unless lazy? has been passed or we haven't built it
            ;; yet
            (doseq [src-file (file-seq (io/file (:from full-spec)))]
              ;; we don't want to display the file on these initial builds, only for most recent build
              (let [config' (assoc full-config :view? false)
                    dest-file (compute-out-path full-spec src-file)]
-               (when (and (not lazy?) (not (.exists (io/file dest-file))))
+               (when (or (not lazy?) (not (.exists (io/file dest-file))))
                  (build-and-view-file! config' full-spec (:from full-spec) nil {:kind :create :file src-file}))))
            ;; Start watching files for changes
            (when live?
              (live/watch! (:from full-spec) (partial build-and-view-file! full-config full-spec)))))
        ;; If we're running this the second time, we want to immediately rebuild the most recently compiled
        ;; file, so that any new templates or whatever being passed in can be re-evaluated for it.
-       (when-let [[file spec] @last-built-file]
-         (let [new-spec (first (filter #(= (:from %) (:from spec)) specs))]
+       (when-let [[file build-spec] @last-built-file]
+         (let [new-spec (first (filter #(= (:from %) (:from build-spec)) build-specs))]
            (log/info "Recompiling last viewed file:" file)
-           (build-and-view-file! full-config new-spec (:from spec) {} {:kind :create :file (io/file file)})))))))
+           (build-and-view-file! full-config new-spec (:from build-spec) {} {:kind :create :file (io/file file)})))))))
 
 ;(reset! last-built-file nil)
 ;@last-built-file
 
 
 ;; for purpose of examples below
+;; Or are they?
 
 (defn- site-template
-  [spec]
+  [doc]
   [:div {:style {:max-width 900 :margin-left "auto" :margin-right "auto"}}
-   spec])
+   doc])
 
 (defn- blog-template
-  [spec]
+  [doc]
   [site-template
-    (let [{:as spec-meta :keys [title published-at tags]} (meta spec)]
+    (let [{:as doc-meta :keys [title published-at tags]} (meta doc)]
       [:div
        [:h1 {:style {:line-height 1.35}} title]
        [:p "Published on: " published-at]
        [:p "Tags: " (string/join ", " tags)]
        [:br]
-       spec])])
+       doc])])
 
 
 ;; Some examples for you
@@ -858,7 +1304,7 @@
                   :width 400
                   :encoding {:x {:field "a"}
                              :y {:field "b"}}}]]
-    ;; Should be using options for mode vega/vega-lite TODO
+    ; Should be using options for mode vega/vega-lite TODO
     "test.html")
 
   ;; Run live view on a file, and see compiled changes real time

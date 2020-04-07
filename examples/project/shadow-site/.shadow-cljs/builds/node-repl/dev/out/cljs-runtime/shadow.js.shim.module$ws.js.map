@@ -1,0 +1,9 @@
+{
+"version":3,
+"file":"shadow.js.shim.module$ws.js",
+"lineCount":5,
+"mappings":"AAAAA,IAAAC,QAAA,CAAa,0BAAb,CAAA;AACAD,IAAAC,QAAA,CAAa,iCAAb,CAAA;AACAC,MAAAC,GAAAC,KAAAC,UAAA,GAA2BC,OAAA,CAAQ,IAAR,CAA3B;AACAC,+BAAAC,QAAA,GAA0CN,MAAAC,GAAAC,KAAAC,UAA1C;;",
+"sources":["shadow.js.shim.module$ws.js"],
+"sourcesContent":["goog.provide(\"shadow.js.shim.module$ws\");\ngoog.provide(\"module$shadow_js_shim_module$ws\");\nshadow.js.shim.module$ws = require(\"ws\");\nmodule$shadow_js_shim_module$ws.default = shadow.js.shim.module$ws;\n"],
+"names":["goog","provide","shadow","js","shim","module$ws","require","module$shadow_js_shim_module$ws","default"]
+}
