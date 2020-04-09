@@ -928,7 +928,6 @@
 (deftest test-compile
   (is (rt/successful? (rt/check `compile {} {:num-tests 2}))))
 
-;(t/run-tests)
 
 (comment
   (compile
@@ -946,15 +945,7 @@
   [:div
     (if (map? doc)
       [(or mode :vega-lite) doc]
-      (clojure.walk/prewalk
-        (fn [form]
-          (cond
-            ;; If we have a reagent style fn component, need to call and send just data
-            (and (vector? form) (fn? (first form))) 
-            (apply-fn-component form)
-            ;; Otherwise, just return doc
-            :else form))
-        doc))
+      (compile-tags doc {}))
     mathjax-script])
 
 
@@ -1273,7 +1264,7 @@
 
 
 (defn kill-builds!
-  "Not to be confused with Kill Bill..."
+  "Kills all file watchers"
   []
   ;; for now this should suffice
   (live/kill-watchers!))
@@ -1339,26 +1330,26 @@
 ;; for purpose of examples below
 ;; Or are they?
 
-(defn- site-template
-  [doc]
-  [:div {:style {:max-width 900 :margin-left "auto" :margin-right "auto"}}
-   doc])
-
-(defn- blog-template
-  [doc]
-  [site-template
-    (let [{:as doc-meta :keys [title published-at tags]} (meta doc)]
-      [:div
-       [:h1 {:style {:line-height 1.35}} title]
-       [:p "Published on: " published-at]
-       [:p "Tags: " (string/join ", " tags)]
-       [:br]
-       doc])])
-
-
 ;; Some examples for you
 
 (comment
+  (defn- site-template
+    [doc]
+    [:div {:style {:max-width 900 :margin-left "auto" :margin-right "auto"}}
+     doc])
+
+  (defn- blog-template
+    [doc]
+    [site-template
+      (let [{:as doc-meta :keys [title published-at tags]} (meta doc)]
+        [:div
+         [:h1 {:style {:line-height 1.35}} title]
+         [:p "Published on: " published-at]
+         [:p "Tags: " (string/join ", " tags)]
+         [:br]
+         doc])])
+
+
   ;; View a simple plot
   (view!
     {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
