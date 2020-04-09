@@ -61,12 +61,12 @@
   (s/with-gen keyword?
     #(s/gen #{:edn :json :yaml :html :pdf :png :svg})))
 
-(s/def ::from
+(s/def ::from-fmt
   (s/with-gen
     (s/or :mode ::mode :format ::format)
     #(s/gen #{:edn :json :yaml :hiccup :vega :vega-lite}))) ;; add html & svg?
 
-(s/def ::to
+(s/def ::to-fmt
   (s/with-gen
     (s/or :mode ::mode :format ::format)
     #(s/gen #{:edn :json :yaml :hiccup :vega :svg :html})))
@@ -134,8 +134,8 @@
 ; Spec for vega-cli
 
 (s/def ::vega-cli-opts
-  (s/keys :req-un [(or ::vega-like ::input-filename) ::to]
-          :opt-un [::from ::return-result? ::output-filename]))
+  (s/keys :req-un [(or ::vega-like ::input-filename) ::to-fmt]
+          :opt-un [::from-fmt ::return-result? ::output-filename]))
 
 (deftest exercise-vega-cli-opts
   (is (s/exercise ::vega-cli-opts)))
@@ -286,13 +286,13 @@
 ;; This is probably not quite right; We should probably err on the side of requiring these args for now
 
 (s/def ::base-compile-opts
-  (s/keys :opt-un [::to ::from ::mode ::tag-compilers]))
+  (s/keys :opt-un [::to-fmt ::from-fmt ::mode ::tag-compilers]))
 
 ;; We use this multimethod for the underlying implementation
 
 (defmulti compile-args-spec
-  (fn [[_ {:keys [from mode to]}]]
-    [(or from mode) to]))
+  (fn [[_ {:keys [from-fmt mode to-fmt]}]]
+    [(or from-fmt mode) to-fmt]))
 
 ;; Warning! Changing the defmulti above doesn't take on reload! Have to restart repl :-/
 (s/def ::compile-args
@@ -302,8 +302,8 @@
 
 (defmulti to-spec :to)
 (defmethod to-spec :default
-  [{:keys [to]}]
-  (keyword 'oz.core (or to :hiccup)))
+  [{:keys [to-fmt]}]
+  (keyword 'oz.core (or to-fmt :hiccup)))
 
 
 (s/fdef compile*
@@ -314,17 +314,17 @@
 
 
 (defn- compiler-key
-  [doc {:keys [from mode to]}]
-  [(or from mode (cond (vector? doc) :hiccup (map? doc) :vega-lite))
-   (or to :hiccup)])
+  [doc {:keys [from-fmt mode to-fmt]}]
+  [(or from-fmt mode (cond (vector? doc) :hiccup (map? doc) :vega-lite))
+   (or to-fmt :hiccup)])
 
 
 ;; We will eventually need to call out to compile in some of the definitions
 (declare compile)
 
 (defmulti ^:no-doc compile*
-  "General purpose compilation function which turns things from one data structure into another"
-  {:arglists '([doc {:keys [from mode to]}])}
+  "General purpose compilation function which turns things from-fmt one data structure into another"
+  {:arglists '([doc {:keys [from-fmt mode to-fmt]}])}
   compiler-key)
 
 ;; QUESTION How do we merge the tag-compilers options for html compilation embedding?
@@ -368,15 +368,15 @@
   "Takes either doc or the contents of input-filename, and uses the vega/vega-lite cli tools to translate to the specified format.
   If both doc and input-filename are present, writes doc to input-filename for running cli tool (otherwise, a tmp file is used).
   This var is semi-public; It's under consideration for fully public inclusion, but consider it alpha for now."
-  ([{:keys [vega-doc from to mode input-filename output-filename return-result?] ;; TODO may add seed and scale eventually
-     :or {to :svg mode :vega-lite return-result? true}}]
-   {:pre [(#{:vega-lite :vega} (or from mode))
-          (#{:png :pdf :svg :vega} to)
+  ([{:keys [vega-doc from-fmt to-fmt mode input-filename output-filename return-result?] ;; TODO may add seed and scale eventually
+     :or {to-fmt :svg mode :vega-lite return-result? true}}]
+   {:pre [(#{:vega-lite :vega} (or from-fmt mode))
+          (#{:png :pdf :svg :vega} to-fmt)
           (or vega-doc input-filename)]}
-   (let [mode (or from mode)]
+   (let [mode (or from-fmt mode)]
      (if (vega-cli-installed? mode)
        (let [short-mode (case (keyword mode) :vega-lite "vl" :vega "vg")
-             ext (name (if (= to :vega) :vg to))
+             ext (name (if (= to-fmt :vega) :vg to-fmt))
              input-filename (or input-filename (tmp-filename (str short-mode ".json")))
              output-filename (or output-filename (tmp-filename ext))
              command (str short-mode 2 ext)
@@ -389,9 +389,9 @@
          (if (= exit 0)
            (when return-result?
              (cond
-               (= :vega to)      (json/parse-stream (io/reader output-filename))
-               (#{:png :pdf} to) (file->bytes output-filename)
-               (= :svg to)       (-> output-filename slurp hickory/parse hickory/as-hiccup first md->hc/component last)))
+               (= :vega to-fmt)      (json/parse-stream (io/reader output-filename))
+               (#{:png :pdf} to-fmt) (file->bytes output-filename)
+               (= :svg to-fmt)       (-> output-filename slurp hickory/parse hickory/as-hiccup first md->hc/component last)))
           ;hiccup (-> html hickory/parse hickory/as-hiccup first md->hc/component)]
            (do
              (log/error "Problem creating output")
@@ -458,8 +458,8 @@
 (defmethod compile* [:vega-lite :pdf]
   ([doc opts]
    (compile*
-     (compile* doc (merge opts {:from :vega-lite :to :vega}))
-     (merge opts {:from :vega :to :pdf}))))
+     (compile* doc (merge opts {:from-fmt :vega-lite :to :vega}))
+     (merge opts {:from-fmt :vega :to :pdf}))))
 
 
 ;; Defining tag-compilers
@@ -524,7 +524,7 @@
 
 
 (s/def ::compiler-key
-  (s/cat :from ::from :to ::to))
+  (s/cat :from-fmt ::from-fmt :to-fmt ::to-fmt))
 
 
 ;; All of this available/registered business is not particularly performant-savy
@@ -563,8 +563,8 @@
 
 
 (s/def ::registered-compiler-key
-   (s/cat :from ::registered-from-format
-          :to ::registered-to-format))
+   (s/cat :from-fmt ::registered-from-format
+          :to-fmt ::registered-to-format))
 
 ;; Compiling hiccup with vega etc in it
 
@@ -610,10 +610,10 @@
                 (cond
                   ;; SVG case; leave as hiccup rep of svg
                   (or (= opt-type :bool) (= opt-val :svg))
-                  (vega-cli (merge opts {:from mode :to (case (first embed-as) :bool :svg :format (second embed-as))}))
+                  (vega-cli (merge opts {:from-fmt mode :to-fmt (case (first embed-as) :bool :svg :format (second embed-as))}))
                   ;; return as embedded png
                   (= opt-val :png)
-                  (embed-png (vega-cli (merge {:from mode :to opt-val}))))))))]
+                  (embed-png (vega-cli (merge {:from-fmt mode :to-fmt opt-val}))))))))]
        (when live-embed?
          [:script {:type "text/javascript"} code])])))
 
@@ -633,7 +633,7 @@
    (compile-tags doc
                  {:vega (partial embed-vega-form compile-opts)
                   :vega-lite (partial embed-vega-form compile-opts)
-                  :markdown (compile doc {:from :md :to :hiccup})}))
+                  :markdown (compile doc {:from-fmt :md :to-fmt :hiccup})}))
                   ;; TODO Add these; Will take front end resolvers as well
                   ;:leaflet-vega (partial embed-vega-form compile-opts)
                   ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
@@ -741,9 +741,9 @@
 
 
 (defn html
-  ([doc {:as opts :keys [from mode]}]
+  ([doc {:as opts :keys [from-fmt mode]}]
    (if (map? doc)
-     (html [(or from mode :vega-lite) doc] opts)
+     (html [(or from-fmt mode :vega-lite) doc] opts)
      (-> doc
          (embed opts)
          (wrap-html opts)
@@ -778,9 +778,9 @@
 ;(shit :this :that)
 
 (defmulti export!
-  {:arglists '([doc filepath & {:as opts :keys [to]}])}
-  (fn [_ _ & {:keys [to]}]
-    to))
+  {:arglists '([doc filepath & {:as opts :keys [to-fmt]}])}
+  (fn [_ _ & {:keys [to-fmt]}]
+    to-fmt))
 
 ;(defmulti export!
   ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
@@ -790,7 +790,7 @@
 ;;; This should also be a defmulti
 ;(defn export!
   ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
-  ;[doc filepath & {:as opts :keys [to]}]
+  ;[doc filepath & {:as opts :keys [to-fmt]}]
   ;(spit filepath (html doc opts)))
 
 
@@ -853,11 +853,11 @@
   ([doc {:as opts :keys [tag-compilers]}]
    (let [key (compiler-key doc opts)]
      (println "key is:" key)
-     (let [[from to] key]
+     (let [[from-fmt to-fmt] key]
        (cond-> doc
-         (not= :hiccup from) (compile* (merge opts {:from from :to :hiccup}))
-         tag-compilers       (compile* (merge opts {:from :hiccup :to :hiccup}))
-         (not= :hiccup to)   (compile* (-> opts (merge {:from :hiccup :to to}) (dissoc :tag-compilers))))))))
+         (not= :hiccup from-fmt) (compile* (merge opts {:from-fmt from-fmt :to-fmt :hiccup}))
+         tag-compilers       (compile* (merge opts {:from-fmt :hiccup :to-fmt :hiccup}))
+         (not= :hiccup to-fmt)   (compile* (-> opts (merge {:from-fmt :hiccup :to-fmt to-fmt}) (dissoc :tag-compilers))))))))
 
 (comment
   (s/conform ::compiler-key [:hiccup :html])
@@ -874,21 +874,21 @@
      :mark :point
      :encoding {:x {:field :a}
                 :y {:field :b}}}
-    {:from :vega-lite
-     :to :png})
+    {:from-fmt :vega-lite
+     :to-fmt :png})
   (vega-cli
     {:vega-doc
       {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
        :mark :point
        :encoding {:x {:field :a}
                   :y {:field :b}}}
-     :to :png
+     :to-fmt :png
      :output-filename "testing.png"
      :return-result? false})
   (compile
     [:div [:poop "yo dawg"]]
     {:tag-compilers {:poop (fn [_] [:blah "BLOOP"])}
-     :to :html})
+     :to-fmt :html})
   (rt/successful? (rt/check `compile {} {:num-tests 10}))
   (sample ::compile-args 1)
   :done-comment)
@@ -901,26 +901,26 @@
           (s/valid? (to-spec opts) ret))))
 
 (defn compile
-  "General purpose compilation function. Uses `:from` and `:to` parameters"
-  {:arglists '([doc & {:keys [from to tag-compilers]}])}
+  "General purpose compilation function. Uses `:from-fmt` and `:to-fmt` parameters"
+  {:arglists '([doc & {:keys [from-fmt to-fmt tag-compilers]}])}
   ([doc opts]
-   ;; Support mode or from to `compile`, but require compile* registrations to use `:from`
+   ;; Support mode or from-fmt to `compile`, but require compile* registrations to use `:from-fmt`
    ;; This is maybe why we _do_ need this function
-   (let [[from to :as key] (compiler-key doc opts)]
+   (let [[from-fmt to-fmt :as key] (compiler-key doc opts)]
      (println key)
      (assert (s/valid? ::registered-compiler-key key))
      (cond
-       (or (= :hiccup from to)
-           (not ((set [from to]) :hiccup)))
+       (or (= :hiccup from-fmt to-fmt)
+           (not ((set [from-fmt to-fmt]) :hiccup)))
        (compile* doc opts)
-       (= :hiccup from)
+       (= :hiccup from-fmt)
        (-> doc
-           (compile* (merge opts {:from :hiccup :to :hiccup}))
+           (compile* (merge opts {:from-fmt :hiccup :to-fmt :hiccup}))
            (compile* opts))
-       (= :hiccup to)
+       (= :hiccup to-fmt)
        (-> doc
            (compile* opts)
-           (compile* (merge opts {:from :hiccup :to :hiccup})))))))
+           (compile* (merge opts {:from-fmt :hiccup :to-fmt :hiccup})))))))
 
 (deftest exercise-compile-args
   (is (s/exercise ::compile-args)))
@@ -935,8 +935,8 @@
      :mark :point
      :encoding {:x {:field :a}
                 :y {:field :b}}}
-    {:from :vega-lite
-     :to :pdf})
+    {:from-fmt :vega-lite
+     :to-fmt :pdf})
   :done-comment)
 
 
@@ -1132,8 +1132,31 @@
   [relative-path]
   (string/replace relative-path #"\.\w*$" ".html"))
 
+
+;; Building up to defining build
+
+(s/def ::path string?)
+(s/def ::from ::path)
+(s/def ::to ::path)
+(s/def ::template-fn
+  (s/fspec :args (s/cat :input ::hiccup)
+           :ret ::hiccup))
+(s/def ::out-path-fn
+  (s/fspec :args (s/cat :in-path ::path)
+           :ret ::path))
+(s/def ::as-assets? boolean?)
+
+(s/def ::build-desc
+  (s/keys :req-un [::from ::to]
+          :opt-un [::out-path-fn]))
+
+(s/def ::build-descs
+  (s/coll-of ::build-desc))
+
+
+
 (defn- compute-out-path
-  [{:as build-spec :keys [from to out-path-fn]} path]
+  [{:as build-desc :keys [from to out-path-fn]} path]
   (let [out-path-fn (or out-path-fn drop-extension)
         single-file? (= path from)
         to-dir? (or (.isDirectory (io/file to))
@@ -1202,7 +1225,7 @@
 
 (defn- build-and-view-file!
   [{:as config :keys [view? host port force-update]}
-   {:as build-spec :keys [format from to out-path-fn template-fn html-template-fn as-assets?]}
+   {:as build-desc :keys [format from to out-path-fn template-fn html-template-fn as-assets?]}
    filename context {:keys [kind file]}]
   (when (and from (.isDirectory (io/file from)))
     (ensure-out-dir to false))
@@ -1211,7 +1234,7 @@
       ;; Handle asset case; just copy things over directly
       (or as-assets? (asset-filetypes ext))
       (when (and (not (.isDirectory file)) (#{:modify :create} kind) (not (ignore? file)))
-        (let [out-path (compute-out-path (assoc build-spec :out-path-fn identity)
+        (let [out-path (compute-out-path (assoc build-desc :out-path-fn identity)
                                          (.getPath file))]
           (ensure-out-dir out-path true)
           (log/info "updating asset:" file)
@@ -1220,7 +1243,7 @@
       (supported-filetypes ext)
       ;; ignore delete (some editors technically delete the file on every save!); also ignore dirs
       (when (and (#{:modify :create} kind) file (not (.isDirectory file)))
-        (reset! last-built-file [(live/canonical-path file) build-spec])
+        (reset! last-built-file [(live/canonical-path file) build-desc])
         (let [filename (.getPath file)
               ext (extension filename)
               contents (slurp filename)]
@@ -1242,7 +1265,7 @@
                   ;_ (log/info "step 1:" evaluation)
                   evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))
                   ;_ (log/info "step 2:" evaluation)
-                  out-path (compute-out-path build-spec filename)]
+                  out-path (compute-out-path build-desc filename)]
               (ensure-out-dir out-path true)
               (when view?
                 (log/info "Updating live view")
@@ -1258,7 +1281,7 @@
    :port 5760
    :host "localhost"})
 
-(def ^:private default-build-spec
+(def ^:private default-build-desc
   {:out-path-fn html-extension})
 
 
@@ -1271,15 +1294,28 @@
 
 
 (defn- infer-root-dir
-  [build-specs]
+  [build-descs]
   ;; not correct; mocking
-  (->> build-specs
+  (->> build-descs
        (map (comp live/canonical-path :to))
        (reduce live/greatest-common-path)))
 
+
+;; build config specs
+
+(s/def ::live? boolean?)
+(s/def ::lazy? boolean?)
+(s/def ::view? boolean?)
+(s/def ::root-dir ::path)
+
+
+(s/def ::build-opts
+  (s/keys :opt-un [::live? ::lazy? ::view? ::root-dir]))
+
+
 (defn build!
-  "Builds a static web site based on the content specified in specs. Each build-spec should be a mapping of paths, with additional
-  details about how to build data from one path to the other. Available build-spec keys are:
+  "Builds a static web site based on the content specified in specs. Each build-desc should be a mapping of paths, with additional
+  details about how to build data from one path to the other. Available build-desc keys are:
     * `:from` - (required) Path from which to build
     * `:to` - (required) Compiled files go here
     * `:template-fn` - Function which takes Oz hiccup content and returns some new hiccup, presumably placing the content in question in some 
@@ -1294,17 +1330,17 @@
     * `:view?` - Build with live view of most recently changed file (default true)
     * `:root-dir` - Static assets will be served relative to this directory (defaults to greatest-common-path between all paths)
   "
-  ;; lazy? - (This is one that it would be nice to merge in at the build-spec level)
+  ;; lazy? - (This is one that it would be nice to merge in at the build-desc level)
   ;; future: middleware?
-  ([build-specs & {:as config}]
+  ([build-descs & {:as config}]
    (kill-builds!)
-   (if (map? build-specs)
-     (apply-opts build! [build-specs] config)
+   (if (map? build-descs)
+     (apply-opts build! [build-descs] config)
      (let [{:as full-config :keys [lazy? live? view?]}
            (merge default-config config)]
-       (reset! server/current-root-dir (or (:root-dir config) (infer-root-dir build-specs)))
-       (doseq [build-spec build-specs]
-         (let [full-spec (merge default-build-spec build-spec)]
+       (reset! server/current-root-dir (or (:root-dir config) (infer-root-dir build-descs)))
+       (doseq [build-desc build-descs]
+         (let [full-spec (merge default-build-desc build-desc)]
            ;; On first build, build out all of the results unless lazy? has been passed or we haven't built it
            ;; yet
            (doseq [src-file (file-seq (io/file (:from full-spec)))]
@@ -1318,10 +1354,10 @@
              (live/watch! (:from full-spec) (partial build-and-view-file! full-config full-spec)))))
        ;; If we're running this the second time, we want to immediately rebuild the most recently compiled
        ;; file, so that any new templates or whatever being passed in can be re-evaluated for it.
-       (when-let [[file build-spec] @last-built-file]
-         (let [new-spec (first (filter #(= (:from %) (:from build-spec)) build-specs))]
+       (when-let [[file build-desc] @last-built-file]
+         (let [new-spec (first (filter #(= (:from %) (:from build-desc)) build-descs))]
            (log/info "Recompiling last viewed file:" file)
-           (build-and-view-file! full-config new-spec (:from build-spec) {} {:kind :create :file (io/file file)})))))))
+           (build-and-view-file! full-config new-spec (:from build-desc) {} {:kind :create :file (io/file file)})))))))
 
 ;(reset! last-built-file nil)
 ;@last-built-file
