@@ -156,7 +156,7 @@
 ;(s/def ::omit-mathjax? boolean?)
 ;(s/def ::omit-js-libs? boolean?)
 
-(s/def ::header-extras ::hiccup)
+(s/def ::head-extras ::hiccup)
 
 (def vega-version "5.9.0")
 (def vega-lite-version "4.0.2")
@@ -318,6 +318,10 @@
   [(or from mode (cond (vector? doc) :hiccup (map? doc) :vega-lite))
    (or to :hiccup)])
 
+
+;; We will eventually need to call out to compile in some of the definitions
+(declare compile)
+
 (defmulti ^:no-doc compile*
   "General purpose compilation function which turns things from one data structure into another"
   {:arglists '([doc {:keys [from mode to]}])}
@@ -349,6 +353,17 @@
 
 ;; QUESTION What do we call the abstract `:vega-doc` here?
 
+(defn file->bytes [file]
+  (with-open [xin (io/input-stream file)
+              xout (java.io.ByteArrayOutputStream.)]
+    (io/copy xin xout)
+    (.toByteArray xout)))
+
+(defn bytes->file
+  [file bytes]
+  (with-open [out (io/output-stream file)]
+    (.write out bytes)))
+
 (defn vega-cli
   "Takes either doc or the contents of input-filename, and uses the vega/vega-lite cli tools to translate to the specified format.
   If both doc and input-filename are present, writes doc to input-filename for running cli tool (otherwise, a tmp file is used).
@@ -368,20 +383,22 @@
              ;; Write out the vega-doc file, and run the vega(-lite) cli command
              _ (when vega-doc
                  (spit input-filename (json/encode vega-doc)))
-             {:keys [out exit err]} (shell/sh command input-filename output-filename)] 
+             {:keys [out exit err]} (shell/sh command input-filename output-filename)]
          (log/info "input:" input-filename)
          (log/info "output:" output-filename)
          (if (= exit 0)
            (when return-result?
-             (cond-> (slurp output-filename)
-               (= to :vega) (json/parse-string)))
+             (cond
+               (= :vega to)      (json/parse-stream (io/reader output-filename))
+               (#{:png :pdf} to) (file->bytes output-filename)
+               (= :svg to)       (-> output-filename slurp hickory/parse hickory/as-hiccup first md->hc/component last)))
+          ;hiccup (-> html hickory/parse hickory/as-hiccup first md->hc/component)]
            (do
              (log/error "Problem creating output")
              (log/error err)
              err)))
        (log/error "Vega CLI not installed! Please run `npm install -g vega vega-lite vega-cli` and try again. (Note: You may have to run with `sudo` depending on your npm setup.)")))))
        ;; Todo; should be throwing
-
 
 
 ;; Vega-Lite compilations
@@ -456,11 +473,11 @@
       (processor form)
       form)))
 
-(s/fdef apply-tag-compilers
+(s/fdef compile-tags
         :args (s/cat :doc ::hiccup :compilers ::tag-compilers)
         :ret ::hiccup)
 
-(defn- apply-tag-compilers
+(defn- compile-tags
   [doc
    compilers]
   (clojure.walk/prewalk
@@ -477,7 +494,7 @@
     doc))
 
 (deftest test-apply-tag-compilers
-  (is (rt/successful? (rt/check `apply-tag-compilers {} {:num-tests 5}))))
+  (is (rt/successful? (rt/check `compile-tags {} {:num-tests 5}))))
 
 
 ;; Spec out transformations once ingested into hiccup
@@ -499,7 +516,7 @@
 
 (defmethod compile* [:hiccup :hiccup]
   ([doc {:as opts :keys [tag-compilers]}]
-   (apply-tag-compilers doc tag-compilers)))
+   (compile-tags doc tag-compilers)))
 
 (defmethod compile-args-spec :default
   [_] (s/cat :doc ::document :opts ::base-compile-opts))
@@ -517,14 +534,17 @@
 (defn- available-compiler-keys []
   (->> (methods compile*)
        keys
-       (map #(s/conform ::compiler-key %))
-       (remove #{::s/invalid})))
+       (filter (partial s/valid? ::compiler-key))))
+
+
+(available-compiler-keys)
 
 ;; QUESTION; Keep public?
 (defn registered-from-formats []
   (->> (available-compiler-keys) (map first) set))
 (defn registered-to-formats []
   (->> (available-compiler-keys) (map second) set))
+
 
 (defn- registered-from-format? [format]
   (some #{format} (registered-from-formats)))
@@ -535,26 +555,304 @@
 
 (s/def ::registered-from-format
   (s/with-gen registered-from-format?
-    #(set (registered-from-formats))))
+    #(s/gen (set (registered-from-formats)))))
 
 (s/def ::registered-to-format
   (s/with-gen registered-to-format?
-    #(set (registered-to-formats))))
+    #(s/gen (set (registered-to-formats)))))
 
 
 (s/def ::registered-compiler-key
-  (s/and ::compiler-key
-         (s/cat :from ::registered-from-format
-                :to ::registered-to-format)))
+   (s/cat :from ::registered-from-format
+          :to ::registered-to-format))
+
+;; Compiling hiccup with vega etc in it
 
 
-;; Do we 
+(s/def ::live-embed? boolean?)
+(s/def ::static-embed
+  (s/or :bool boolean?
+        :format #{:svg :png}))
+
+(s/def ::vega-embed-opts
+  (s/keys
+    :opt-un [::static-embed
+             ::live-embed?]))
+
+(defn- base64-encode [bytes]
+  (.encodeToString (java.util.Base64/getEncoder) bytes))
+   
+(defn embed-png
+  [bytes]
+  [:img
+   {:alt"compiled vega png"
+    :src (str "data:image/png;base64," (base64-encode bytes))}])
+
+(defn embed-vega-form
+  "Embed a single Vega-Lite/Vega visualization as hiccup representing a live/interactive embedding as hiccup;
+  Currently private, may be public in future, and name may change."
+  ([compile-opts [mode doc & [embed-opts]]]
+   (let [{:as opts :keys [static-embed live-embed?]} (merge (:vega-embed-opts compile-opts) embed-opts)
+         ;; expose id in opts?
+         id (str "viz-" (java.util.UUID/randomUUID))
+         code (format "vegaEmbed('#%s', %s, %s);" id (json/generate-string doc) (json/generate-string {:mode mode}))]
+     [:div
+       ;; TODO In the future this should be a precompiled version of whatever the viz renders as (svg), at least
+       ;; optionally
+       ;; Also SECURITY!!! We should have to allowlist via metadata or something things that we don't want to
+       ;; sanitize
+       [:div {:id id}
+        (when static-embed
+          (let [embed-as (s/conform ::static-embed static-embed)]
+            (if (= embed-as ::s/invalid)
+              "Unable to compile viz"
+              (let [[opt-type opt-val] embed-as]
+                (cond
+                  ;; SVG case; leave as hiccup rep of svg
+                  (or (= opt-type :bool) (= opt-val :svg))
+                  (vega-cli (merge opts {:from mode :to (case (first embed-as) :bool :svg :format (second embed-as))}))
+                  ;; return as embedded png
+                  (= opt-val :png)
+                  (embed-png (vega-cli (merge {:from mode :to opt-val}))))))))]
+       (when live-embed?
+         [:script {:type "text/javascript"} code])])))
+
+
+(defn ^:no-doc map->style-string
+  [m]
+  (->> m
+       (map #(str (name (first %)) ": " (second %)))
+       (string/join "; ")))
+
+;(s/def ::embed-opts
+  ;(s/keys :req-un [::live-embed? ::static-embed?]))
+
+
+(defn- embed-for-html
+  ([doc compile-opts]
+   (compile-tags doc
+                 {:vega (partial embed-vega-form compile-opts)
+                  :vega-lite (partial embed-vega-form compile-opts)
+                  :markdown (compile doc {:from :md :to :hiccup})}))
+                  ;; TODO Add these; Will take front end resolvers as well
+                  ;:leaflet-vega (partial embed-vega-form compile-opts)
+                  ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
+  ([doc]
+   (embed-for-html doc {})))
+
+(defn ^:no-doc embed
+  "Take hiccup or vega/lite doc and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
+  When rendered, should present as live html page; Currently semi-private, may be made fully public in future."
+  ([doc {:as opts :keys [embed-fn mode] :or {embed-fn embed-vega-form mode :vega-lite}}]
+   ;; prewalk doc, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
+   ;; rendering using the components above. Leave regular hiccup unchanged).
+   ;; TODO finish writing; already hooked in below so will break now
+   (if (map? doc)
+     (embed-fn [mode doc])
+     (clojure.walk/prewalk
+       (fn [form]
+         (cond
+           ;; For vega or vega lite apply the embed-fn (TODO add :markdown elements to hiccup documents)
+           (and (vector? form) (#{:vega :vega-lite :leaflet-vega :leaflet-vega-lite :markdown} (first form)))
+           (embed-fn form)
+           ;; Make sure that any style attrs are properly cast (newer hiccup should do this, but for now)
+           (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style map?))
+           (into [(first form)
+                  (update (second form) :style map->style-string)]
+                 (drop 2 form))
+           ;; If we see a function, call it with the args in form
+           (and (vector? form) (fn? (first form))) 
+           (apply-fn-component form)
+           ;; Else, assume hiccup and leave form alone
+           :else form))
+       doc)))
+  ([doc]
+   (embed doc {})))
+
+
+(defn- shortcut-icon [url]
+  [:link {:rel "shortcut icon"
+          :href url
+          :type "image/x-icon"}])
+
+;; which should take precedance in general? meta or html-opts?
+;; What about if it's something that could theoretically get merged? like keywords/tags?
+
+
+(s/def ::html-head-opts
+  (s/keys :opt-un [::title ::description ::author ::keywords ::shortcut-icon-url ::omit-shortcut-icon? ::omit-styles? ::omit-charset? ::omit-vega-libs? ::head-extras]))
+
+;; Might be worth exposing this in the future, but uncertain whether this is a good idea for now
+(defn- html-head
+  "Construct a header as hiccup, given the html opts and doc metadata"
+  [doc {:as opts :keys [title description author keywords shortcut-icon-url omit-shortcut-icon? omit-styles? omit-charset? omit-vega-libs? header-extras]}]
+  (let [metadata (or (meta doc) {})
+        opts (reduce
+               (fn [opts' k]
+                 (assoc opts' k (or (get opts' k)
+                                    (get metadata k))))
+               opts
+               [:title :description :author :keywords])
+        keywords (into (set (:keywords opts))
+                       (:tags metadata))]
+    (vec
+      (concat
+        ;; Should we have a separate function for constructing the head?
+        [:head
+          (when-not omit-charset?
+            [:meta {:charset "UTF-8"}])
+          [:title (or (:title opts) "Oz document")]
+          [:meta {:name "description" :content (or (:description opts) "Oz document")}]
+          (when-let [author (:author opts)]
+            [:meta {:name "author" :content author}])
+          (when keywords
+            [:meta {:name "keywords" :content (string/join "," keywords)}])
+          [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+          (when-not omit-shortcut-icon?
+            (shortcut-icon (or shortcut-icon-url "http://ozviz.io/oz.svg")))]
+        ;; QUESTION Possible to embed these directly?
+        (when-not omit-styles?
+          [[:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
+           [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
+           [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}]]) 
+        ;; TODO Ideally we wouldn't need these, and inclusion of the compiled oz target should be enough; However,
+        ;; we're not currently actually included that in html export, so this is necessary for now.
+        ;; Everntually though...
+        (when-not omit-vega-libs?
+          [[:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega@" vega-version)}]
+           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-lite@" vega-lite-version)}]
+           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-embed@" vega-embed-version)}]])
+        ;; Not allowing this option for now;
+        ;(when-not omit-js-libs?
+        ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
+        [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]))))
+
+;; Would like to expose this in the future, but not certain about the name/api
+;; TODO Add some checks to see if we actually need html/body
+(defn- wrap-html
+  [doc opts]
+  [:html
+   (html-head doc opts)
+   [:body
+     doc
+     [:div#vis-tooltip {:class "vg-tooltip"}]
+     ;; TODO This shouldn't be included as such for exported html content (I think it raises a warning)
+     [:script {:src "js/compiled/oz.js" :type "text/javascript"}]]])
+
+
+(defn html
+  ([doc {:as opts :keys [from mode]}]
+   (if (map? doc)
+     (html [(or from mode :vega-lite) doc] opts)
+     (-> doc
+         (embed opts)
+         (wrap-html opts)
+         hiccup/html)))
+  ([doc]
+   (html doc {})))
+
+(s/def ::html-output-opts
+  (s/merge ::html-head-opts ::html-embed-opts))
+
+(defmethod compile-args-spec [:hiccup :html]
+  ([_] (s/cat :doc ::hiccup :opts ::vega-cli-opts)))
+
+(defmethod compile* [:hiccup :html]
+  ([doc opts] (html doc opts)))
+
+(comment
+  ;; WARNING!!!
+  ;; This isn't quite right; We need to be using global references for the stylesheets and fonts, or embedding
+  ;; them somehow. But would be good to eventually do something like this as propper build target, or just as
+  ;; uncommented code, so that vega versions and such are always up to date.
+  (spit "resources/oz/public/index.html"
+        (html [:div#app [:h2 "oz"] [:p "pay no attention"]]
+              {:omit-vega-libs? true}))
+  :end-comment)
+   
+;(defn shit
+  ;([x y]
+   ;(println x y))
+  ;([x & {:as opts}]
+   ;(println x opts)))
+;(shit :this :that)
+
+(defmulti export!
+  {:arglists '([doc filepath & {:as opts :keys [to]}])}
+  (fn [_ _ & {:keys [to]}]
+    to))
+
+;(defmulti export!
+  ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
+  ;[doc filepath & {:as opts}])
+  
+
+;;; This should also be a defmulti
+;(defn export!
+  ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
+  ;[doc filepath & {:as opts :keys [to]}]
+  ;(spit filepath (html doc opts)))
+
+
+(defn- process-md-block
+  [block]
+  (if (vector? block)
+    (let [[block-type & contents :as block] block]
+      (if (= :pre block-type)
+        (let [[_ {:keys [class] :or {class ""}} src] (->> contents (remove map?) first)
+              classes (->> (string/split class #" ") (map keyword) set)]
+          (if-not (empty? (set/intersection classes #{:vega :vega-lite :hiccup :edn-vega :edn-vega-lite :edn-hiccup :json-vega-lite :json-vega :json-hiccup :yaml-vega :yaml-vega-lite}))
+            (let [viz-type (cond
+                             (seq (set/intersection classes #{:vega :edn-vega :json-vega})) :vega
+                             (seq (set/intersection classes #{:vega-lite :edn-vega-lite :json-vega-lite})) :vega-lite
+                             (seq (set/intersection classes #{:hiccup :edn-hiccup :json-hiccup})) :hiccup)
+                  src-type (cond
+                             (seq (set/intersection classes #{:edn :edn-vega :edn-vega-lite :edn-hiccup})) :edn
+                             (seq (set/intersection classes #{:json :json-vega :json-vega-lite :json-hiccup})) :json)
+                  data (case src-type
+                         :edn (edn/read-string src)
+                         :json (json/parse-string src keyword)
+                         :yaml (yaml/parse-string src))]
+              (case viz-type
+                :hiccup data
+                (:vega :vega-lite) [viz-type data]))
+            block))
+        block))
+    block))
+    
+
+
+(defn- ^:no-doc from-markdown
+  "Process markdown string into a hiccup document"
+  [md-string]
+  (try
+    (let [{:keys [metadata html]} (md/md-to-html-string-with-meta md-string)
+          hiccup (-> html hickory/parse hickory/as-hiccup first md->hc/component md-decode/decode)]
+          ;hiccup (-> html hickory/parse hickory/as-hiccup first md->hc/component)]
+          ;; TODO deal with encoding of html escape characters (see markdown->hc for this)!
+      (with-meta
+        (->> hiccup (map process-md-block) vec)
+        metadata))
+    (catch Exception e
+      (log/error "Unable to process markdown")
+      (.printStackTrace e))))
+
+
+(defn load
+  "Reads file and processes according to file type"
+  [filename & {:as opts :keys [format]}]
+  (let [contents (slurp filename)]
+    (case (or (and format (name format))
+              (last (string/split filename #"\.")))
+      "md" (from-markdown contents)
+      "edn" (edn/read-string contents)
+      "json" (json/parse-string contents keyword)
+      "yaml" (yaml/parse-string contents))))
 
 (defmethod compile* :default
   ([doc {:as opts :keys [tag-compilers]}]
    (let [key (compiler-key doc opts)]
      (println "key is:" key)
-     (assert (s/valid? ::registered-compiler-key key))
      (let [[from to] key]
        (cond-> doc
          (not= :hiccup from) (compile* (merge opts {:from from :to :hiccup}))
@@ -568,20 +866,8 @@
   (with-open [in (io/input-stream "testing.png")
               out (io/output-stream "bloop.png")])
   (into [] (io/input-stream "testing.png"))
-  :end-comment)
+  :end-comment
 
-(defn file->bytes [file]
-  (with-open [xin (io/input-stream file)
-              xout (java.io.ByteArrayOutputStream.)]
-    (io/copy xin xout)
-    (.toByteArray xout)))
-
-(defn bytes->file
-  [file bytes]
-  (with-open [out (io/output-stream file)]
-    (.write out bytes)))
-
-(comment
   ;; Are we doing this right? We're getting back a string instead of a map...
   (compile
     {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
@@ -599,7 +885,6 @@
      :to :png
      :output-filename "testing.png"
      :return-result? false})
-  (io/copy (io/file "testing.png") (io/file "blerp.png"))
   (compile
     [:div [:poop "yo dawg"]]
     {:tag-compilers {:poop (fn [_] [:blah "BLOOP"])}
@@ -615,14 +900,27 @@
         (let [[_ opts] args]
           (s/valid? (to-spec opts) ret))))
 
-
 (defn compile
   "General purpose compilation function. Uses `:from` and `:to` parameters"
-  {:arglists '([doc & {:keys [from mode to tag-compilers]}])}
-  ([doc {:as opts :keys [mode]}]
+  {:arglists '([doc & {:keys [from to tag-compilers]}])}
+  ([doc opts]
    ;; Support mode or from to `compile`, but require compile* registrations to use `:from`
    ;; This is maybe why we _do_ need this function
-   (compile* doc (merge {:from (or mode :hiccup) :to :hiccup} opts))))
+   (let [[from to :as key] (compiler-key doc opts)]
+     (println key)
+     (assert (s/valid? ::registered-compiler-key key))
+     (cond
+       (or (= :hiccup from to)
+           (not ((set [from to]) :hiccup)))
+       (compile* doc opts)
+       (= :hiccup from)
+       (-> doc
+           (compile* (merge opts {:from :hiccup :to :hiccup}))
+           (compile* opts))
+       (= :hiccup to)
+       (-> doc
+           (compile* opts)
+           (compile* (merge opts {:from :hiccup :to :hiccup})))))))
 
 (deftest exercise-compile-args
   (is (s/exercise ::compile-args)))
@@ -807,230 +1105,6 @@
   (log/warnf "WARNING!!! DEPRECATED!!! Please call `publish!` instead.")
   (let [doc (merge-opts plot opts)]
     (publish! doc opts)))
-
-(defn- ^:no-doc live-embed
-  "Embed a single Vega-Lite/Vega visualization as hiccup representing a live/interactive embedding as hiccup;
-  Currently private, may be public in future, and name may change."
-  ([[mode doc]]
-   (let [id (str "viz-" (java.util.UUID/randomUUID))
-         code (format "vegaEmbed('#%s', %s, %s);" id (json/generate-string doc) (json/generate-string {:mode mode}))]
-     [:div
-       ;; TODO In the future this should be a precompiled version of whatever the viz renders as (svg), at least
-       ;; optionally
-       [:div {:id id}]
-       [:script {:type "text/javascript"} code]])))
-
-
-
-(defn ^:no-doc map->style-string
-  [m]
-  (->> m
-       (map #(str (name (first %)) ": " (second %)))
-       (string/join "; ")))
-
-
-
-(defn embed
-  ([doc opts]
-   (apply-tag-compilers doc (:processors opts)))
-  ([doc]
-   (embed doc {})))
-
-(defn ^:no-doc embed
-  "Take hiccup or vega/lite doc and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
-  When rendered, should present as live html page; Currently semi-private, may be made fully public in future."
-  ([doc {:as opts :keys [embed-fn mode] :or {embed-fn live-embed mode :vega-lite}}]
-   ;; prewalk doc, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
-   ;; rendering using the components above. Leave regular hiccup unchanged).
-   ;; TODO finish writing; already hooked in below so will break now
-   (if (map? doc)
-     (embed-fn [mode doc])
-     (clojure.walk/prewalk
-       (fn [form]
-         (cond
-           ;; For vega or vega lite apply the embed-fn (TODO add :markdown elements to hiccup documents)
-           (and (vector? form) (#{:vega :vega-lite :leaflet-vega :leaflet-vega-lite :markdown} (first form)))
-           (embed-fn form)
-           ;; Make sure that any style attrs are properly cast (newer hiccup should do this, but for now)
-           (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style map?))
-           (into [(first form)
-                  (update (second form) :style map->style-string)]
-                 (drop 2 form))
-           ;; If we see a function, call it with the args in form
-           (and (vector? form) (fn? (first form))) 
-           (apply-fn-component form)
-           ;; Else, assume hiccup and leave form alone
-           :else form))
-       doc)))
-  ([doc]
-   (embed doc {})))
-
-                       
-;(s/def ::html-opts
-  ;(s/keys :opt-un [::title ::description ::author ::keywords ::shortcut-icon-url ::omit-shortcut-icon? ::omit-styles? ::omit-charset? ::omit-vega-libs? ::header-extras]))
-
-(defn- shortcut-icon [url]
-  [:link {:rel "shortcut icon"
-          :href url
-          :type "image/x-icon"}])
-
-;; which should take precedance in general? meta or html-opts?
-;; What about if it's something that could theoretically get merged? like keywords/tags?
-
-;; Might be worth exposing this in the future, but uncertain whether this is a good idea for now
-(defn- html-head
-  "Construct a header as hiccup, given the html opts and doc metadata"
-  [doc {:as opts :keys [title description author keywords shortcut-icon-url omit-shortcut-icon? omit-styles? omit-charset? omit-vega-libs? header-extras]}]
-  (let [metadata (or (meta doc) {})
-        opts (reduce
-               (fn [opts' k]
-                 (assoc opts' k (or (get opts' k)
-                                    (get metadata k))))
-               opts
-               [:title :description :author :keywords])
-        keywords (into (set (:keywords opts))
-                       (:tags metadata))]
-    (vec
-      (concat
-        ;; Should we have a separate function for constructing the head?
-        [:head
-          (when-not omit-charset?
-            [:meta {:charset "UTF-8"}])
-          [:title (or (:title opts) "Oz document")]
-          [:meta {:name "description" :content (or (:description opts) "Oz document")}]
-          (when-let [author (:author opts)]
-            [:meta {:name "author" :content author}])
-          (when keywords
-            [:meta {:name "keywords" :content (string/join "," keywords)}])
-          [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-          (when-not omit-shortcut-icon?
-            (shortcut-icon (or shortcut-icon-url "http://ozviz.io/oz.svg")))]
-        ;; QUESTION Possible to embed these directly?
-        (when-not omit-styles?
-          [[:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
-           [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
-           [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}]]) 
-        ;; TODO Ideally we wouldn't need these, and inclusion of the compiled oz target should be enough; However,
-        ;; we're not currently actually included that in html export, so this is necessary for now.
-        ;; Everntually though...
-        (when-not omit-vega-libs?
-          [[:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega@" vega-version)}]
-           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-lite@" vega-lite-version)}]
-           [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-embed@" vega-embed-version)}]])
-        ;; Not allowing this option for now;
-        ;(when-not omit-js-libs?
-        ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
-        [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]))))
-
-;; Would like to expose this in the future, but not certain about the name/api
-(defn- wrap-html
-  [doc opts]
-  [:html
-   (html-head doc opts)
-   [:body
-     (vec (embed doc opts))
-     [:div#vis-tooltip {:class "vg-tooltip"}]
-     ;; TODO This shouldn't be included as such for exported html content (I think it raises a warning)
-     [:script {:src "js/compiled/oz.js" :type "text/javascript"}]]])
-
-
-(defn html
-  ([doc opts]
-   (if (map? doc)
-     (html [:vega-lite doc] opts)
-     (hiccup/html (wrap-html doc opts))))
-  ([doc]
-   (html doc {})))
-
-(comment
-  ;; WARNING!!!
-  ;; This isn't quite right; We need to be using global references for the stylesheets and fonts, or embedding
-  ;; them somehow. But would be good to eventually do something like this as propper build target, or just as
-  ;; uncommented code, so that vega versions and such are always up to date.
-  (spit "resources/oz/public/index.html"
-        (html [:div#app [:h2 "oz"] [:p "pay no attention"]]
-              {:omit-vega-libs? true}))
-  :end-comment)
-   
-;(defn shit
-  ;([x y]
-   ;(println x y))
-  ;([x & {:as opts}]
-   ;(println x opts)))
-;(shit :this :that)
-
-(defmulti export!
-  {:arglists '([doc filepath & {:as opts :keys [to]}])}
-  (fn [_ _ & {:keys [to]}]
-    to))
-
-;(defmulti export!
-  ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
-  ;[doc filepath & {:as opts}])
-  
-
-;;; This should also be a defmulti
-;(defn export!
-  ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
-  ;[doc filepath & {:as opts :keys [to]}]
-  ;(spit filepath (html doc opts)))
-
-
-(defn- process-md-block
-  [block]
-  (if (vector? block)
-    (let [[block-type & contents :as block] block]
-      (if (= :pre block-type)
-        (let [[_ {:keys [class] :or {class ""}} src] (->> contents (remove map?) first)
-              classes (->> (string/split class #" ") (map keyword) set)]
-          (if-not (empty? (set/intersection classes #{:vega :vega-lite :hiccup :edn-vega :edn-vega-lite :edn-hiccup :json-vega-lite :json-vega :json-hiccup :yaml-vega :yaml-vega-lite}))
-            (let [viz-type (cond
-                             (seq (set/intersection classes #{:vega :edn-vega :json-vega})) :vega
-                             (seq (set/intersection classes #{:vega-lite :edn-vega-lite :json-vega-lite})) :vega-lite
-                             (seq (set/intersection classes #{:hiccup :edn-hiccup :json-hiccup})) :hiccup)
-                  src-type (cond
-                             (seq (set/intersection classes #{:edn :edn-vega :edn-vega-lite :edn-hiccup})) :edn
-                             (seq (set/intersection classes #{:json :json-vega :json-vega-lite :json-hiccup})) :json)
-                  data (case src-type
-                         :edn (edn/read-string src)
-                         :json (json/parse-string src keyword)
-                         :yaml (yaml/parse-string src))]
-              (case viz-type
-                :hiccup data
-                (:vega :vega-lite) [viz-type data]))
-            block))
-        block))
-    block))
-    
-
-
-(defn- ^:no-doc from-markdown
-  "Process markdown string into a hiccup document"
-  [md-string]
-  (try
-    (let [{:keys [metadata html]} (md/md-to-html-string-with-meta md-string)
-          hiccup (-> html hickory/parse hickory/as-hiccup first md->hc/component md-decode/decode)]
-          ;hiccup (-> html hickory/parse hickory/as-hiccup first md->hc/component)]
-          ;; TODO deal with encoding of html escape characters (see markdown->hc for this)!
-      (with-meta
-        (->> hiccup (map process-md-block) vec)
-        metadata))
-    (catch Exception e
-      (log/error "Unable to process markdown")
-      (.printStackTrace e))))
-
-
-(defn load
-  "Reads file and processes according to file type"
-  [filename & {:as opts :keys [format]}]
-  (let [contents (slurp filename)]
-    (case (or (and format (name format))
-              (last (string/split filename #"\.")))
-      "md" (from-markdown contents)
-      "edn" (edn/read-string contents)
-      "json" (json/parse-string contents keyword)
-      "yaml" (yaml/parse-string contents))))
-
 
 
 ;; Refer to the live-reload! function
