@@ -26,7 +26,6 @@
   (:import java.io.File
            java.util.UUID))
 
-
 (defn- apply-opts
   "utility function for applying kw-args"
   [f & args]
@@ -535,7 +534,6 @@
   (->> (methods compile*)
        keys
        (filter (partial s/valid? ::compiler-key))))
-
 
 (available-compiler-keys)
 

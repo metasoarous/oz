@@ -16,3 +16,4 @@ cljsjs-vega-dists
 .cljs_rhino_repl
 scratch
 trace.edn
+.cpcache

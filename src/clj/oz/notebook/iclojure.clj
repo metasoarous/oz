@@ -2,7 +2,7 @@
   "Experimental support for rendering vega in Jupyter with IClojure"
   (:require
     [oz.core :as oz]
-    [lazy-require.core :as lreq]
+    ;[lazy-require.core :as lreq]
     [hiccup.core :as hiccup]
     [cheshire.core :as json]))
 

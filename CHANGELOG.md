@@ -16,6 +16,10 @@
   * cljsjs/vega-lite -> "3.0.0-rc16-0"
   * cljsjs/vega-tooltip -> "0.16.0-0"
   * cljsjs/vega-embed -> "4.0.0-rc1-0"
+* new general purpose `compile` function for arbitrary conversions
+* more general purpose `export!` function for compiling to other formats
+* more flexibility in how 
+* added `vega-cli` function
 
 
 ## 1.5.6
