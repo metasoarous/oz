@@ -1,0 +1,27 @@
+{
+  "name": "oz",
+  "version": "1.6.0-alpha7-SNAPSHOT",
+  "description": "The client side portion of Oz, your Clojure(Script) toolkit for dynamic, data-driven data visualizations",
+  "keywords": [],
+  "author": "Christopher Small",
+  "license": "ISC",
+  "dependencies": {
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
+    "vega": "^5.9.1",
+    "vega-lite": "^4.0.2",
+    "vega-embed": "^6.2.2",
+    "vega-tooltip": "^0.20.0"
+  },
+  "devDependencies": {
+    "create-react-class": "^15.6.3",
+    "marked": "^0.8.2",
+    "leaflet-vega": "^0.8.6",
+    "leaflet": "^1.6.0",
+    "@deck.gl/core": "6.4",
+    "@deck.gl/layers": "6.4",
+    "@msrvida/sanddance": "^2",
+    "luma.gl": "6.4",
+    "shadow-cljs": "^2.8.98"
+  }
+}

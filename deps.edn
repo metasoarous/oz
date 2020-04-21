@@ -36,7 +36,10 @@
         irresponsible/tentacles {:mvn/version "0.6.3"}
         respeced {:mvn/version "0.0.1"}
         org.clojure/test.check {:mvn/version "0.10.0"}
-        hawk {:mvn/version "0.2.11"}}
+        hawk {:mvn/version "0.2.11"}
+        metasoarous/darkstar {:mvn/version "0.1.0"}}
+        ;applied-science/darkstar {:git/url "https://github.com/applied-science/darkstar/"
+                                  ;:sha "ef93147377d09a3894959c2c43faabf1a527a7d5"}}
         ;timofreiberg/bultitude {:mvn/version "0.3.0"}
         ;org.clojure/tools.namespace {:mvn/version "0.2.11"}
  :aliases {:dev {:extra-paths ["dev"]

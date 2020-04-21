@@ -1,0 +1,16 @@
+{:source-paths ["src/cljs"]
+ ;:deps true
+ :dependencies [[reagent "0.10.0"]
+                [devcards "0.2.6"]]
+ :builds {:lib {:output-dir "resources/oz/public/js"
+                :target :browser
+                :modules {:oz {:entries [oz.core]}}}
+          :devcards {:target :browser
+                     :output-dir "resources/oz/public/js"
+                     :compiler-options {:devcards true}
+                     :modules {:main {:init-fn oz.core-devcards/main}}}
+          :app {:output-dir "resources/oz/public/js"
+                :target :browser
+                :modules {:app {:entries [oz.app]}}
+                :devtools {:after-load oz.app/init}}}
+ :dev-http {7125 ["resources/oz/public" "target/public"]}}
