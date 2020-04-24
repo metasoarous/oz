@@ -15,3 +15,8 @@ cljsjs-vega-dists
 .lein-failures
 .cljs_rhino_repl
 scratch
+trace.edn
+.cpcache
+resources/oz/public/js/cljs-runtime/
+.shadow-cljs
+node_modules

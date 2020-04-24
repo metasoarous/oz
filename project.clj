@@ -41,6 +41,8 @@
                  [commonmark-hiccup "0.1.0"]
                  [org.clojure/spec.alpha "0.2.176"]
                  [irresponsible/tentacles "0.6.3"]
+                 [respeced "0.0.1"]
+                 [org.clojure/test.check "0.10.0"]
                  ;; hot reloading experiments
                  [hawk "0.2.11"]]
                  ;[timofreiberg/bultitude "0.3.0"]

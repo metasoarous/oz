@@ -59,7 +59,7 @@
   [{:as ev-msg :keys [?data]}]
   (let [[id msg] ?data]
     (case id
-      :oz.core/view-spec (swap! app-state assoc :view-spec msg)
+      :oz.core/view-doc (swap! app-state assoc :view-spec msg)
       (debugf "Push event from server: %s" ?data))))
 
 
@@ -72,25 +72,18 @@
   (stop-router!)
   (reset! router_ (sente/start-client-chsk-router! ch-chsk event-msg-handler)))
 
-(defn start! []
-  (start-router!))
-
-
 
 (defn application [app-state]
   (if-let [spec (:view-spec @app-state)]
-    [core/view-spec spec]
+    [core/live-view spec]
     [:div
       [:h1 "Waiting for first spec to load..."]
       [:p "This may take a second the first time if you call a plot function, unless you first call " [:code '(oz/start-server!)] "."]]))
 
-(r/render-component [application app-state]
-                    (. js/document (getElementById "app")))
 
-(defn on-js-reload []
-  ;; optionally touch your app-state to force rerendering depending on
-  ;; your application
-  ;; (swap! app-state update-in [:__figwheel_counter] inc)
-  )
+(defn init []
+  (start-router!)
+  (r/render-component [application app-state]
+                      (. js/document (getElementById "app"))))
 
-(start!)
+

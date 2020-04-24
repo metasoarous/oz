@@ -11,11 +11,18 @@
 * fix oz logo in exported html
 * dependency updates which seem to fix figwheel compatibility
 * moved delay after starting server from specific setup step on view! to start-plot-server! to avoid vizs not showing up in scripts
+* new general purpose `compile` function for arbitrary conversions
+* more general purpose `export!` function for compiling to other formats
+* more flexibility in html output (header, styles, favicons, etc)
+* static compilation of vega(-lite) -> svg/png
+* embedded visualizations by default include both a statically compiled view and live/interactive view (& either can be turned off)
+* move to shadow-cljs for cljs compilation
+* move to deps.edn for simpler dependency management and build tooling
 * update js libs:
-  * cljsjs/vega -> "5.3.1-0"
-  * cljsjs/vega-lite -> "3.0.0-rc16-0"
-  * cljsjs/vega-tooltip -> "0.16.0-0"
-  * cljsjs/vega-embed -> "4.0.0-rc1-0"
+  * vega -> "5.3.1-0"
+  * vega-lite -> "3.0.0-rc16-0"
+  * vega-tooltip -> "0.16.0-0"
+  * vega-embed -> "4.0.0-rc1-0"
 
 
 ## 1.5.6
