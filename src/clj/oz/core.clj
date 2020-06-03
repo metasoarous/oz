@@ -1016,7 +1016,7 @@
   * `:public`: default false
   * `:description`: auto generated based on doc"
   [doc & {:as opts
-          :keys [name description public]
+          :keys [name description public pretty]
           :or {public false}}]
   (let [type (doc-type doc)
         name (or name
@@ -1028,8 +1028,12 @@
                         :ozviz "Ozviz document; To load go to https://ozviz.io/#/gist/<gist-id>."
                         :vega "Vega/Vega-Lite viz; To load go to https://vega.github.io/editor"))
         doc-string (case type
-                     :ozviz (pr-str doc)
-                     :vega (json/generate-string doc))
+                     :ozviz (if pretty
+                              (with-out-str (clojure.pprint/pprint doc))
+                              (pr-str doc))
+                     :vega (if pretty
+                             (json/generate-string doc {:pretty true})
+                             (json/generate-string doc)))
         create-gist-opts (merge {:description description :public public}
                                 (auth-args opts))
         gist (gists/create-gist {name doc-string} create-gist-opts)]
