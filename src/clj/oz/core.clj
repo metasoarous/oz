@@ -1077,7 +1077,8 @@
   Additional options:
   * `:public`: default false
   * `:description`: auto generated based on doc
-  * `:return-full-gist`: return the full tentacles gist api response data"
+  * `:return-full-gist`: return the full tentacles gist api response data
+  * `:pretty` : pretty print the published spec"
   [doc & {:as opts
           :keys [mode return-full-gist]
           :or {mode :vega-lite}}]
