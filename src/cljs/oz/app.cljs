@@ -1,9 +1,11 @@
 (ns ^:no-doc ^:figwheel-always oz.app
   (:require [reagent.core :as r]
+            [reagent.dom :as rd]
             [cljs.core.async :as async  :refer (<! >! put! chan)]
             [taoensso.encore :as encore :refer-macros (have have?)]
             [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
             [clojure.string :as str]
+            [clojure.stacktrace :as st]
             [taoensso.sente :as sente :refer (cb-success?)]
             [taoensso.sente.packers.transit :as sente-transit]
             [oz.core :as core])
@@ -13,11 +15,9 @@
 (timbre/set-level! :info)
 (enable-console-print!)
 
-(defn- log [a-thing]
-  (.log js/console a-thing))
-
 (defonce app-state (r/atom {:text "Pay no attention to the man behind the curtain!"
-                            :view-spec nil}))
+                            :view-spec nil
+                            :error nil}))
 
 (let [packer (sente-transit/get-transit-packer)
       {:keys [chsk ch-recv send-fn state]}
@@ -59,7 +59,7 @@
   [{:as ev-msg :keys [?data]}]
   (let [[id msg] ?data]
     (case id
-      :oz.core/view-doc (swap! app-state assoc :view-spec msg)
+      :oz.core/view-doc (swap! app-state merge {:view-spec msg :error nil})
       (debugf "Push event from server: %s" ?data))))
 
 
@@ -80,10 +80,23 @@
       [:h1 "Waiting for first spec to load..."]
       [:p "This may take a second the first time if you call a plot function, unless you first call " [:code '(oz/start-server!)] "."]]))
 
+(defn error-boundary
+  [component]
+  (r/create-class
+    {:component-did-catch (fn [this e info]
+                            (swap! app-state assoc :error e))
+     :reagent-render (fn [comp]
+                       (if-let [error (:error @app-state)]
+                         [:div
+                          [:h2 "Unable to process document!"]
+                          [:h3 "Error:"]
+                          [:code (pr-str error)]]
+                         comp))}))
+
 
 (defn init []
   (start-router!)
-  (r/render-component [application app-state]
-                      (. js/document (getElementById "app"))))
+  (rd/render [error-boundary [application app-state]]
+             (. js/document (getElementById "app"))))
 
-
+(init)
