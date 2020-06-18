@@ -1,7 +1,10 @@
 {:source-paths ["src/cljs"]
  ;:deps true
  :dependencies [[reagent "0.10.0"]
-                [devcards "0.2.6"]]
+                [devcards "0.2.6"]
+                [com.taoensso/timbre "4.10.0"]
+                [com.taoensso/encore "2.120.0"]
+                [com.taoensso/sente "1.13.1"]]
  :builds {:lib {:output-dir "resources/oz/public/js"
                 :target :browser
                 :modules {:oz {:entries [oz.core]}}}
