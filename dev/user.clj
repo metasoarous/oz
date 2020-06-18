@@ -35,7 +35,7 @@
   (oz/view! line-plot)
   (oz/view! [:div [:h1 "yo dawg"]])
   (oz/view! [:div
-             [:h1 "Hello pepe"]
+             [:h1 "What up pepes?"]
              [:vega-lite line-plot]])
 
   ;; We can also try publishing the plot like so (requires auth; see README.md for setup)
