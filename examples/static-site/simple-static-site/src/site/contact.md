@@ -1,5 +1,5 @@
 ---
-title: Fuckers gonna fuck
+title: Haters gonna hate
 ---
 
 # This is a great md file
