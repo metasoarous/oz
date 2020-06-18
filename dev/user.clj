@@ -10,15 +10,12 @@
 ;(set! *warn-on-reflection* true)
 ;(set! *unchecked-math* :warn-on-boxed)
 
-(def browser-repl figwheel/cljs-repl)
-
 
 ;; Here is some example usage you can play with at the repl
 (comment
 
   ;; Start the plot server
-  ;(do-it-fools!) ;; for figwheel dev
-  (oz/start-server! 3000)
+  (oz/start-server! 10666)
 
   ;; define a function for generating some dummy data
   (defn play-data [& names]
@@ -36,10 +33,10 @@
 
   ;; Render the plot to the 
   (oz/view! line-plot)
+  (oz/view! [:div [:h1 "yo dawg"]])
   (oz/view! [:div
              [:h1 "Hello pepe"]
-             [:vega line-plot]]
-            :port 3000)
+             [:vega-lite line-plot]])
 
   ;; We can also try publishing the plot like so (requires auth; see README.md for setup)
   (oz/publish! line-plot)
