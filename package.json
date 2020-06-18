@@ -6,7 +6,7 @@
   "author": "Christopher Small",
   "license": "ISC",
   "dependencies": {
-    "react": "^16.2.0",
+    "react": "^16.13.1",
     "react-dom": "^16.2.0",
     "vega": "^5.9.1",
     "vega-lite": "^4.0.2",
