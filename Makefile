@@ -43,10 +43,14 @@ check-clean-tree:
 
 .PHONY: build
 build:
+	shadow-cljs release app lib && \
 	clojure -A:pack mach.pack.alpha.skinny --no-libs --project-path target/oz.jar
 
 .PHONY: release
 release: check-clean-tree build
+	# Add the js compilation output and commit
+	git add resources/oz/public/js && \
+	git commit -m "add build targets" && \
 	clojure -Spom && \
 	mvn deploy:deploy-file -Dfile=target/oz.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DpomFile=pom.xml
 
