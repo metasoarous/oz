@@ -207,10 +207,8 @@
   (atom {}))
 
 (defn -check-vega-cli-installed? [mode]
-  (case mode
-    :vega-lite (= 0 (:exit (shell/sh "vl2svg" "--help")))
-    :vega      (= 0 (:exit (shell/sh "vg2svg" "--help")))))
-  
+  (= 0 (:exit (shell/sh "which" (case mode :vega-lite "vl2svg" :vega "vg2svg")))))
+
 (defn- vega-cli-installed? [mode]
   ;; First checks the installed-clis cache, then epirically checks via cli call
   (or (get @installed-clis mode)
@@ -220,8 +218,8 @@
         status)))
 
 (deftest test-vega-cli-installed?
-  (is (= true (rt/check-call `vega-cli-installed? [:vega])))
-  (is (= true (rt/check-call `vega-cli-installed? [:vega-lite]))))
+  (is (= true (vega-cli-installed? :vega)))
+  (is (= true (vega-cli-installed? :vega-lite))))
 
 ;; Utils
 
@@ -582,18 +580,18 @@
 ;; Is it worth making this a materialized view?
 ;; This may require an abstracted format registration process
 
-(defn- available-compiler-keys []
+(defn- installed-compiler-keys []
   (->> (methods compile*)
        keys
        (filter (partial s/valid? ::compiler-key))))
 
-(available-compiler-keys)
+(installed-compiler-keys)
 
 ;; QUESTION; Keep public?
 (defn registered-from-formats []
-  (->> (available-compiler-keys) (map first) set))
+  (->> (installed-compiler-keys) (map first) set))
 (defn registered-to-formats []
-  (->> (available-compiler-keys) (map second) set))
+  (->> (installed-compiler-keys) (map second) set))
 
 
 (defn- registered-from-format? [fmt]
@@ -605,7 +603,7 @@
 
 
 (defn registered-compiler-key? [[k1 k2]]
-  (let [keys (available-compiler-keys)]
+  (let [keys (installed-compiler-keys)]
     (or (some #{[k1 k2]} keys)
         (let [to-hiccup (filter (comp #{:hiccup} second) keys)
               from-hiccup (filter (comp #{:hiccup} first) keys)]
@@ -613,7 +611,7 @@
                  (some (comp #{k1} first) from-hiccup))))))
 
 (defn registered-compiler-keys []
-  (let [keys (available-compiler-keys)
+  (let [keys (installed-compiler-keys)
         to-hiccup (filter (comp #{:hiccup} second))
         from-hiccup (filter (comp #{:hiccup} first))
         implied-keys (for [k1 to-hiccup
@@ -1058,7 +1056,6 @@
 
 (deftest exercise-compile-args
   (is (s/exercise ::compile-args)))
-(s/valid? ::registered-compiler-key [:vega-lite :hiccup])
 
 (deftest test-compile
   (is (rt/successful? (rt/check `compile {} {:num-tests 2}))))
