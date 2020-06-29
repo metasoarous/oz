@@ -1400,17 +1400,18 @@
                     [:div "CLJS Coming soon!"]
                     ;; loading of static files, like md or hiccup
                     :else
-                    (load filename :format format))
-                  ;_ (log/info "step 1:" evaluation)
-                  evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))
-                  ;_ (log/info "step 2:" evaluation)
-                  out-path (compute-out-path build-desc filename)]
-              (ensure-out-dir out-path true)
-              (when view?
-                (log/info "Updating live view")
-                (view! evaluation :host host :port port))
-              (export! evaluation out-path)
-              (swap! live/watchers update filename (partial merge {:last-contents contents :last-eval evaluation})))))))))
+                    (load filename :format format))]
+              (when evaluation
+                (let [;_ (log/info "step 1:" evaluation)
+                      evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))
+                      ;_ (log/info "step 2:" evaluation)
+                      out-path (compute-out-path build-desc filename)]
+                  (ensure-out-dir out-path true)
+                  (when view?
+                    (log/info "Updating live view")
+                    (view! evaluation :host host :port port))
+                  (export! evaluation out-path)
+                  (swap! live/watchers update filename (partial merge {:last-contents contents :last-eval evaluation})))))))))))
 
 
 (def ^:private default-config
