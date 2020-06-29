@@ -584,11 +584,10 @@
        keys
        (filter (partial s/valid? ::compiler-key))))
 
-(installed-compiler-keys)
-
 ;; QUESTION; Keep public?
 (defn registered-from-formats []
   (->> (installed-compiler-keys) (map first) set))
+
 (defn registered-to-formats []
   (->> (installed-compiler-keys) (map second) set))
 
@@ -611,8 +610,8 @@
 
 (defn registered-compiler-keys []
   (let [keys (installed-compiler-keys)
-        to-hiccup (filter (comp #{:hiccup} second))
-        from-hiccup (filter (comp #{:hiccup} first))
+        from-hiccup (map second (filter (comp #{:hiccup} first) keys))
+        to-hiccup (map first (filter (comp #{:hiccup} second) keys))
         implied-keys (for [k1 to-hiccup
                            k2 from-hiccup]
                        [k1 k2])]
