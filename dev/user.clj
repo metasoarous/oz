@@ -17,6 +17,8 @@
   ;; Start the plot server
   (oz/start-server! 10666)
 
+
+
   ;; define a function for generating some dummy data
   (defn play-data [& names]
     (for [n names
@@ -59,7 +61,7 @@
 
 
   ;; vega example
-  (def contour-plot (json/parse-string (slurp "examples/contour-lines.vega.json"))) 
+  (def contour-plot (json/parse-string (slurp "resources/oz/examples/contour-lines.vega.json"))) 
   (oz/view! contour-plot :mode :vega)
 
   ;; Note that to publish vega, you must set :mode
@@ -85,9 +87,9 @@
 
   ;; Test out live reloading functionality
 
-  (oz/live-view! "examples/test.md")
+  (oz/live-view! "resources/oz/examples/test.md")
 
-  ;; Then edit the file at `examples/test.md` and watch
+  ;; Then edit the file at `resources/oz/examples/test.md` and watch
 
   ;; Can live reload code as well
 
