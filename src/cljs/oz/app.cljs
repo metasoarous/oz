@@ -99,3 +99,4 @@
   (rd/render [error-boundary [application app-state]]
              (. js/document (getElementById "app"))))
 
+(init)
