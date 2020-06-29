@@ -81,7 +81,7 @@
   [mode]
   (s/gen
     (->>
-      (file-seq (clojure.java.io/file (str "examples/" (name mode))))
+      (file-seq (io/file (io/resource (str "oz/examples/" (name mode)))))
       (remove #(.isDirectory %))
       (map str)
       (map load)
@@ -168,7 +168,6 @@
 (s/def ::vega-compile-opts
   (s/multi-spec vega-compile-opts-spec (fn [genval _] genval)))
 
-(sample ::vega-compile-opts)
 
 (deftest exercise-vega-cli-opts
   (is (s/exercise ::vega-cli-opts))
