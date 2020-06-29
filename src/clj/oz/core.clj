@@ -653,11 +653,16 @@
    {:alt "compiled vega png"
     :src (str "data:image/png;base64," (base64-encode bytes))}])
 
+
+(def default-embed-opts
+  {:static-embed :png
+   :live-embed? true})
+
 (defn embed-vega-form
   "Embed a single Vega-Lite/Vega visualization as hiccup representing a live/interactive embedding as hiccup;
   Currently private, may be public in future, and name may change."
   ([compile-opts [mode doc & [embed-opts]]]
-   (let [{:as opts :keys [static-embed live-embed?]} (merge (:vega-embed-opts compile-opts) embed-opts)
+   (let [{:as opts :keys [static-embed live-embed?]} (merge default-embed-opts (:vega-embed-opts compile-opts) embed-opts)
          ;; expose id in opts?
          id (str "viz-" (java.util.UUID/randomUUID))
          code (format "vegaEmbed('#%s', %s, %s);" id (json/generate-string doc) (json/generate-string {:mode mode}))]
@@ -673,12 +678,13 @@
               "Unable to compile viz"
               (let [[opt-type opt-val] embed-as]
                 (cond
-                  ;; SVG case; leave as hiccup rep of svg
-                  (or (= opt-type :bool) (= opt-val :svg))
-                  (vega-cli (merge opts {:from-format mode :to-format (case (first embed-as) :bool :svg)}))
-                  ;; return as embedded png
-                  (= opt-val :png)
-                  (embed-png (vega-cli (merge {:from-format mode :to-format opt-val}))))))))]
+                  ;; default to png, since this will generally be more performant (TODO: test?)
+                  (or (and (= opt-type :bool) opt-val)
+                      (= opt-val :png))
+                  (embed-png (compile doc (merge opts {:from-format mode :to-format :png})))
+                  ;; Use svg as hiccup if requested
+                  (= opt-val :svg)
+                  (compile doc (merge opts {:from-format mode :to-format :svg})))))))]
        (when live-embed?
          [:script {:type "text/javascript"} code])])))
 
