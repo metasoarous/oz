@@ -703,7 +703,7 @@
    (compile-tags doc
                  {:vega (partial embed-vega-form compile-opts)
                   :vega-lite (partial embed-vega-form compile-opts)
-                  :markdown #(compile % (merge compile-opts {:from-format :md :to-format :hiccup}))}))
+                  :markdown #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))}))
                   ;; TODO Add these; Will take front end resolvers as well
                   ;:leaflet-vega (partial embed-vega-form compile-opts)
                   ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
@@ -1592,5 +1592,4 @@
               (build! build-spec)
               (println "done calling build"))))
               ;(a/<!! (a/chan)))))
-
 
