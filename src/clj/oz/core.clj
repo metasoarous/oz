@@ -347,7 +347,7 @@
 (defmulti to-spec :to)
 (defmethod to-spec :default
   [{:keys [to-format]}]
-  (keyword 'oz.core (or to-format :hiccup)))
+  (keyword "oz.core" (name (or to-format :hiccup))))
 
 
 (s/fdef compile*
