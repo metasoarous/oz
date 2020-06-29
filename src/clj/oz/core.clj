@@ -1247,14 +1247,18 @@
   (when (and (#{:modify :create} kind)
              (not (.isDirectory (io/file filename))))
     (let [contents (slurp filename)
-          from-format (or from-format format)]
+          from-format (or from-format format (filename-format filename))]
       ;; if there are differences, then do the thing
       (when-not (= contents
                    (get-in @live/watchers [filename :last-contents]))
         (log/info "Rerendering file:" filename)
         ;; Evaluate the ns form, and whatever forms thereafter differ from the last time we succesfully ran
         ;; Update last-forms in our state atom
-        (view! (load filename :from-format from-format) :host host :port port)
+        (when-let [result
+                   (if (#{:clj :cljc} from-format)
+                     (live/reload-file! filename context {:kind kind :file file})
+                     (load filename :from-format from-format))]
+          (view! result :host host :port port))
         (swap! live/watchers assoc-in [filename :last-contents] contents)))))
 
 (defn live-view!
