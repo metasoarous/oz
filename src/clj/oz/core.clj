@@ -675,15 +675,20 @@
           (let [embed-as (s/conform ::static-embed static-embed)]
             (if (= embed-as ::s/invalid)
               "Unable to compile viz"
-              (let [[opt-type opt-val] embed-as]
-                (cond
-                  ;; default to png, since this will generally be more performant (TODO: test?)
-                  (or (and (= opt-type :bool) opt-val)
-                      (= opt-val :png))
-                  (embed-png (compile doc (merge opts {:from-format mode :to-format :png})))
-                  ;; Use svg as hiccup if requested
-                  (= opt-val :svg)
-                  (compile doc (merge opts {:from-format mode :to-format :svg})))))))]
+              (try
+                (let [[opt-type opt-val] embed-as]
+                  (cond
+                    ;; default to png, since this will generally be more performant (TODO: test?)
+                    (or (and (= opt-type :bool) opt-val)
+                        (= opt-val :png))
+                    (embed-png (compile doc (merge opts {:from-format mode :to-format :png})))
+                    ;; Use svg as hiccup if requested
+                    (= opt-val :svg)
+                    (compile doc (merge opts {:from-format mode :to-format :svg}))))
+                (catch Throwable t
+                  (log/error "Unable to execute static embed")
+                  (log/error t)
+                  nil)))))]
        (when live-embed?
          [:script {:type "text/javascript"} code])])))
 
