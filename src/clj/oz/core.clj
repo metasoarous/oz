@@ -801,7 +801,9 @@
         ;; Not allowing this option for now;
         ;(when-not omit-js-libs?
         ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
-        [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]))))
+        [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]
+        header-extras))))
+
 
 ;; Would like to expose this in the future, but not certain about the name/api
 ;; TODO Add some checks to see if we actually need html/body
