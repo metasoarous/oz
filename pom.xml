@@ -150,12 +150,22 @@
     <dependency>
       <groupId>reagent</groupId>
       <artifactId>reagent</artifactId>
-      <version>0.8.1</version>
+      <version>0.10.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.taoensso</groupId>
+      <artifactId>timbre</artifactId>
+      <version>4.10.0</version>
     </dependency>
     <dependency>
       <groupId>com.cognitect</groupId>
       <artifactId>transit-clj</artifactId>
       <version>0.8.313</version>
+    </dependency>
+    <dependency>
+      <groupId>metasoarous</groupId>
+      <artifactId>darkstar</artifactId>
+      <version>0.1.0</version>
     </dependency>
     <dependency>
       <groupId>hickory</groupId>
