@@ -53,7 +53,7 @@ release: check-clean-tree build
 	git add resources/oz/public/js && \
 	git commit -m "add build targets" && \
 	clojure -Spom && \
-	mvn deploy:deploy-file -Dfile=target/oz.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DpomFile=pom.xml
+	mvn -e deploy:deploy-file -Dfile=target/oz.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DpomFile=pom.xml
 
 .PHONY: clean
 clean:
