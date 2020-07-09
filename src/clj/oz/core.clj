@@ -708,7 +708,8 @@
    (compile-tags doc
                  {:vega (partial embed-vega-form compile-opts)
                   :vega-lite (partial embed-vega-form compile-opts)
-                  :markdown #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))}))
+                  :markdown #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
+                  :md       #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))}))
                   ;; TODO Add these; Will take front end resolvers as well
                   ;:leaflet-vega (partial embed-vega-form compile-opts)
                   ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
@@ -1087,7 +1088,10 @@
   [:div
     (if (map? doc)
       [(or mode :vega-lite) doc]
-      (compile-tags doc {}))
+      ;; TODO These compilers should be considered a stopgap; Need to have markdown compilers for frontend as
+      ;; well
+      (compile-tags doc {:md       #(compile (second %) {:from-format :md :to-format :hiccup})
+                         :markdown #(compile (second %) {:from-format :md :to-format :hiccup})}))
     mathjax-script])
 
 
@@ -1535,10 +1539,13 @@
 
   ;; View a simple plot
   (view!
-    {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
-     :mark :point
-     :encoding {:x {:field :a}
-                :y {:field :b}}}
+    [:div
+      [:markdown "shit me _timbres_, dawn?"]
+      [:vega-lite
+        {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
+         :mark :point
+         :encoding {:x {:field :a}
+                    :y {:field :b}}}]]
     :port 10666)
 
   ;; View a more complex document
