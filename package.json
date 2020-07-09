@@ -1,6 +1,6 @@
 {
   "name": "oz",
-  "version": "1.6.0-alpha7-SNAPSHOT",
+  "version": "1.6.0-alpha7",
   "description": "The client side portion of Oz, your Clojure(Script) toolkit for dynamic, data-driven data visualizations",
   "keywords": [],
   "author": "Christopher Small",
