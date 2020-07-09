@@ -50,7 +50,7 @@ build:
 .PHONY: release
 release: check-clean-tree build
 	# Add the js compilation output and commit
-	git add resources/oz/public/js && \
+	git add resources/oz/public/js package-lock.json && \
 	git commit -m "add build targets" && \
 	clojure -Spom && \
 	mvn -e deploy:deploy-file -Dfile=target/oz.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DpomFile=pom.xml
