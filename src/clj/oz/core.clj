@@ -987,7 +987,6 @@
   [filename & {:as opts :keys [format from-format]}]
   (let [from-format (or from-format format (keyword (extension filename)))
         doc (slurp filename)]
-    (log/info "From format is" from-format)
     (compile doc
              (merge opts
                     {:from-format (or from-format format)}))))
@@ -1050,7 +1049,7 @@
    ;; Support mode or from-format to `compile`, but require compile* registrations to use `:from-format`
    ;; This is maybe why we _do_ need this function
    (let [[from-format to-format :as key] (compiler-key doc opts)]
-     (log/info "compile key is" (with-out-str (pp/pprint key)))
+     ;(log/debug "compile key is" (with-out-str (pp/pprint key)))
      (assert (s/valid? ::registered-compiler-key key))
      (cond
        (or (= :hiccup from-format to-format)
