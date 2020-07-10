@@ -45,8 +45,8 @@ check-clean-tree:
 build:
 	npm install && \
 	shadow-cljs release app lib && \
-	mkdir -p META-INF/ &&
-	cp pom.xml META-INF/ &&
+	mkdir -p META-INF/ && \
+	cp pom.xml META-INF/ && \
 	clojure -A:pack mach.pack.alpha.skinny --no-libs --project-path target/oz.jar
 
 .PHONY: release
