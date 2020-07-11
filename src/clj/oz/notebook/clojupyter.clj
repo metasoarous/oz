@@ -11,7 +11,12 @@
 
 (try
   (require '[clojupyter.protocol.mime-convertible :as mc])
+  (catch Throwable _
+    (log/debug "Unable to require clojupyter; Please explicitly add clojupyter to your dependencies if you would like to use it.")))
 
+
+(try
+  (require '[clojupyter.protocol.mime-convertible :as mc])
 
   (def require-string
     (str "
@@ -96,8 +101,10 @@
     [spec]
     (reify
       mc/PMimeConvertible
+      ;clojupyter.protocol.mime-convertible/PMimeConvertible
       (to-mime [this]
         (mc/stream-to-string
+        ;(clojupyter.protocol.mime-convertible/stream-to-string
           ;; TODO switch back to oz.core/embed once this issue is resolved
           ;{:text/html (hiccup/html (oz/embed spec {:embed-fn live-embed}))}
           {:text/html (hiccup/html (embed spec {:embed-fn live-embed}))}))))
