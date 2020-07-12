@@ -100,11 +100,11 @@
     "Display a vega or vega-lite spec from a Jupyter notebook using the Clojupyter kernel."
     [spec]
     (reify
-      mc/PMimeConvertible
-      ;clojupyter.protocol.mime-convertible/PMimeConvertible
+      ;mc/PMimeConvertible
+      clojupyter.protocol.mime-convertible/PMimeConvertible
       (to-mime [this]
-        (mc/stream-to-string
-        ;(clojupyter.protocol.mime-convertible/stream-to-string
+        ;(mc/stream-to-string
+        (clojupyter.protocol.mime-convertible/stream-to-string
           ;; TODO switch back to oz.core/embed once this issue is resolved
           ;{:text/html (hiccup/html (oz/embed spec {:embed-fn live-embed}))}
           {:text/html (hiccup/html (embed spec {:embed-fn live-embed}))}))))
