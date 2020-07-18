@@ -4,7 +4,7 @@
   <groupId>metasoarous</groupId>
   <artifactId>oz</artifactId>
   <packaging>jar</packaging>
-  <version>1.6.0-alpha7-SNAPSHOT</version>
+  <version>1.6.0-alpha11</version>
   <name>oz</name>
   <description>Great and powerful data visualizations and scientific documents in Clojure using Vega and Vega-lite</description>
   <url>http://github.com/metasoarous/oz</url>
@@ -61,6 +61,10 @@
     <repository>
       <id>clojars</id>
       <url>https://repo.clojars.org/</url>
+    </repository>
+    <repository>
+      <id>datomic-cloud</id>
+      <url>s3://datomic-releases-1fc2183a/maven/releases</url>
     </repository>
   </repositories>
   <dependencyManagement>
@@ -150,12 +154,22 @@
     <dependency>
       <groupId>reagent</groupId>
       <artifactId>reagent</artifactId>
-      <version>0.8.1</version>
+      <version>0.10.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.taoensso</groupId>
+      <artifactId>timbre</artifactId>
+      <version>4.10.0</version>
     </dependency>
     <dependency>
       <groupId>com.cognitect</groupId>
       <artifactId>transit-clj</artifactId>
       <version>0.8.313</version>
+    </dependency>
+    <dependency>
+      <groupId>metasoarous</groupId>
+      <artifactId>darkstar</artifactId>
+      <version>0.1.0</version>
     </dependency>
     <dependency>
       <groupId>hickory</groupId>

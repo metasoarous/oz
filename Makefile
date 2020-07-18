@@ -43,12 +43,20 @@ check-clean-tree:
 
 .PHONY: build
 build:
+	npm install && \
+	shadow-cljs release app lib && \
+	mkdir -p META-INF/ && \
+	cp pom.xml META-INF/ && \
 	clojure -A:pack mach.pack.alpha.skinny --no-libs --project-path target/oz.jar
 
 .PHONY: release
 release: check-clean-tree build
+	# Add the js compilation output and commit
+	git add resources/oz/public/js package-lock.json && \
+	git commit -m "add build targets" && \
+	git push origin && \
 	clojure -Spom && \
-	mvn deploy:deploy-file -Dfile=target/oz.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DpomFile=pom.xml
+	mvn -e deploy:deploy-file -Dfile=target/oz.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DpomFile=pom.xml
 
 .PHONY: clean
 clean:

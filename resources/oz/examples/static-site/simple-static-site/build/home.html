@@ -1,0 +1,11 @@
+<html><head><meta charset="UTF-8" /><title>Yo dawg</title><meta content="Oz document" name="description" /><meta content="" name="keywords" /><meta content="width=device-width, initial-scale=1" name="viewport" /><link href="http://ozviz.io/oz.svg" rel="shortcut icon" type="image/x-icon" /><link href="http://ozviz.io/css/style.css" rel="stylesheet" type="text/css" /><link href="http://ozviz.io/fonts/lmroman12-regular.woff" rel="stylesheet" /><link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" /><script src="https://cdn.jsdelivr.net/npm/vega@5.9.0" type="text/javascript"></script><script src="https://cdn.jsdelivr.net/npm/vega-lite@4.0.2" type="text/javascript"></script><script src="https://cdn.jsdelivr.net/npm/vega-embed@6.0.0" type="text/javascript"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script></head><body><div><h1>Yo dawg!</h1><p>We heard you like <strong>data vizualizationz</strong>.</p><p>So we put data vizualizationz in yo <strong>Markdown</strong> so you can be like</p><div><div id="viz-d6d10e2a-83f5-43e7-bf23-6378393bf942"></div></div><pre><code>```edn vega
+{:title "Blao!"
+ :data {:values [{:time 1 :dopeness 3}
+                 {:time 5 :dopeness 4}
+                 {:time 9 :dopeness 12}]}
+ :mark :line
+ :encoding {:x {:field :time} :y {:field :dopeness}}
+ }
+```</code></pre><h2>Look ye and <strong>behold!</strong></h2><p>A resized image as hiccup:</p><img src="/img/oz.svg" style="width: 80; padding-top: 20" /><p>whence</p><pre><code>```edn hiccup
+[:img {:src "/img/oz.svg" :style {:max-width 400 :padding-top 20}}]
+```</code></pre><h2>Full LaTeX support coming soon!</h2><p>Right now you'll only see this render on the static export, not on the live view</p><p>$$ e ^ {i \theta} = \cos \theta + i \sin \theta $$</p></div></body></html>

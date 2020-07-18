@@ -176,7 +176,7 @@
     (clojure.walk/prewalk
       (fn [x] (if (and (coll? x) (live-viewer-keys (first x)))
                 (into
-                  [(get register-live-view (first x))]
+                  [(get live-viewers (first x))]
                   (rest x))
                 x))
       doc)))

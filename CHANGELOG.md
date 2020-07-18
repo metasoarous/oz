@@ -18,6 +18,8 @@
 * embedded visualizations by default include both a statically compiled view and live/interactive view (& either can be turned off)
 * move to shadow-cljs for cljs compilation
 * move to deps.edn for simpler dependency management and build tooling
+* add react-error-boundary so that broken plots don't glob up the view! machinery
+* add main function for CLI goodness
 * update js libs:
   * vega -> "5.3.1-0"
   * vega-lite -> "3.0.0-rc16-0"

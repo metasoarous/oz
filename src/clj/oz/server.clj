@@ -27,6 +27,7 @@
 ;; (reset! sente/debug-mode?_ true)
 
 (let [packer (sente-transit/get-transit-packer)
+      ;; TODO CSRF token set to nil for now; Need to fix this https://github.com/metasoarous/oz/issues/122
       chsk-server (sente/make-channel-socket-server! (get-sch-adapter) {:packer packer})
       {:keys [ch-recv send-fn connected-uids
               ajax-post-fn ajax-get-or-ws-handshake-fn]} chsk-server]
@@ -145,7 +146,11 @@
         (.browse (java.awt.Desktop/getDesktop) (java.net.URI. uri))
         (.exec (java.lang.Runtime/getRuntime) (str "xdg-open " uri)))
       (Thread/sleep 7500)
-      (catch java.awt.HeadlessException _))))
+      (catch Throwable t
+        (log/error "Unable to open a browser tab for you. Please visit" (str "http://localhost:" port))
+        (log/error t)))))
+
+
 (defn get-server-port [] (:port @web-server_))
 
 

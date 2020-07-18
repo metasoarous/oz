@@ -22,7 +22,9 @@
             [tentacles.gists :as gists]
             [clojure.test :as t :refer [deftest is]]
             [clojure.spec.gen.alpha :as gen]
-            [respeced.test :as rt])
+            [clojure.core.async :as a]
+            [respeced.test :as rt]
+            [applied-science.darkstar :as darkstar])
   (:import java.io.File
            java.util.UUID))
 
@@ -52,6 +54,7 @@
 ;; Still feels to me like we're missing something big semantically here as far as the difference between a
 ;; mode and a format
 
+;; Should review ::mode and see how much we actually use it vs from-format and to-format
 (s/def ::mode
   (s/with-gen keyword?
     #(s/gen #{:vega :vega-lite :hiccup})))
@@ -60,12 +63,13 @@
   (s/with-gen keyword?
     #(s/gen #{:edn :json :yaml :html :pdf :png :svg})))
 
-(s/def ::from-fmt
+;; Not sure if I like the way that this is specced
+(s/def ::from-format
   (s/with-gen
     (s/or :mode ::mode :format ::format)
     #(s/gen #{:edn :json :yaml :hiccup :vega :vega-lite}))) ;; add html & svg?
 
-(s/def ::to-fmt
+(s/def ::to-format
   (s/with-gen
     (s/or :mode ::mode :format ::format)
     #(s/gen #{:edn :json :yaml :hiccup :vega :svg :html})))
@@ -77,7 +81,7 @@
   [mode]
   (s/gen
     (->>
-      (file-seq (clojure.java.io/file (str "examples/" (name mode))))
+      (file-seq (io/file (io/resource (str "oz/examples/" (name mode)))))
       (remove #(.isDirectory %))
       (map str)
       (map load)
@@ -133,11 +137,41 @@
 ; Spec for vega-cli
 
 (s/def ::vega-cli-opts
-  (s/keys :req-un [(or ::vega-like ::input-filename) ::to-fmt]
-          :opt-un [::from-fmt ::return-result? ::output-filename]))
+  (s/keys :req-un [(or ::vega ::vega-lite ::input-filename) ::to-format]
+          :opt-un [::from-format ::return-result? ::output-filename]))
+
+(s/def ::vega-compiler
+  #{:vega-cli :graal})
+
+(s/def ::base-vega-compile-opts
+  (s/keys :opt-un []))
+
+(defn choose-vega-compiler
+  [{:keys [vega-compiler to-format]}]
+  (or vega-compiler
+      ;; Prefer grall for svg and vega output
+      (if (#{:svg :vega} to-format)
+        :graal
+        :vega-cli)))
+
+(defmulti vega-compile-opts-spec
+  choose-vega-compiler)
+
+(defmethod vega-compile-opts-spec
+  :graal
+  [_] map?)
+
+(defmethod vega-compile-opts-spec
+  :vega-cli
+  [_] ::vega-cli-opts)
+
+(s/def ::vega-compile-opts
+  (s/multi-spec vega-compile-opts-spec (fn [genval _] genval)))
+
 
 (deftest exercise-vega-cli-opts
-  (is (s/exercise ::vega-cli-opts)))
+  (is (s/exercise ::vega-cli-opts))
+  (is (s/exercise ::vega-compile-opts)))
 
 
 (s/def ::title string?)
@@ -157,9 +191,9 @@
 
 (s/def ::head-extras ::hiccup)
 
-(def vega-version "5.9.0")
-(def vega-lite-version "4.0.2")
-(def vega-embed-version "6.0.0")
+(def vega-version "5.13.0")
+(def vega-lite-version "4.13.1")
+(def vega-embed-version "6.9.0")
 
 
 (s/fdef vega-cli-installed?
@@ -172,10 +206,8 @@
   (atom {}))
 
 (defn -check-vega-cli-installed? [mode]
-  (case mode
-    :vega-lite (= 0 (:exit (shell/sh "vl2svg" "--help")))
-    :vega      (= 0 (:exit (shell/sh "vg2svg" "--help")))))
-  
+  (= 0 (:exit (shell/sh "which" (case mode :vega-lite "vl2svg" :vega "vg2svg")))))
+
 (defn- vega-cli-installed? [mode]
   ;; First checks the installed-clis cache, then epirically checks via cli call
   (or (get @installed-clis mode)
@@ -185,8 +217,8 @@
         status)))
 
 (deftest test-vega-cli-installed?
-  (is (= true (rt/check-call `vega-cli-installed? [:vega])))
-  (is (= true (rt/check-call `vega-cli-installed? [:vega-lite]))))
+  (is (= true (vega-cli-installed? :vega)))
+  (is (= true (vega-cli-installed? :vega-lite))))
 
 ;; Utils
 
@@ -285,24 +317,37 @@
 ;; This is probably not quite right; We should probably err on the side of requiring these args for now
 
 (s/def ::base-compile-opts
-  (s/keys :opt-un [::to-fmt ::from-fmt ::mode ::tag-compilers]))
+  (s/keys :opt-un [::to-format ::from-format ::mode ::tag-compilers]))
 
 ;; We use this multimethod for the underlying implementation
 
+(defn- extension
+  [filename]
+  (last (string/split filename #"\.")))
+
+;; QUESTION Does this need to be pluggable?
+(def extension-formats
+  {:md :markdown})
+
+(defn- compiler-key
+  ([doc {:keys [from-format mode to-format]}]
+   (let [from-format (or from-format mode (cond (vector? doc) :hiccup (map? doc) :vega-lite))]
+     [(get extension-formats from-format from-format)
+      (or to-format :hiccup)])))
+
 (defmulti compile-args-spec
-  (fn [[_ {:keys [from-fmt mode to-fmt]}]]
-    [(or from-fmt mode) to-fmt]))
+  (partial apply compiler-key))
 
 ;; Warning! Changing the defmulti above doesn't take on reload! Have to restart repl :-/
 (s/def ::compile-args
-  (s/multi-spec compile-args-spec (fn retag [genval _] genval)))
-
+  (s/and (s/multi-spec compile-args-spec (fn retag [genval _] genval))
+         #(s/valid? ::registered-compiler-key (apply compiler-key %))))
 
 
 (defmulti to-spec :to)
 (defmethod to-spec :default
-  [{:keys [to-fmt]}]
-  (keyword 'oz.core (or to-fmt :hiccup)))
+  [{:keys [to-format]}]
+  (keyword "oz.core" (name (or to-format :hiccup))))
 
 
 (s/fdef compile*
@@ -312,18 +357,12 @@
           (s/valid? (to-spec opts) ret))))
 
 
-(defn- compiler-key
-  [doc {:keys [from-fmt mode to-fmt]}]
-  [(or from-fmt mode (cond (vector? doc) :hiccup (map? doc) :vega-lite))
-   (or to-fmt :hiccup)])
-
-
 ;; We will eventually need to call out to compile in some of the definitions
 (declare compile)
 
 (defmulti ^:no-doc compile*
-  "General purpose compilation function which turns things from-fmt one data structure into another"
-  {:arglists '([doc {:keys [from-fmt mode to-fmt]}])}
+  "General purpose compilation function which turns things from-format one data structure into another"
+  {:arglists '([doc {:keys [from-format to-format]}])}
   compiler-key)
 
 ;; QUESTION How do we merge the tag-compilers options for html compilation embedding?
@@ -367,15 +406,15 @@
   "Takes either doc or the contents of input-filename, and uses the vega/vega-lite cli tools to translate to the specified format.
   If both doc and input-filename are present, writes doc to input-filename for running cli tool (otherwise, a tmp file is used).
   This var is semi-public; It's under consideration for fully public inclusion, but consider it alpha for now."
-  ([{:keys [vega-doc from-fmt to-fmt mode input-filename output-filename return-result?] ;; TODO may add seed and scale eventually
-     :or {to-fmt :svg mode :vega-lite return-result? true}}]
-   {:pre [(#{:vega-lite :vega} (or from-fmt mode))
-          (#{:png :pdf :svg :vega} to-fmt)
+  ([{:keys [vega-doc from-format to-format mode input-filename output-filename return-result?] ;; TODO may add seed and scale eventually
+     :or {to-format :svg mode :vega-lite return-result? true}}]
+   {:pre [(#{:vega-lite :vega} (or from-format mode))
+          (#{:png :pdf :svg :vega} to-format)
           (or vega-doc input-filename)]}
-   (let [mode (or from-fmt mode)]
+   (let [mode (or from-format mode)]
      (if (vega-cli-installed? mode)
        (let [short-mode (case (keyword mode) :vega-lite "vl" :vega "vg")
-             ext (name (if (= to-fmt :vega) :vg to-fmt))
+             ext (name (if (= to-format :vega) :vg to-format))
              input-filename (or input-filename (tmp-filename (str short-mode ".json")))
              output-filename (or output-filename (tmp-filename ext))
              command (str short-mode 2 ext)
@@ -388,9 +427,9 @@
          (if (= exit 0)
            (when return-result?
              (cond
-               (= :vega to-fmt)      (json/parse-stream (io/reader output-filename))
-               (#{:png :pdf} to-fmt) (file->bytes output-filename)
-               (= :svg to-fmt)       (-> output-filename slurp hickory/parse hickory/as-hiccup first md->hc/component last)))
+               (= :vega to-format)      (json/parse-stream (io/reader output-filename))
+               (#{:png :pdf} to-format) (file->bytes output-filename)
+               (= :svg to-format)       (-> output-filename slurp hickory/parse hickory/as-hiccup first md->hc/component last)))
           ;hiccup (-> html hickory/parse hickory/as-hiccup first md->hc/component)]
            (do
              (log/error "Problem creating output")
@@ -403,18 +442,19 @@
 ;; Vega-Lite compilations
 
 (defmethod compile-args-spec [:vega-lite :png]
-  [_] (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+  [_] (s/cat :doc ::vega-lite :opts ::vega-compile-opts))
 
 (defmethod compile* [:vega-lite :png]
   ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
 
 (defmethod compile-args-spec [:vega-lite :svg]
-  [_] (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+  [_] (s/cat :doc ::vega-lite :opts ::vega-compile-opts))
 (defmethod compile* [:vega-lite :svg]
-  ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
+  ;([doc opts] (vega-cli (merge opts {:vega-doc doc})))
+  ([doc _] (darkstar/vega-lite-spec->svg doc)))
 
 (defmethod compile-args-spec [:vega-lite :vega]
-  [_] (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+  [_] (s/cat :doc ::vega-lite :opts ::vega-compile-opts))
 (defmethod compile* [:vega-lite :vega]
   ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
 
@@ -422,43 +462,52 @@
 ;; Vega compilations
 
 (defmethod compile-args-spec [:vega :png]
-  [_] (s/alt :doc ::vega :opts ::vega-cli-opts))
+  [_] (s/alt :doc ::vega :opts ::vega-compile-opts))
 (defmethod compile* [:vega :png]
   ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
 
 (defmethod compile-args-spec [:vega :svg]
-  [_] (s/cat :doc ::vega :opts ::vega-cli-opts))
+  [_] (s/cat :doc ::vega :opts ::vega-compile-opts))
 (defmethod compile* [:vega :svg]
-  ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
+  ;([doc opts] (vega-cli (merge opts {:vega-doc doc})))
+  ([doc _] (darkstar/vega-spec->svg doc)))
 
 (defmethod compile-args-spec [:vega :pdf]
-  [_] (s/cat :doc ::vega :opts ::vega-cli-opts))
+  [_] (s/cat :doc ::vega :opts ::vega-compile-opts))
 (defmethod compile* [:vega :pdf]
   ([doc opts] (vega-cli (merge opts {:vega-doc doc}))))
 
-;(sample (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+;(sample (s/cat :doc ::vega-lite :opts ::vega-compile-opts))
 
 
-;; For Vega-Lite the cli doesn't let us 
+;; For Vega-Lite the cli doesn't let us export to pdf, so we have to define this in terms of compiling from
+;; Vega-Lite -> Vega -> PDF
 
 ;; TODO QUESTION
 ;; This is almost right; But the language around which opts it applies to is not clear yet
-;(s/def ::nested-vega-opts ::vega-cli-opts)
+;(s/def ::nested-vega-opts ::vega-compile-opts)
+
+;; This is the right way to do this if we need it
+;(s/def ::vega-pdf-opts
+  ;(s/keys :req-un []))
+  
 
 (defmethod compile-args-spec [:vega-lite :pdf]
-  ;; Here we go; This is interesting; This exposes why this can't always be so simple. Because the same args
-  ;; might get interpretted in multiple ways; Like usage of the output filename stuff
-  ;; Basically, we need to s/merge in with the a nested option; But which direction should this take? TODO QUESTION
-  ;[_] (s/cat :doc ::vega-lite (s/merge ::vega-cli-opts (s/keys :opt-un [::nested-vega-opts]))))
   ;; As written below, it may not be incorrect, but files may be getting overwritten between steps or weird
   ;; things happen?
-  [_] (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
-;(sample (s/cat :doc ::vega-lite :opts ::vega-cli-opts))
+  [_] (s/cat :doc ::vega-lite :opts ::vega-compile-opts))
+  ;; If needed, here's an alternate implementation which lets us have nested params for pdf
+  ;; Interesting case that exposes why this can't always be so simple. Because the same args
+  ;; might get interpretted in multiple ways; Like usage of the output filename stuff
+  ;; Basically, we need to s/merge in with the a nested option;
+  ;[_] (s/cat :doc ::vega-lite :opts (s/merge ::vega-compile-opts (s/keys :opt-un [::vega-pdf-opts])))
+
+;(sample (s/cat :doc ::vega-lite :opts ::vega-compile-opts))
 (defmethod compile* [:vega-lite :pdf]
   ([doc opts]
    (compile*
-     (compile* doc (merge opts {:from-fmt :vega-lite :to :vega}))
-     (merge opts {:from-fmt :vega :to :pdf}))))
+     (compile* doc (merge opts {:from-format :vega-lite :to :vega}))
+     (merge opts {:from-format :vega :to :pdf}))))
 
 
 ;; Defining tag-compilers
@@ -466,7 +515,7 @@
 (defn- compiled-form
   "Processes a form according to the given processors map, which maps tag keywords
   to a function for transforming the form."
-  [[tag & _ :as form] processors]
+  [processors [tag & _ :as form]]
   (let [tag (keyword tag)]
     (if-let [processor (get processors tag)]
       (processor form)
@@ -487,7 +536,7 @@
         (apply-fn-component form)
         ;; apply compilers
         (vector? form)
-        (compiled-form form compilers)
+        (compiled-form compilers form)
         ;; Else, assume hiccup and leave form alone
         :else form))
     doc))
@@ -523,33 +572,55 @@
 
 
 (s/def ::compiler-key
-  (s/cat :from-fmt ::from-fmt :to-fmt ::to-fmt))
+  (s/cat :from-format ::from-format :to-format ::to-format))
 
 
 ;; All of this available/registered business is not particularly performant-savy
 ;; Is it worth making this a materialized view?
 ;; This may require an abstracted format registration process
 
-(defn- available-compiler-keys []
+(defn- installed-compiler-keys []
   (->> (methods compile*)
        keys
        (filter (partial s/valid? ::compiler-key))))
 
-(available-compiler-keys)
-
 ;; QUESTION; Keep public?
 (defn registered-from-formats []
-  (->> (available-compiler-keys) (map first) set))
+  (->> (installed-compiler-keys) (map first) set))
+
 (defn registered-to-formats []
-  (->> (available-compiler-keys) (map second) set))
+  (->> (installed-compiler-keys) (map second) set))
 
 
-(defn- registered-from-format? [format]
-  (some #{format} (registered-from-formats)))
+(defn- registered-from-format? [fmt]
+  (some #{fmt} (registered-from-formats)))
 
-(defn- registered-to-format? [format]
-  (some #{format} (registered-to-formats)))
+(defn- registered-to-format? [fmt]
+  (some #{fmt} (registered-to-formats)))
 
+
+
+(defn registered-compiler-key? [[k1 k2]]
+  (let [keys (installed-compiler-keys)]
+    (or (some #{[k1 k2]} keys)
+        (let [to-hiccup (filter (comp #{:hiccup} second) keys)
+              from-hiccup (filter (comp #{:hiccup} first) keys)]
+            (and (some (comp #{k1} first) to-hiccup)
+                 (some (comp #{k1} first) from-hiccup))))))
+
+(defn registered-compiler-keys []
+  (let [keys (installed-compiler-keys)
+        from-hiccup (map second (filter (comp #{:hiccup} first) keys))
+        to-hiccup (map first (filter (comp #{:hiccup} second) keys))
+        implied-keys (for [k1 to-hiccup
+                           k2 from-hiccup]
+                       [k1 k2])]
+    (set (concat keys implied-keys))))
+
+(s/def ::registered-compiler-key
+  (s/with-gen
+    registered-compiler-key?
+    #(s/gen (registered-compiler-keys))))
 
 (s/def ::registered-from-format
   (s/with-gen registered-from-format?
@@ -558,11 +629,6 @@
 (s/def ::registered-to-format
   (s/with-gen registered-to-format?
     #(s/gen (set (registered-to-formats)))))
-
-
-(s/def ::registered-compiler-key
-   (s/cat :from-fmt ::registered-from-format
-          :to-fmt ::registered-to-format))
 
 ;; Compiling hiccup with vega etc in it
 
@@ -583,14 +649,19 @@
 (defn embed-png
   [bytes]
   [:img
-   {:alt"compiled vega png"
+   {:alt "compiled vega png"
     :src (str "data:image/png;base64," (base64-encode bytes))}])
+
+
+(def default-embed-opts
+  {:static-embed :png
+   :live-embed? true})
 
 (defn embed-vega-form
   "Embed a single Vega-Lite/Vega visualization as hiccup representing a live/interactive embedding as hiccup;
   Currently private, may be public in future, and name may change."
   ([compile-opts [mode doc & [embed-opts]]]
-   (let [{:as opts :keys [static-embed live-embed?]} (merge (:vega-embed-opts compile-opts) embed-opts)
+   (let [{:as opts :keys [static-embed live-embed?]} (merge default-embed-opts (:vega-embed-opts compile-opts) embed-opts)
          ;; expose id in opts?
          id (str "viz-" (java.util.UUID/randomUUID))
          code (format "vegaEmbed('#%s', %s, %s);" id (json/generate-string doc) (json/generate-string {:mode mode}))]
@@ -604,14 +675,20 @@
           (let [embed-as (s/conform ::static-embed static-embed)]
             (if (= embed-as ::s/invalid)
               "Unable to compile viz"
-              (let [[opt-type opt-val] embed-as]
-                (cond
-                  ;; SVG case; leave as hiccup rep of svg
-                  (or (= opt-type :bool) (= opt-val :svg))
-                  (vega-cli (merge opts {:from-fmt mode :to-fmt (case (first embed-as) :bool :svg :format (second embed-as))}))
-                  ;; return as embedded png
-                  (= opt-val :png)
-                  (embed-png (vega-cli (merge {:from-fmt mode :to-fmt opt-val}))))))))]
+              (try
+                (let [[opt-type opt-val] embed-as]
+                  (cond
+                    ;; default to png, since this will generally be more performant (TODO: test?)
+                    (or (and (= opt-type :bool) opt-val)
+                        (= opt-val :png))
+                    (embed-png (compile doc (merge opts {:from-format mode :to-format :png})))
+                    ;; Use svg as hiccup if requested
+                    (= opt-val :svg)
+                    (compile doc (merge opts {:from-format mode :to-format :svg}))))
+                (catch Throwable t
+                  (log/error "Unable to execute static embed")
+                  (log/error t)
+                  nil)))))]
        (when live-embed?
          [:script {:type "text/javascript"} code])])))
 
@@ -627,11 +704,12 @@
 
 
 (defn- embed-for-html
-  ([doc compile-opts]
+  ([compile-opts doc]
    (compile-tags doc
                  {:vega (partial embed-vega-form compile-opts)
                   :vega-lite (partial embed-vega-form compile-opts)
-                  :markdown (compile doc {:from-fmt :md :to-fmt :hiccup})}))
+                  :markdown #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
+                  :md       #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))}))
                   ;; TODO Add these; Will take front end resolvers as well
                   ;:leaflet-vega (partial embed-vega-form compile-opts)
                   ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
@@ -641,29 +719,30 @@
 (defn ^:no-doc embed
   "Take hiccup or vega/lite doc and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
   When rendered, should present as live html page; Currently semi-private, may be made fully public in future."
-  ([doc {:as opts :keys [embed-fn mode] :or {embed-fn embed-vega-form mode :vega-lite}}]
+  ([doc {:as opts :keys [embed-fn mode] :or {mode :vega-lite}}]
    ;; prewalk doc, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
    ;; rendering using the components above. Leave regular hiccup unchanged).
    ;; TODO finish writing; already hooked in below so will break now
-   (if (map? doc)
-     (embed-fn [mode doc])
-     (clojure.walk/prewalk
-       (fn [form]
-         (cond
-           ;; For vega or vega lite apply the embed-fn (TODO add :markdown elements to hiccup documents)
-           (and (vector? form) (#{:vega :vega-lite :leaflet-vega :leaflet-vega-lite :markdown} (first form)))
-           (embed-fn form)
-           ;; Make sure that any style attrs are properly cast (newer hiccup should do this, but for now)
-           (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style map?))
-           (into [(first form)
-                  (update (second form) :style map->style-string)]
-                 (drop 2 form))
-           ;; If we see a function, call it with the args in form
-           (and (vector? form) (fn? (first form))) 
-           (apply-fn-component form)
-           ;; Else, assume hiccup and leave form alone
-           :else form))
-       doc)))
+   (let [embed-fn (or embed-fn (partial embed-for-html opts))]
+     (if (map? doc)
+       (embed-fn [mode doc])
+       (clojure.walk/prewalk
+         (fn [form]
+           (cond
+             ;; For vega or vega lite apply the embed-fn (TODO add :markdown elements to hiccup documents)
+             (and (vector? form) (#{:vega :vega-lite :leaflet-vega :leaflet-vega-lite :markdown} (first form)))
+             (embed-fn form)
+             ;; Make sure that any style attrs are properly cast (newer hiccup should do this, but for now)
+             (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style map?))
+             (into [(first form)
+                    (update (second form) :style map->style-string)]
+                   (drop 2 form))
+             ;; If we see a function, call it with the args in form
+             (and (vector? form) (fn? (first form))) 
+             (apply-fn-component form)
+             ;; Else, assume hiccup and leave form alone
+             :else form))
+         doc))))
   ([doc]
    (embed doc {})))
 
@@ -723,25 +802,34 @@
         ;; Not allowing this option for now;
         ;(when-not omit-js-libs?
         ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
-        [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]))))
+        [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]
+        header-extras))))
+
 
 ;; Would like to expose this in the future, but not certain about the name/api
 ;; TODO Add some checks to see if we actually need html/body
 (defn- wrap-html
   [doc opts]
-  [:html
-   (html-head doc opts)
-   [:body
-     doc
-     [:div#vis-tooltip {:class "vg-tooltip"}]
-     ;; TODO This shouldn't be included as such for exported html content (I think it raises a warning)
-     [:script {:src "js/compiled/oz.js" :type "text/javascript"}]]])
+  (if-not (= :html (first doc))
+    ;; we only wrap with html tag if needed
+    [:html
+     (html-head doc opts)
+     ;; We only wrap with body tag if needed
+     (if-not (= :body (first doc))
+       [:body doc]
+       doc)]
+       ;; Don't think we need this anymore
+       ;[:div#vis-tooltip {:class "vg-tooltip"}]]]
+       ;; TODO This shouldn't be included as such for exported html content (I think it raises a warning)
+       ;; Then again, should we just include this instead of the vega libs?
+       ;[:script {:src "js/oz.js" :type "text/javascript"}]]]
+    doc))
 
 
 (defn html
-  ([doc {:as opts :keys [from-fmt mode]}]
+  ([doc {:as opts :keys [from-format mode]}]
    (if (map? doc)
-     (html [(or from-fmt mode :vega-lite) doc] opts)
+     (html [(or from-format mode :vega-lite) doc] opts)
      (-> doc
          (embed opts)
          (wrap-html opts)
@@ -768,28 +856,55 @@
               {:omit-vega-libs? true}))
   :end-comment)
    
-;(defn shit
-  ;([x y]
-   ;(println x y))
-  ;([x & {:as opts}]
-   ;(println x opts)))
-;(shit :this :that)
 
-(defmulti export!
-  {:arglists '([doc filepath & {:as opts :keys [to-fmt]}])}
-  (fn [_ _ & {:keys [to-fmt]}]
-    to-fmt))
+;; again is this the right naming convention
+
+(defmulti export!*
+  {:arglists '([doc filepath {:as opts :keys [to-format]}])}
+  (fn [doc _ {:as opts}]
+    (second (compiler-key doc opts))))
 
 ;(defmulti export!
   ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
   ;[doc filepath & {:as opts}])
+
+(defn filename-format
+  [filename]
+  (keyword (extension filename)))
+
+
+(defmethod export!*
+  :default
+  [doc filepath {:as opts}] 
+  ;; Default method is to just call convert and spit to file
+  (spit filepath (compile doc opts)))
+
+
+(defn export!
+  ([doc filepath]
+   (export! doc filepath {}))
+  ([doc filepath {:as opts :keys [to-format]}]
+   ;; Infer the to-format based on filename, unless explicitly set
+   ;; TODO Check if this is safe if weird filename (no suffix?)
+   (let [to-format (or to-format (filename-format filepath))]
+     (println "to-format:" to-format)
+     (export!* doc filepath (merge opts {:to-format to-format}))))
+  ([doc filepath opt-key opt-val & more-opts]
+   (export! doc filepath (merge {opt-key opt-val} more-opts))))
   
 
 ;;; This should also be a defmulti
 ;(defn export!
   ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
-  ;[doc filepath & {:as opts :keys [to-fmt]}]
+  ;[doc filepath & {:as opts :keys [to-format]}]
   ;(spit filepath (html doc opts)))
+
+
+(comment
+  (export!
+    [:div [:h1 "Hello, Dave"] [:p "Why are you doing that Dave?"]]
+    "dave.html")
+  :end-comment)
 
 
 (defn- process-md-block
@@ -820,6 +935,10 @@
     
 
 
+;; I'd like to be able to define my own markdown extensions
+;; Maybe via instaparse?
+;; Roam data?
+
 (defn- ^:no-doc from-markdown
   "Process markdown string into a hiccup document"
   [md-string]
@@ -836,26 +955,51 @@
       (.printStackTrace e))))
 
 
+
+(s/def ::markdown string?)
+(s/def ::edn-string string?)
+(s/def ::json-string string?)
+(s/def ::yaml-string string?)
+
+
+(defmethod compile-args-spec [:markdown :hiccup]
+  [_] (s/cat :doc ::markdown :opts map?))
+(defmethod compile* [:markdown :hiccup]
+  ([doc _] (from-markdown doc)))
+
+(defmethod compile-args-spec [:edn :hiccup]
+  [_] (s/cat :doc ::edn-string :opts map?))
+(defmethod compile* [:edn :hiccup]
+  ([doc _] (edn/read-string doc)))
+
+(defmethod compile-args-spec [:json :hiccup]
+  [_] (s/cat :doc ::json-string :opts map?))
+(defmethod compile* [:json :hiccup]
+  ([doc _] (json/parse-string doc keyword)))
+
+(defmethod compile-args-spec [:yaml :hiccup]
+  [_] (s/cat :doc ::yaml-string :opts map?))
+(defmethod compile* [:yaml :hiccup]
+  ([doc _] (yaml/parse-string doc)))
+
+
 (defn load
   "Reads file and processes according to file type"
-  [filename & {:as opts :keys [format]}]
-  (let [contents (slurp filename)]
-    (case (or (and format (name format))
-              (last (string/split filename #"\.")))
-      "md" (from-markdown contents)
-      "edn" (edn/read-string contents)
-      "json" (json/parse-string contents keyword)
-      "yaml" (yaml/parse-string contents))))
+  [filename & {:as opts :keys [format from-format]}]
+  (let [from-format (or from-format format (keyword (extension filename)))
+        doc (slurp filename)]
+    (compile doc
+             (merge opts
+                    {:from-format (or from-format format)}))))
 
 (defmethod compile* :default
   ([doc {:as opts :keys [tag-compilers]}]
-   (let [key (compiler-key doc opts)]
-     (println "key is:" key)
-     (let [[from-fmt to-fmt] key]
-       (cond-> doc
-         (not= :hiccup from-fmt) (compile* (merge opts {:from-fmt from-fmt :to-fmt :hiccup}))
-         tag-compilers       (compile* (merge opts {:from-fmt :hiccup :to-fmt :hiccup}))
-         (not= :hiccup to-fmt)   (compile* (-> opts (merge {:from-fmt :hiccup :to-fmt to-fmt}) (dissoc :tag-compilers))))))))
+   (let [[from-format to-format :as key] (compiler-key doc opts)]
+     (println "on:" key)
+     (cond-> doc
+       (not= :hiccup from-format) (compile* (merge opts {:from-format from-format :to-format :hiccup}))
+       tag-compilers              (compile* (merge opts {:from-format :hiccup :to-format :hiccup}))
+       (not= :hiccup to-format)   (compile* (-> opts (merge {:from-format :hiccup :to-format to-format}) (dissoc :tag-compilers)))))))
 
 (comment
   (s/conform ::compiler-key [:hiccup :html])
@@ -872,21 +1016,21 @@
      :mark :point
      :encoding {:x {:field :a}
                 :y {:field :b}}}
-    {:from-fmt :vega-lite
-     :to-fmt :png})
+    {:from-format :vega-lite
+     :to-format :png})
   (vega-cli
     {:vega-doc
       {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
        :mark :point
        :encoding {:x {:field :a}
                   :y {:field :b}}}
-     :to-fmt :png
+     :to-format :png
      :output-filename "testing.png"
      :return-result? false})
   (compile
     [:div [:poop "yo dawg"]]
     {:tag-compilers {:poop (fn [_] [:blah "BLOOP"])}
-     :to-fmt :html})
+     :to-format :html})
   (rt/successful? (rt/check `compile {} {:num-tests 10}))
   (sample ::compile-args 1)
   :done-comment)
@@ -898,27 +1042,28 @@
         (let [[_ opts] args]
           (s/valid? (to-spec opts) ret))))
 
+
 (defn compile
-  "General purpose compilation function. Uses `:from-fmt` and `:to-fmt` parameters"
-  {:arglists '([doc & {:keys [from-fmt to-fmt tag-compilers]}])}
+  "General purpose compilation function. Uses `:from-format` and `:to-format` parameters"
+  {:arglists '([doc & {:keys [from-format to-format tag-compilers]}])}
   ([doc opts]
-   ;; Support mode or from-fmt to `compile`, but require compile* registrations to use `:from-fmt`
+   ;; Support mode or from-format to `compile`, but require compile* registrations to use `:from-format`
    ;; This is maybe why we _do_ need this function
-   (let [[from-fmt to-fmt :as key] (compiler-key doc opts)]
-     (println key)
+   (let [[from-format to-format :as key] (compiler-key doc opts)]
+     ;(log/debug "compile key is" (with-out-str (pp/pprint key)))
      (assert (s/valid? ::registered-compiler-key key))
      (cond
-       (or (= :hiccup from-fmt to-fmt)
-           (not ((set [from-fmt to-fmt]) :hiccup)))
+       (or (= :hiccup from-format to-format)
+           (not ((set [from-format to-format]) :hiccup)))
        (compile* doc opts)
-       (= :hiccup from-fmt)
+       (= :hiccup from-format)
        (-> doc
-           (compile* (merge opts {:from-fmt :hiccup :to-fmt :hiccup}))
+           (compile* (merge opts {:from-format :hiccup :to-format :hiccup}))
            (compile* opts))
-       (= :hiccup to-fmt)
+       (= :hiccup to-format)
        (-> doc
            (compile* opts)
-           (compile* (merge opts {:from-fmt :hiccup :to-fmt :hiccup})))))))
+           (compile* (merge opts {:from-format :hiccup :to-format :hiccup})))))))
 
 (deftest exercise-compile-args
   (is (s/exercise ::compile-args)))
@@ -933,8 +1078,8 @@
      :mark :point
      :encoding {:x {:field :a}
                 :y {:field :b}}}
-    {:from-fmt :vega-lite
-     :to-fmt :pdf})
+    {:from-format :vega-lite
+     :to-format :pdf})
   :done-comment)
 
 
@@ -943,7 +1088,10 @@
   [:div
     (if (map? doc)
       [(or mode :vega-lite) doc]
-      (compile-tags doc {}))
+      ;; TODO These compilers should be considered a stopgap; Need to have markdown compilers for frontend as
+      ;; well
+      (compile-tags doc {:md       #(compile (second %) {:from-format :md :to-format :hiccup})
+                         :markdown #(compile (second %) {:from-format :md :to-format :hiccup})}))
     mathjax-script])
 
 
@@ -1079,8 +1227,8 @@
           :or {mode :vega-lite}}]
   (let [gist (apply-opts gist! doc opts)
         gist-url (:url gist)]
-    (println "Gist url:" (:html_url gist))
     (println "Raw gist url:" gist-url)
+    (println "Gist url:" (:html_url gist))
     ;; Should really merge these into gist and return as data...
     (case (doc-type doc)
       :ozviz (println "Ozviz url:" (ozviz-url gist-url))
@@ -1104,23 +1252,33 @@
 
 ;; For the live-view! function below
 (defn- view-file!
-  [{:keys [host port format]} filename context {:keys [kind file]}]
+  [{:keys [host port format from-format]} filename context {:keys [kind file]}]
   ;; ignore delete (some editors technically delete the file on every save!
-  (when (#{:modify :create} kind)
-    (let [contents (slurp filename)]
+  (when (and (#{:modify :create} kind)
+             (not (.isDirectory (io/file filename))))
+    (let [contents (slurp filename)
+          from-format (or from-format format (filename-format filename))]
       ;; if there are differences, then do the thing
       (when-not (= contents
                    (get-in @live/watchers [filename :last-contents]))
         (log/info "Rerendering file:" filename)
         ;; Evaluate the ns form, and whatever forms thereafter differ from the last time we succesfully ran
         ;; Update last-forms in our state atom
-        (view! (load filename :format format) :host host :port port)
+        (when-let [result
+                   (if (#{:clj :cljc} from-format)
+                     (live/reload-file! filename context {:kind kind :file file})
+                     (load filename :from-format from-format))]
+          (view! result :host host :port port))
         (swap! live/watchers assoc-in [filename :last-contents] contents)))))
 
 (defn live-view!
   "Watch file for changes and apply `load` & `view!` to the contents"
   [filename & {:keys [host port format] :as opts}]
   (live/watch! filename (partial view-file! opts)))
+
+(comment
+  (live-view! "/home/csmall/code/polis/client-admin/src/content/privacy.md" :port 10666)
+  :end)
 
 (defn- drop-extension
   [relative-path]
@@ -1192,10 +1350,6 @@
           (.mkdir file))))))
 
 
-(defn- extension
-  [filename]
-  (last (string/split filename #"\.")))
-
 (def ^:private supported-filetypes
   #{"md" "mds" "clj" "cljc" "cljs" "yaml" "json" "edn"})
 
@@ -1223,7 +1377,7 @@
 
 (defn- build-and-view-file!
   [{:as config :keys [view? host port force-update]}
-   {:as build-desc :keys [format from to out-path-fn template-fn html-template-fn as-assets?]}
+   {:as build-desc :keys [format from to out-path-fn template-fn html-template-fn as-assets? compile-opts]}
    filename context {:keys [kind file]}]
   (when (and from (.isDirectory (io/file from)))
     (ensure-out-dir to false))
@@ -1259,17 +1413,18 @@
                     [:div "CLJS Coming soon!"]
                     ;; loading of static files, like md or hiccup
                     :else
-                    (load filename :format format))
-                  ;_ (log/info "step 1:" evaluation)
-                  evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))
-                  ;_ (log/info "step 2:" evaluation)
-                  out-path (compute-out-path build-desc filename)]
-              (ensure-out-dir out-path true)
-              (when view?
-                (log/info "Updating live view")
-                (view! evaluation :host host :port port))
-              (export! evaluation out-path)
-              (swap! live/watchers update filename (partial merge {:last-contents contents :last-eval evaluation})))))))))
+                    (load filename :format format))]
+              (when evaluation
+                (let [;_ (log/info "step 1:" evaluation)
+                      evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))
+                      ;_ (log/info "step 2:" evaluation)
+                      out-path (compute-out-path build-desc filename)]
+                  (ensure-out-dir out-path true)
+                  (when view?
+                    (log/info "Updating live view")
+                    (view! evaluation :host host :port port))
+                  (export! evaluation out-path)
+                  (swap! live/watchers update filename (partial merge {:last-contents contents :last-eval evaluation})))))))))))
 
 
 (def ^:private default-config
@@ -1318,6 +1473,8 @@
     * `:to` - (required) Compiled files go here
     * `:template-fn` - Function which takes Oz hiccup content and returns some new hiccup, presumably placing the content in question in some 
     * `:out-path-fn` - Function used for naming compilation output
+    * `:to-format` - Literal format to use for export!
+    * `:to-format-fn` - Function of input filename to format
     * `:as-assets?` - Pass through as a static assets (for images, css, json or edn data, etc)
       - Note: by default, images, css, etc will pass through anyway
 
@@ -1357,10 +1514,6 @@
            (log/info "Recompiling last viewed file:" file)
            (build-and-view-file! full-config new-spec (:from build-desc) {} {:kind :create :file (io/file file)})))))))
 
-;(reset! last-built-file nil)
-;@last-built-file
-
-
 ;; for purpose of examples below
 ;; Or are they?
 
@@ -1386,10 +1539,13 @@
 
   ;; View a simple plot
   (view!
-    {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
-     :mark :point
-     :encoding {:x {:field :a}
-                :y {:field :b}}}
+    [:div
+      [:markdown "shit me _timbres_, dawn?"]
+      [:vega-lite
+        {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
+         :mark :point
+         :encoding {:x {:field :a}
+                    :y {:field :b}}}]]
     :port 10666)
 
   ;; View a more complex document
@@ -1414,16 +1570,16 @@
   ;; Can kill file watchers and server manually if needed
   ;(kill-watchers!)
   ;(server/stop!)
-  ;(server/start-server! 2392)
+  (server/start-server! 10666)
 
   ;; Run static site generation features
   (build!
-    [{:from "examples/static-site/src/site/"
-      :to "examples/static-site/build/"
+    [{:from "examples/static-site/simple-static-site/src/site/"
+      :to "examples/static-site/simple-static-site/build/"
       :template-fn site-template}
-     ;; If you have static assets, like datasets or imagines which need to be simply copied over
-     {:from "examples/static-site/src/assets/"
-      :to "examples/static-site/build/"
+     ;; If you have static assets, like datasets or images which need to be simply copied over
+     {:from "examples/static-site/simple-static-site/src/assets/"
+      :to "examples/static-site/simple-static-site/build/"
       :as-assets? true}]
     :lazy? false
     :view? true
@@ -1432,4 +1588,21 @@
 
   :end-comment)
 
+
+(def help-message
+  "args: command, &args
+  command options
+  ")
+
+(defn -main
+  [command & args]
+  (case command
+    "help" (println help-message)
+    "build" (let [[build-spec & args'] args
+                  build-spec (edn/read-string build-spec)] 
+              (println "build-spec" (pr-str build-spec))
+              (println "args'" args')
+              (build! build-spec)
+              (println "done calling build"))))
+              ;(a/<!! (a/chan)))))
 

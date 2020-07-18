@@ -178,10 +178,10 @@
                         ;; If long running, log out how long it took
                         (if (async/poll! long-running?)
                           (println (color-str ANSI_YELLOW "Form processed in: " (/ (- (System/currentTimeMillis) t0) 1000.0) "s")))))
-                    (catch Exception e
+                    (catch Throwable t
                       (log/error (color-str ANSI_RED "Error processing form:\n" (ppstr form)))
-                      (log/error e)
-                      (throw e)))))
+                      (log/error t)
+                      (throw t)))))
               (log/info (color-str ANSI_GREEN "Done reloading file: " filename "\n"))
               (catch Exception _
                 (log/error (color-str ANSI_RED "Unable to process all of file: " filename "\n"))))
