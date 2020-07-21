@@ -1,4 +1,4 @@
-{:paths ["src/clj" "resources"]
+{:paths ["src/clj" "src/cljs" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.10.0"}
         org.clojure/clojurescript {:mvn/version "1.10.439"} ;; equivalent of :scope "provided"?
         ;; this appears to be necessary for fiwheel to work for some applications
