@@ -1,7 +1,7 @@
 (ns oz.core
   (:require ["vega-embed" :as vegaEmbed]
-            ["leaflet-vega" :as leafletVega]
-            ["leaflet" :as leaflet]
+            ;["leaflet-vega" :as leafletVega]
+            ;["leaflet" :as leaflet]
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
             [reagent.core :as r]
@@ -189,33 +189,33 @@
 
 
 
-(comment
+;(comment)
   ;; This is still a work in progress
-  (defn ^:private render-leaflet-vega [dom-node]
-    ;(.map leaflet dom-node)
-    (let [m (.map leaflet "map")
-          _ (.setView m (clj->js [51.505 -0.09]) 4)
-          tile (.tileLayer leaflet
-                           "https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png"
-                           (clj->js {:attribution "&copy; <a href=\"http://osm.org/copyright\">OpenStreetMap</a> contributors"}))
+  ;(defn ^:private render-leaflet-vega [dom-node]
+    ;;(.map leaflet dom-node)
+    ;(let [m (.map leaflet "map")
+          ;_ (.setView m (clj->js [51.505 -0.09]) 4)
+          ;tile (.tileLayer leaflet
+                           ;"https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png"
+                           ;(clj->js {:attribution "&copy; <a href=\"http://osm.org/copyright\">OpenStreetMap</a> contributors"}))
 
-          _ (.addTo tile m)
-          marker (.marker leaflet (clj->js [40.7128 -74.0059]))]
-      ;(js/console.log (clj->js [40.7128 -74.0059]))
-      (.addTo marker m)))
-      ;(.bindPopup marker "a red-headed rhino")))
+          ;_ (.addTo tile m)
+          ;marker (.marker leaflet (clj->js [40.7128 -74.0059]))]
+      ;;(js/console.log (clj->js [40.7128 -74.0059]))
+      ;(.addTo marker m)))
+      ;;(.bindPopup marker "a red-headed rhino")))
 
-  ;; This is still a work in progress
-  (defn ^:private leaflet-vega
-    "WIP/Alpha wrapper around leaflet-vega"
-    []
-    (r/create-class
-      {:display-name "leaflet-vega"
-       :component-did-mount (fn [this]
-                              (render-leaflet-vega (rd/dom-node this)))
-       :component-did-update (fn [this [_]]
-                               (render-leaflet-vega (rd/dom-node this)))
-       :reagent-render (fn []
-                         [:div#map])})))
+  ;;; This is still a work in progress
+  ;(defn ^:private leaflet-vega
+    ;"WIP/Alpha wrapper around leaflet-vega"
+    ;[]
+    ;(r/create-class
+      ;{:display-name "leaflet-vega"
+       ;:component-did-mount (fn [this]
+                              ;(render-leaflet-vega (rd/dom-node this)))
+       ;:component-did-update (fn [this [_]]
+                               ;(render-leaflet-vega (rd/dom-node this)))
+       ;:reagent-render (fn []
+                         ;[:div#map])})))
 
 

@@ -1,6 +1,6 @@
 {
   "name": "oz",
-  "version": "1.6.0-alpha12",
+  "version": "1.6.0-alpha13",
   "description": "The client side portion of Oz, your Clojure(Script) toolkit for dynamic, data-driven data visualizations",
   "keywords": [],
   "author": "Christopher Small",
@@ -17,8 +17,6 @@
   "devDependencies": {
     "create-react-class": "^15.6.3",
     "marked": "^0.8.2",
-    "leaflet-vega": "^0.8.6",
-    "leaflet": "^1.6.0",
     "@deck.gl/core": "6.4",
     "@deck.gl/layers": "6.4",
     "@msrvida/sanddance": "^2",
