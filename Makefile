@@ -43,6 +43,7 @@ check-clean-tree:
 
 .PHONY: build
 build:
+	rm -rf resources/oz/public/js && \
 	npm install && \
 	shadow-cljs release app lib && \
 	mkdir -p META-INF/ && \
