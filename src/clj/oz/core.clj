@@ -1262,8 +1262,6 @@
       (when-not (= contents
                    (get-in @live/watchers [filename :last-contents]))
         (log/info "Rerendering file:" filename)
-        ;; Evaluate the ns form, and whatever forms thereafter differ from the last time we succesfully ran
-        ;; Update last-forms in our state atom
         (when-let [result
                    (if (#{:clj :cljc} from-format)
                      (live/reload-file! filename context {:kind kind :file file})
@@ -1424,7 +1422,7 @@
                     (log/info "Updating live view")
                     (view! evaluation :host host :port port))
                   (export! evaluation out-path)
-                  (swap! live/watchers update filename (partial merge {:last-contents contents :last-eval evaluation})))))))))))
+                  (swap! live/watchers update filename (partial merge {:last-contents contents})))))))))))
 
 
 (def ^:private default-config
