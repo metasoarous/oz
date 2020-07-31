@@ -114,6 +114,36 @@
        ANSI_RESET))
 
 
+(defn- process-form!
+  [ns-sym form final-result-chan successful-forms]
+  (let [t0 (System/currentTimeMillis)
+        result-chan (async/chan 1)
+        timeout-chan (async/timeout 1000)
+        long-running? (async/chan 1)]
+    ;; Create a timeout on the result, and log a "in processing" message if necessary
+    (async/go
+      (let [[_ chan] (async/alts! [result-chan timeout-chan])]
+        (when (= chan timeout-chan)
+          (log/info (color-str ANSI_YELLOW "Long running form being processed:\n" (ppstr form)))
+          (async/>! long-running? true))))
+    ;; actually run the code
+    (try
+      (binding [*ns* (create-ns ns-sym)]
+        (let [result (eval form)]
+          ;; put the result on the result chan, to let the go block above know we're done
+          (async/>!! result-chan :done)
+          (when result
+            (async/>!! final-result-chan result))
+          ;; keep track of successfully run forms, so we don't redo work that completed
+          (swap! successful-forms conj form)
+          ;; If long running, log out how long it took
+          (when (async/poll! long-running?)
+            (println (color-str ANSI_YELLOW "Form processed in: " (/ (- (System/currentTimeMillis) t0) 1000.0) "s")))))
+      (catch Throwable t
+        (log/error (color-str ANSI_RED "Error processing form:\n" (ppstr form)))
+        (log/error t)
+        (throw t)))))
+
 
 (defn reload-file! [_ _ {:keys [kind file]}]
   ;; ignore delete (some editors technically delete the file on every save!)
@@ -155,33 +185,7 @@
             ;; Evaluate each of the following forms thereafter differ from the last time we successfully ran
             (try
               (doseq [form diff-forms]
-                (let [t0 (System/currentTimeMillis)
-                      result-chan (async/chan 1)
-                      timeout-chan (async/timeout 1000)
-                      long-running? (async/chan 1)]
-                  ;; Create a timeout on the result, and log a "in processing" message if necessary
-                  (async/go
-                    (let [[_ chan] (async/alts! [result-chan timeout-chan])]
-                      (when (= chan timeout-chan)
-                        (log/info (color-str ANSI_YELLOW "Long running form being processed:\n" (ppstr form)))
-                        (async/>! long-running? true))))
-                  ;; actually run the code
-                  (try
-                    (binding [*ns* (create-ns ns-sym)]
-                      (let [result (eval form)]
-                        ;; put the result on the result chan, to let the go block above know we're done
-                        (async/>!! result-chan :done)
-                        (when result
-                          (async/>!! final-result-chan result))
-                        ;; keep track of successfully run forms, so we don't redo work that completed
-                        (swap! successful-forms conj form)
-                        ;; If long running, log out how long it took
-                        (if (async/poll! long-running?)
-                          (println (color-str ANSI_YELLOW "Form processed in: " (/ (- (System/currentTimeMillis) t0) 1000.0) "s")))))
-                    (catch Throwable t
-                      (log/error (color-str ANSI_RED "Error processing form:\n" (ppstr form)))
-                      (log/error t)
-                      (throw t)))))
+                (process-form! ns-sym form final-result-chan successful-forms))
               (log/info (color-str ANSI_GREEN "Done reloading file: " filename "\n"))
               (catch Exception _
                 (log/error (color-str ANSI_RED "Unable to process all of file: " filename "\n"))))
