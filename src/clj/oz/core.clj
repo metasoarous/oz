@@ -702,6 +702,14 @@
 ;(s/def ::embed-opts
   ;(s/keys :req-un [::live-embed? ::static-embed?]))
 
+(defn- pprint-hiccup
+  [data]
+  [:pre (with-out-str (pp/pprint data))])
+
+(defn- print-hiccup
+  [data]
+  [:code (pr-str data)])
+
 
 (defn- embed-for-html
   ([compile-opts doc]
@@ -709,7 +717,9 @@
                  {:vega (partial embed-vega-form compile-opts)
                   :vega-lite (partial embed-vega-form compile-opts)
                   :markdown #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
-                  :md       #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))}))
+                  :md       #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
+                  :pprint   (comp pprint-hiccup second)
+                  :print    (comp print-hiccup second)}))
                   ;; TODO Add these; Will take front end resolvers as well
                   ;:leaflet-vega (partial embed-vega-form compile-opts)
                   ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
@@ -1091,7 +1101,9 @@
       ;; TODO These compilers should be considered a stopgap; Need to have markdown compilers for frontend as
       ;; well
       (compile-tags doc {:md       #(compile (second %) {:from-format :md :to-format :hiccup})
-                         :markdown #(compile (second %) {:from-format :md :to-format :hiccup})}))
+                         :markdown #(compile (second %) {:from-format :md :to-format :hiccup})
+                         :pprint   (comp pprint-hiccup second)
+                         :print    (comp print-hiccup second)}))
     mathjax-script])
 
 
