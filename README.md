@@ -188,66 +188,6 @@ Also note that while not illustrated above, you can specify multiple maps in the
 So for example, you can do `[:vega-lite stacked-bar {:width 100}]` to override the width.
 
 
-## Sharing features
-
-Looking to share your cool plots or hiccup documents with someone?
-We've got you covered via the `publish!` utility function.
-
-This will post the plot content to a GitHub Gist, and use the gist uuid to create a [vega-editor](http://vega.github.io/editor) link which prints to the screen.
-When you visit the vega-editor link, it will load the gist in question and place the content in the editor.
-It renders the plot, and updates in real time as you tinker with the code, making it a wonderful yet simple tool for sharing and prototyping.
-
-```clojure
-user=> (oz/publish! stacked-bar)
-Gist url: https://gist.github.com/87a5621b0dbec648b2b54f68b3354c3a
-Raw gist url: https://api.github.com/gists/87a5621b0dbec648b2b54f68b3354c3a
-Vega editor url: https://vega.github.io/editor/#/gist/vega-lite/metasoarous/87a5621b0dbec648b2b54f68b3354c3a/e1d471b5a5619a1f6f94e38b2673feff15056146/vega-viz.json
-```
-
-Following the Vega editor url with take you here (click on image to follow):
-
-[![vega-editor](doc/export.small.png)](https://vega.github.io/editor/#/gist/vega-lite/metasoarous/87a5621b0dbec648b2b54f68b3354c3a/e1d471b5a5619a1f6f94e38b2673feff15056146/vega-viz.json)
-
-As mentioned above, we can also share our hiccup documents/dashboards.
-Since Vega Editor knows nothing about hiccup, we've created [ozviz.io](https://ozviz.io) as a tool for loading these documents.
-
-```
-user=> (oz/publish! viz)
-Gist url: https://gist.github.com/305fb42fa03e3be2a2c78597b240d30e
-Raw gist url: https://api.github.com/gists/305fb42fa03e3be2a2c78597b240d30e
-Ozviz url: http://ozviz.io/#/gist/305fb42fa03e3be2a2c78597b240d30e
-```
-
-Try it out: <http://ozviz.io/#/gist/305fb42fa03e3be2a2c78597b240d30e>
-
-
-### Authentication
-
-In order to use the `oz/publish!` function, you must provide authentication.
-
-The easiest way is to pass `:auth "username:password"` to the `oz/publish!` function.
-However, this can be problematic in that you don't want these credentials accidentally strewn throughout your code or `./.lein-repl-history`.
-
-To address this issue, `oz/publish!` will by default try to read authorization parameters from a file at `~/.oz/github-creds.edn`.
-The contents should be a map of authorization arguments, as passed to the [tentacles api](https://github.com/clj-commons/tentacles).
-While you can use `{:auth "username:password"}` in this file, as above, it's far better from a security standpoint to use OAuth tokens.
-
-* First, [generate a new token](https://github.com/settings/tokens/new) (Settings > Developer settings > Personal access tokens):
-  * Enter a description like "Oz api token"
-  * Select the "[ ] **gist**" scope checkbox, to grant gisting permissions for this token
-  * Click "Generate token" to finish
-* Copy the token and paste place in your `~/.oz/github-creds.edn` file as `{:oauth-token "xxxxxxxxxxxxxx"}`
-
-When you're finished, it's a good idea to run `chmod 600 ~/.oz/github-creds.edn` so that only your user can read the credential file.
-
-And that's it!
-Your calls to `(oz/publish! spec)` should now be authenticated.
-
-Sadly, GitHub used to allow the posting of anonymous gists, without the requirement of authentication, which saved us from all this hassle.
-However, they've since [deprecated this](https://blog.github.com/2018-02-18-deprecation-notice-removing-anonymous-gist-creation/).
-If you like, you can [submit a comment](https://github.com/contact) asking that GitHub consider enabling auto-expiring anonymous gists, which would avoid this setup.
-
-
 ## As client side reagent components
 
 If you like, you may also use the Reagent components found at `oz.core` to render vega and/or vega-lite you construct client side.
@@ -386,10 +326,66 @@ Fortunately, setting root var bindings isn't something I've ever needed to do in
 Just be aware that it might come up.
 This seems to be a pretty fundamental Clojure limitation, but I'd be interested to hear from the oracles whether there's any chance of this being supported in a future version of Clojure.
 
-Please note that this functionality is still somewhat experimental, and I appreciate feedback at this early stage.
-So far it's been really wonderful in the project I've been testing it out in, and I hope that you're able to find it useful.
-
 There's also a related function, `oz/live-view!` which will similarly watch a file for changes, `oz/load!` it, then `oz/view!` it.
+
+
+## Sharing features
+
+Looking to share your cool plots or hiccup documents with someone?
+We've got you covered via the `publish!` utility function.
+
+This will post the plot content to a GitHub Gist, and use the gist uuid to create a [vega-editor](http://vega.github.io/editor) link which prints to the screen.
+When you visit the vega-editor link, it will load the gist in question and place the content in the editor.
+It renders the plot, and updates in real time as you tinker with the code, making it a wonderful yet simple tool for sharing and prototyping.
+
+```clojure
+user=> (oz/publish! stacked-bar)
+Gist url: https://gist.github.com/87a5621b0dbec648b2b54f68b3354c3a
+Raw gist url: https://api.github.com/gists/87a5621b0dbec648b2b54f68b3354c3a
+Vega editor url: https://vega.github.io/editor/#/gist/vega-lite/metasoarous/87a5621b0dbec648b2b54f68b3354c3a/e1d471b5a5619a1f6f94e38b2673feff15056146/vega-viz.json
+```
+
+Following the Vega editor url with take you here (click on image to follow):
+
+[![vega-editor](doc/export.small.png)](https://vega.github.io/editor/#/gist/vega-lite/metasoarous/87a5621b0dbec648b2b54f68b3354c3a/e1d471b5a5619a1f6f94e38b2673feff15056146/vega-viz.json)
+
+As mentioned above, we can also share our hiccup documents/dashboards.
+Since Vega Editor knows nothing about hiccup, we've created [ozviz.io](https://ozviz.io) as a tool for loading these documents.
+
+```
+user=> (oz/publish! viz)
+Gist url: https://gist.github.com/305fb42fa03e3be2a2c78597b240d30e
+Raw gist url: https://api.github.com/gists/305fb42fa03e3be2a2c78597b240d30e
+Ozviz url: http://ozviz.io/#/gist/305fb42fa03e3be2a2c78597b240d30e
+```
+
+Try it out: <http://ozviz.io/#/gist/305fb42fa03e3be2a2c78597b240d30e>
+
+### Authentication
+
+In order to use the `oz/publish!` function, you must provide authentication.
+
+The easiest way is to pass `:auth "username:password"` to the `oz/publish!` function.
+However, this can be problematic in that you don't want these credentials accidentally strewn throughout your code or `./.lein-repl-history`.
+
+To address this issue, `oz/publish!` will by default try to read authorization parameters from a file at `~/.oz/github-creds.edn`.
+The contents should be a map of authorization arguments, as passed to the [tentacles api](https://github.com/clj-commons/tentacles).
+While you can use `{:auth "username:password"}` in this file, as above, it's far better from a security standpoint to use OAuth tokens.
+
+* First, [generate a new token](https://github.com/settings/tokens/new) (Settings > Developer settings > Personal access tokens):
+  * Enter a description like "Oz api token"
+  * Select the "[ ] **gist**" scope checkbox, to grant gisting permissions for this token
+  * Click "Generate token" to finish
+* Copy the token and paste place in your `~/.oz/github-creds.edn` file as `{:oauth-token "xxxxxxxxxxxxxx"}`
+
+When you're finished, it's a good idea to run `chmod 600 ~/.oz/github-creds.edn` so that only your user can read the credential file.
+
+And that's it!
+Your calls to `(oz/publish! spec)` should now be authenticated.
+
+Sadly, GitHub used to allow the posting of anonymous gists, without the requirement of authentication, which saved us from all this hassle.
+However, they've since [deprecated this](https://blog.github.com/2018-02-18-deprecation-notice-removing-anonymous-gist-creation/).
+If you like, you can [submit a comment](https://github.com/contact) asking that GitHub consider enabling auto-expiring anonymous gists, which would avoid this setup.
 
 
 ## Static site generation
@@ -464,7 +460,7 @@ This metadata can be written into Markdown files using a yaml markdown metadata 
 
 ```
 ---
-title: Oz static website rock
+title: Oz static websites rock
 tags: oz, dataviz
 ---
 
@@ -485,29 +481,14 @@ You can also use GitHub Pages or S3 or really whatever if you prefer.
 The great thing about static sites is that they are easy and cheap to deploy and scale, so you have plenty of options at your disposal.
 
 
-## Using Oz from Shadow-CLJS
+## Local CLJS development
 
-It is possible to use Oz with Shadow-CLJS but care must be taken that the right Vega and Vega-lite dependencies are provided to Oz. The Oz project depends on Vega and Vega Lite as packaged in CLJSJS. This enables Oz to be able to spin up a web server with Vega loaded from a normal Clojure application. Shadow-CLJS does not support CLJSJS, and requires JavaScript dependencies to be loadable with NPM. To use Oz from Shadow-CLJS,
+Oz is now compiled (on the cljs side) with [Shadow-CLJS](http://shadow-cljs.org/).
+A typical workflow involves running `shadow-cljs watch app devcards`.
+This will compile both the `app.js` and `devcards.js` compile targets (to `resources/oz/public/js/`), meaning you can run the REPL/JVM tooling locally, and it will serve up the latest edition of the `app.js` for calling `view!`, etc.
+But also, visiting <https://localhost:7125/devcards.html> will pull up a live view of a set of example components defined at `src/cljs/oz/core_devcards.cljs`.
+This is the easiest way to tweak functionality and test new features, as editing `src/cljs/oz/core.cljs` will trigger updates to the devcards views.
 
-1. Ensure that you have Shadow-CLJS version 2.8.37 or later installed. Shadow-CLJS before version 2.8.37 did not include CLJSJS shims for Vega and Vega lite.
-2. Check what versions of Vega, Vega-Lite and Vega-Embed your Oz version requires by reading the Oz package CLJSJS dependencies on [Clojars][2]
-3. Install the required versions of Vega, Vega-Lite and Vega-Embed from NPM.
-
-Optionally, check out this [example project][1].
-
-[1]: https://github.com/teodorlu/reagent-shadow-oz-example
-[2]: https://clojars.org/metasoarous/oz/versions/
-
-
-## Local development
-
-For development environment, `dev/utils.clj` has 
-
-``` clojure
-(do-it-fools!)
-```
-
-Then do yer thing.
 
 
 ## Debugging & updating Vega/Vega-Lite versions
@@ -517,20 +498,10 @@ As a side note, I think this speaks volumes of the stellar job (pun intended) th
 More to the point though, if you find yourself unable to do something you expect to be able to do, it's not a bad idea to try
 
 1. Make sure your Oz version is up to date, in case there's a more recent Vega/Vega-Lite versions required there fix the problem.
-2. Check [cljsjs](http://cljsjs.github.io/) to see if there's a more recent version of the Vega/Vega-Lite (or Vega-Embed or Vega-Hover, as appropriate).
-   You can override whatever version of these libraries is getting used by Oz by adding the correspoding `[cljsjs/vega-* ...]` coordinates to your `project.clj` dependencies list.
-   As long as this comes before your Oz version specification, your cljsjs version specification should take precedence.
-3. If there's not a more recent version on cljsjs, but there are more up to date versions of the JS libraries (check the github pages or npm).
-   Read below for instructions.
+2. Check [npm](http://npmjs.com/) to see if there's a more recent version of the [Vega](https://www.npmjs.com/package/vega)/[Vega-Lite](https://www.npmjs.com/package/vega-lite) (or [Vega-Embed](https://www.npmjs.com/package/vega-embed) or [Vega-Tooltip](https://www.npmjs.com/package/vega-tooltip), as appropriate).
+3. Clone Oz, update the `package.json` file, and attempt to rebuild the Oz as described above.
 4. If this still doesn't solve your problem, file an issue on the appropriate Vega GitHub project.
    I've found the developers super responsive to issues.
-
-
-## Updating cljsjs packages
-
-For more context and information, see the cljsjs [creating pacakages](https://github.com/cljsjs/packages/wiki/Creating-Packages), [updating packages](https://github.com/cljsjs/packages/wiki/Updating-packages) and [creating externs](https://github.com/cljsjs/packages/wiki/Creating-Externs) documentation.
-For convenience, I've automated much of this work in the script at `./bin/update-cljsjs.sh`.
-
 
 
 ## License
