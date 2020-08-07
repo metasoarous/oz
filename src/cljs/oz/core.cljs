@@ -1,5 +1,6 @@
 (ns oz.core
   (:require ["vega-embed" :as vegaEmbed]
+            ["vega" :as vega]
             ;["leaflet-vega" :as leafletVega]
             ;["leaflet" :as leaflet]
             [clojure.string :as str]
@@ -11,14 +12,30 @@
 
 (enable-console-print!)
 
+
+(defn- apply-log-level
+  [{:as opts :keys [log-level]}]
+  (if (or (keyword? log-level) (string? log-level))
+    (-> opts
+        (dissoc :log-level)
+        (assoc :logLevel
+               (case (keyword log-level)
+                 :debug vega/Debug
+                 :info vega/Info
+                 :warn vega/Warn)))
+    opts))
+
 (defn ^:no-doc embed-vega
   ([elem doc] (embed-vega elem doc {}))
   ([elem doc opts]
    (when doc
      (let [doc (clj->js doc)
-           opts (merge {:renderer :canvas
+           opts (->> opts
+                     (merge {:renderer :canvas
+                             :mode "vega-lite"})
+                     (apply-log-level))
+           opts (merge {:renderer :canvas}
                         ;; Have to think about how we want the defaults here to behave
-                        :mode "vega-lite"}
                        opts)]
        (-> (vegaEmbed elem doc (clj->js opts))
            (.catch (fn [err]
@@ -39,7 +56,7 @@
      (or (:always-rerender new-opts)
          (not= (dissoc old-doc :data) (dissoc new-doc :data))
          (not= old-opts new-opts))
-     (embed-vega new-doc new-opts)
+     (embed-vega elem new-doc new-opts)
      ;; Otherwise, just update the data component
      ;; TODO This is the hard part to figure out
      ;(= ())

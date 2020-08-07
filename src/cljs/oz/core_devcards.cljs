@@ -28,6 +28,21 @@
                :color {:field :engine}
                :size {:value 80}}}])
 
+(defn log-level-example []
+  [oz/vega-lite
+   {:data {:values sample-data}
+    :mark {:type :point
+           :tooltip true}
+    :transform [{:calculate "info(datum.speed/datum.power)"
+                 :as "sp-ratio"}]
+    :width 500
+    :height 400
+    :encoding {:x {:field :power}
+               :y {:field :speed}
+               :color {:field :engine}
+               :size {:value 80}}}
+   {:log-level :debug}])
+
 (defn simple-data-table-example []
   [oz/data-table
    sample-data
@@ -44,6 +59,10 @@
 (defcard vega-lite-card
   "Simple vega-lite example"
   (devcards/reagent simple-vega-lite-example))
+
+(defcard log-level-card
+  "Simple vega-lite example"
+  (devcards/reagent log-level-example))
 
 (defcard data-table-card
   "Simple data-table example"
