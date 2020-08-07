@@ -10,9 +10,9 @@
     "react-dom": "^16.13.1",
     "vega": "^5.13.0",
     "vega-cli": "^5.13.0",
-    "vega-embed": "^6.9.0",
-    "vega-lite": "^4.13.1",
-    "vega-tooltip": "^0.23.0"
+    "vega-embed": "^6.10.0",
+    "vega-lite": "^4.14.1",
+    "vega-tooltip": "^0.23.2"
   },
   "devDependencies": {
     "create-react-class": "^15.6.3",
