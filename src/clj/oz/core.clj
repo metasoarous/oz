@@ -1550,9 +1550,10 @@
   ;; View a simple plot
   (view!
     [:div
-      [:markdown "shit me _timbres_, dawn?"]
+      [:md "shiver me _timbres_"]
       [:vega-lite
-        {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
+        {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}
+                         {:a 2.3 :b 2.1} {:a 3.5 :b 5.7} {:a 3 :b 9}]}
          :mark :point
          :encoding {:x {:field :a}
                     :y {:field :b}}}]]
