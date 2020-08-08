@@ -1,6 +1,6 @@
 {
   "name": "oz",
-  "version": "1.6.0-alpha20",
+  "version": "1.6.0-alpha22",
   "description": "The client side portion of Oz, your Clojure(Script) toolkit for dynamic, data-driven data visualizations",
   "keywords": [],
   "author": "Christopher Small",
@@ -10,7 +10,7 @@
     "react-dom": "16.13.1",
     "vega": "5.13.0",
     "vega-util": "1.14.1",
-    "vega-embed": "6.9.0",
+    "vega-embed": "6.10.0",
     "vega-lite": "4.14.1",
     "vega-tooltip": "0.23.2"
   },
