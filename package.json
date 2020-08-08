@@ -9,18 +9,13 @@
     "react": "16.13.1",
     "react-dom": "16.13.1",
     "vega": "5.13.0",
-    "vega-cli": "5.13.0",
+    "vega-util": "1.14.1",
     "vega-embed": "6.9.0",
-    "vega-lite": "4.13.1",
-    "vega-tooltip": "0.23.0"
+    "vega-lite": "4.14.1",
+    "vega-tooltip": "0.23.2"
   },
   "devDependencies": {
-    "create-react-class": "^15.6.3",
-    "marked": "^0.8.2",
-    "@deck.gl/core": "6.4",
-    "@deck.gl/layers": "6.4",
-    "@msrvida/sanddance": "^2",
-    "luma.gl": "6.4",
-    "shadow-cljs": "2.8.98"
+    "create-react-class": "15.6.3",
+    "shadow-cljs": "2.10.19"
   }
 }
