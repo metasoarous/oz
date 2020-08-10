@@ -712,7 +712,7 @@
 
 
 (defn- embed-for-html
-  ([compile-opts doc]
+  ([doc compile-opts]
    (compile-tags doc
                  {:vega (partial embed-vega-form compile-opts)
                   :vega-lite (partial embed-vega-form compile-opts)
@@ -725,36 +725,6 @@
                   ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
   ([doc]
    (embed-for-html doc {})))
-
-(defn ^:no-doc embed
-  "Take hiccup or vega/lite doc and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
-  When rendered, should present as live html page; Currently semi-private, may be made fully public in future."
-  ([doc {:as opts :keys [embed-fn mode] :or {mode :vega-lite}}]
-   ;; prewalk doc, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
-   ;; rendering using the components above. Leave regular hiccup unchanged).
-   ;; TODO finish writing; already hooked in below so will break now
-   (let [embed-fn (or embed-fn (partial embed-for-html opts))]
-     (if (map? doc)
-       (embed-fn [mode doc])
-       (clojure.walk/prewalk
-         (fn [form]
-           (cond
-             ;; For vega or vega lite apply the embed-fn (TODO add :markdown elements to hiccup documents)
-             (and (vector? form) (#{:vega :vega-lite :leaflet-vega :leaflet-vega-lite :markdown} (first form)))
-             (embed-fn form)
-             ;; Make sure that any style attrs are properly cast (newer hiccup should do this, but for now)
-             (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style map?))
-             (into [(first form)
-                    (update (second form) :style map->style-string)]
-                   (drop 2 form))
-             ;; If we see a function, call it with the args in form
-             (and (vector? form) (fn? (first form))) 
-             (apply-fn-component form)
-             ;; Else, assume hiccup and leave form alone
-             :else form))
-         doc))))
-  ([doc]
-   (embed doc {})))
 
 
 (defn- shortcut-icon [url]
@@ -841,7 +811,7 @@
    (if (map? doc)
      (html [(or from-format mode :vega-lite) doc] opts)
      (-> doc
-         (embed opts)
+         (embed-for-html opts)
          (wrap-html opts)
          hiccup/html)))
   ([doc]
@@ -1565,6 +1535,7 @@
      [:h1 "Greetings, Earthling"]
      [:p "Take us to your King of Kings. We demand tribute!."]
      [:h2 "Look, and behold"]
+     [:pprint {:yo :dawg}]
      [:vega-lite {:data {:values [{:a 2 :b 3} {:a 5 :b 2} {:a 7 :b 4}]}
                   :mark :point
                   :width 400
