@@ -1529,6 +1529,15 @@
                     :y {:field :b}}}]]
     :port 10666)
 
+  (view! [:vega-lite
+          {:data {:values [{:x 1 :y 1}{:x 2.3 :y 2.1}{:x 3 :y 3}{:x 4 :y 4}{:x 5 :y 5}]}
+           :transform [{:calculate "info(datum.x / datum.y)" :as "ratio"}]
+           :mark {:type "line"}
+           :encoding {:x {:field "x" :type "quantitative"}
+                      :y {:field "y" :type "quantitative"}}}
+          {:log-level :debug}]
+         :port 10666)
+
   ;; View a more complex document
   (export!
     [:div
