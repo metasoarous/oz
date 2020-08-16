@@ -45,7 +45,7 @@ Here's another which focuses on the philosophical ideas behind Vega & Vega-Lite,
 [![Seajure Clojure + Vega/Vega-Lite talk](https://i.imgur.com/SmIPUQtm.png)](https://www.youtube.com/watch?v=hXq5Bb40zZY)
 
 This Readme is the canonical entry point for learning about Oz.
-You may also want to check out the [clojdoc page](https://cljdoc.org/d/metasoarous/oz) (if you're not there already) for API & other docs, and look at the [example-projects directory](https://github.com/metasoarous/oz/tree/master/example-projects) of this project (references occassionally below).
+You may also want to check out the [clojdoc page](https://cljdoc.org/d/metasoarous/oz) (if you're not there already) for API & other docs, and look at the [projects directory](https://github.com/metasoarous/oz/tree/master/resources/oz/examples) of this project (references occassionally below).
 
 
 ### Ecosystem
