@@ -147,8 +147,8 @@
         (.exec (java.lang.Runtime/getRuntime) (str "xdg-open " uri)))
       (Thread/sleep 7500)
       (catch Throwable t
-        (log/error "Unable to open a browser tab for you. Please visit" (str "http://localhost:" port))
-        (log/error t)))))
+        (log/error "Unable to open a browser tab for you. Please visit" (str "http://localhost:" port))))))
+        ;(log/error t)))))
 
 
 (defn get-server-port [] (:port @web-server_))
