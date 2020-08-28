@@ -20,7 +20,7 @@
             [hiccup.core :as hiccup]
             [taoensso.timbre :as log]
             [tentacles.gists :as gists]
-            [clojure.test :as t :refer [deftest is]]
+            [clojure.test :as t :refer [deftest testing is]]
             [clojure.spec.gen.alpha :as gen]
             [clojure.core.async :as a]
             [respeced.test :as rt]
@@ -533,7 +533,7 @@
       (cond
         ;; If we see a function, call it with the args in form
         (and (vector? form) (fn? (first form))) 
-        (apply-fn-component form)
+        (compile-tags (apply-fn-component form) compilers)
         ;; apply compilers
         (vector? form)
         (compiled-form compilers form)
@@ -726,6 +726,10 @@
   ([doc]
    (embed-for-html doc {})))
 
+(deftest functions-as-components
+  (testing "should process nested tags"
+    (is (= [:div {} [:p {} "yo " [:strong {} "dawg"]]]
+           (embed-for-html [(fn [] [:md "yo **dawg**"])])))))
 
 (defn- shortcut-icon [url]
   [:link {:rel "shortcut icon"
@@ -1256,10 +1260,6 @@
   [filename & {:keys [host port format] :as opts}]
   (live/watch! filename (partial view-file! opts)))
 
-(comment
-  (live-view! "/home/csmall/code/polis/client-admin/src/content/privacy.md" :port 10666)
-  :end)
-
 (defn- drop-extension
   [relative-path]
   (string/replace relative-path #"\.\w*$" ""))
@@ -1556,6 +1556,7 @@
   ;; Run live view on a file, and see compiled changes real time
   (kill-watchers!)
   (live-view! "examples/test.md" :port 10666)
+  (live-view! "resources/oz/examples/clj/clj_test.clj")
 
 
   ;; Can kill file watchers and server manually if needed
