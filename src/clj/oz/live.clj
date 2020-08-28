@@ -119,10 +119,11 @@
   (let [t0 (System/currentTimeMillis)
         result-chan (async/chan 1)
         timeout-chan (async/timeout 1000)
-        long-running? (async/chan 1)]
+        long-running? (async/chan 1)
+        error-chan (async/chan 1)]
     ;; Create a timeout on the result, and log a "in processing" message if necessary
     (async/go
-      (let [[_ chan] (async/alts! [result-chan timeout-chan])]
+      (let [[_ chan] (async/alts! [result-chan timeout-chan error-chan])]
         (when (= chan timeout-chan)
           (log/info (color-str ANSI_YELLOW "Long running form being processed:\n" (ppstr form)))
           (async/>! long-running? true))))
@@ -140,6 +141,7 @@
       (catch Throwable t
         (log/error (color-str ANSI_RED "Error processing form:\n" (ppstr form)))
         (log/error t)
+        (async/>!! error-chan t)
         (throw t)))))
 
 
