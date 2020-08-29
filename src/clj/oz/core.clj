@@ -1535,8 +1535,8 @@
         {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}
                          {:a 2.3 :b 2.1} {:a 3.5 :b 5.7} {:a 3 :b 9}]}
          :mark :point
-         :encoding {:x {:field :a}
-                    :y {:field :b}}}]]
+         :encoding {:x {:field :a :type :quantitative}
+                    :y {:field :b :type :quantitative}}}]]
     :port 10666)
 
   (view! [:vega-lite
@@ -1558,8 +1558,8 @@
      [:vega-lite {:data {:values [{:a 2 :b 3} {:a 5 :b 2} {:a 7 :b 4}]}
                   :mark :point
                   :width 400
-                  :encoding {:x {:field "a"}
-                             :y {:field "b"}}}]]
+                  :encoding {:x {:field "a" :type :quantitative}
+                             :y {:field "b" :type :quantitative}}}]]
     ; Should be using options for mode vega/vega-lite TODO
     "test.html")
 
