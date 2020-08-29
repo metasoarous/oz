@@ -10,7 +10,7 @@
             [taoensso.sente.packers.transit :as sente-transit]
             [oz.core :as core])
   (:require-macros
-   [cljs.core.async.macros :as asyncm :refer (go go-loop)]))
+    [cljs.core.async.macros :as asyncm :refer (go go-loop)]))
 
 (timbre/set-level! :info)
 (enable-console-print!)
@@ -93,6 +93,18 @@
                           [:code (pr-str error)]]
                          comp))}))
 
+(add-watch chsk-state ::chsk-connected?
+  (fn [_ _ _ old-value new-value]
+    ;; For some reason new-value v old-value appear to be switched
+    ;; So just going to use a fresh deref on the atom value
+    (if (:open? @chsk-state)
+      (do
+        (js/console.log "chsk now open; sending connection established message.")
+        (go
+          (<! (async/timeout 1000))
+          (chsk-send! [::connection-established])))
+      (when (not= old-value new-value)
+        (js/console.log "chsk closed; attempting to reestablish connection")))))
 
 (defn init []
   (start-router!)

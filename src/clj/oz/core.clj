@@ -1080,6 +1080,8 @@
                          :print    (comp print-hiccup second)}))
     mathjax-script])
 
+(defonce ^:private last-viewed-doc
+  (atom nil))
 
 (defn view!
   "View the given doc in a web browser. Docs for which map? is true are treated as single Vega-Lite/Vega visualizations.
@@ -1095,12 +1097,20 @@
       (prepare-server-for-view! port host)
       (let [hiccup-doc (prep-for-live-view doc opts)]
         ;; if we have a map, just try to pass it through as a vega form
+        (reset! last-viewed-doc hiccup-doc)
         (server/send-all! [::view-doc hiccup-doc]))
       (catch Exception e
         (log/error "error sending plot to server:" e)
         (log/error "Try using a different port?")
         (.printStackTrace e)))))
 
+
+(defmethod server/-event-msg-handler :oz.app/connection-established
+  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
+  (when-let [doc @last-viewed-doc]
+    (let [session (:session ring-req)
+          uid (:uid session)]
+      (server/chsk-send! uid [::view-doc doc]))))
 
 (defn ^:no-doc v!
   "Deprecated version of `view!`, which takes a single vega or vega-lite clojure map `viz`, as well as added `:data`,
