@@ -97,14 +97,22 @@
   (fn [_ _ _ old-value new-value]
     ;; For some reason new-value v old-value appear to be switched
     ;; So just going to use a fresh deref on the atom value
-    (if (:open? @chsk-state)
-      (do
-        (js/console.log "chsk now open; sending connection established message.")
-        (go
-          (<! (async/timeout 1000))
-          (chsk-send! [::connection-established])))
-      (when (not= old-value new-value)
-        (js/console.log "chsk closed; attempting to reestablish connection")))))
+    (when (:open? @chsk-state)
+      (js/console.log "chsk now open; sending connection established message.")
+      (go
+        (<! (async/timeout 1000))
+        (chsk-send! [::connection-established])))))
+    ;; TODO Consider whether we should initialize our own reconnection loop, so that we don't necessarily have
+    ;; open up a new window when we restart the process (and can reconnect faster). Main downside is if you
+    ;; don't realize you still have an old tab open that nabs the session, it won't open a new window; could be
+    ;; confusing
+    ;; This isn't right... need to have a :reconnecting state separately somewhere since this ends up getting
+    ;; triggered in an insane loop due to existing sente reconnection attempts stacking
+      ;(do
+        ;(js/console.log "oz chsk closed; attempting to reestablish connection")))))
+        ;(go
+          ;(<! (async/timeout 2000))
+          ;(sente/chsk-connect! chsk))))))
 
 (defn init []
   (start-router!)
