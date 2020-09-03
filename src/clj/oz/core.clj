@@ -20,7 +20,7 @@
             [hiccup.core :as hiccup]
             [taoensso.timbre :as log]
             [tentacles.gists :as gists]
-            [clojure.test :as t :refer [deftest is]]
+            [clojure.test :as t :refer [deftest testing is]]
             [clojure.spec.gen.alpha :as gen]
             [clojure.core.async :as a]
             [respeced.test :as rt]
@@ -533,7 +533,7 @@
       (cond
         ;; If we see a function, call it with the args in form
         (and (vector? form) (fn? (first form))) 
-        (apply-fn-component form)
+        (compile-tags (apply-fn-component form) compilers)
         ;; apply compilers
         (vector? form)
         (compiled-form compilers form)
@@ -702,50 +702,34 @@
 ;(s/def ::embed-opts
   ;(s/keys :req-un [::live-embed? ::static-embed?]))
 
+(defn- pprint-hiccup
+  [data]
+  [:pre (with-out-str (pp/pprint data))])
+
+(defn- print-hiccup
+  [data]
+  [:code (pr-str data)])
+
 
 (defn- embed-for-html
-  ([compile-opts doc]
+  ([doc compile-opts]
    (compile-tags doc
                  {:vega (partial embed-vega-form compile-opts)
                   :vega-lite (partial embed-vega-form compile-opts)
                   :markdown #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
-                  :md       #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))}))
+                  :md       #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
+                  :pprint   (comp pprint-hiccup second)
+                  :print    (comp print-hiccup second)}))
                   ;; TODO Add these; Will take front end resolvers as well
                   ;:leaflet-vega (partial embed-vega-form compile-opts)
                   ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
   ([doc]
    (embed-for-html doc {})))
 
-(defn ^:no-doc embed
-  "Take hiccup or vega/lite doc and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
-  When rendered, should present as live html page; Currently semi-private, may be made fully public in future."
-  ([doc {:as opts :keys [embed-fn mode] :or {mode :vega-lite}}]
-   ;; prewalk doc, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
-   ;; rendering using the components above. Leave regular hiccup unchanged).
-   ;; TODO finish writing; already hooked in below so will break now
-   (let [embed-fn (or embed-fn (partial embed-for-html opts))]
-     (if (map? doc)
-       (embed-fn [mode doc])
-       (clojure.walk/prewalk
-         (fn [form]
-           (cond
-             ;; For vega or vega lite apply the embed-fn (TODO add :markdown elements to hiccup documents)
-             (and (vector? form) (#{:vega :vega-lite :leaflet-vega :leaflet-vega-lite :markdown} (first form)))
-             (embed-fn form)
-             ;; Make sure that any style attrs are properly cast (newer hiccup should do this, but for now)
-             (and (vector? form) (keyword? (first form)) (map? (second form)) (-> form second :style map?))
-             (into [(first form)
-                    (update (second form) :style map->style-string)]
-                   (drop 2 form))
-             ;; If we see a function, call it with the args in form
-             (and (vector? form) (fn? (first form))) 
-             (apply-fn-component form)
-             ;; Else, assume hiccup and leave form alone
-             :else form))
-         doc))))
-  ([doc]
-   (embed doc {})))
-
+(deftest functions-as-components
+  (testing "should process nested tags"
+    (is (= [:div {} [:p {} "yo " [:strong {} "dawg"]]]
+           (embed-for-html [(fn [] [:md "yo **dawg**"])])))))
 
 (defn- shortcut-icon [url]
   [:link {:rel "shortcut icon"
@@ -831,7 +815,7 @@
    (if (map? doc)
      (html [(or from-format mode :vega-lite) doc] opts)
      (-> doc
-         (embed opts)
+         (embed-for-html opts)
          (wrap-html opts)
          hiccup/html)))
   ([doc]
@@ -1091,9 +1075,13 @@
       ;; TODO These compilers should be considered a stopgap; Need to have markdown compilers for frontend as
       ;; well
       (compile-tags doc {:md       #(compile (second %) {:from-format :md :to-format :hiccup})
-                         :markdown #(compile (second %) {:from-format :md :to-format :hiccup})}))
+                         :markdown #(compile (second %) {:from-format :md :to-format :hiccup})
+                         :pprint   (comp pprint-hiccup second)
+                         :print    (comp print-hiccup second)}))
     mathjax-script])
 
+(defonce ^:private last-viewed-doc
+  (atom nil))
 
 (defn view!
   "View the given doc in a web browser. Docs for which map? is true are treated as single Vega-Lite/Vega visualizations.
@@ -1109,12 +1097,20 @@
       (prepare-server-for-view! port host)
       (let [hiccup-doc (prep-for-live-view doc opts)]
         ;; if we have a map, just try to pass it through as a vega form
+        (reset! last-viewed-doc hiccup-doc)
         (server/send-all! [::view-doc hiccup-doc]))
       (catch Exception e
         (log/error "error sending plot to server:" e)
         (log/error "Try using a different port?")
         (.printStackTrace e)))))
 
+
+(defmethod server/-event-msg-handler :oz.app/connection-established
+  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
+  (when-let [doc @last-viewed-doc]
+    (let [session (:session ring-req)
+          uid (:uid session)]
+      (server/chsk-send! uid [::view-doc doc]))))
 
 (defn ^:no-doc v!
   "Deprecated version of `view!`, which takes a single vega or vega-lite clojure map `viz`, as well as added `:data`,
@@ -1262,8 +1258,6 @@
       (when-not (= contents
                    (get-in @live/watchers [filename :last-contents]))
         (log/info "Rerendering file:" filename)
-        ;; Evaluate the ns form, and whatever forms thereafter differ from the last time we succesfully ran
-        ;; Update last-forms in our state atom
         (when-let [result
                    (if (#{:clj :cljc} from-format)
                      (live/reload-file! filename context {:kind kind :file file})
@@ -1275,10 +1269,6 @@
   "Watch file for changes and apply `load` & `view!` to the contents"
   [filename & {:keys [host port format] :as opts}]
   (live/watch! filename (partial view-file! opts)))
-
-(comment
-  (live-view! "/home/csmall/code/polis/client-admin/src/content/privacy.md" :port 10666)
-  :end)
 
 (defn- drop-extension
   [relative-path]
@@ -1424,7 +1414,7 @@
                     (log/info "Updating live view")
                     (view! evaluation :host host :port port))
                   (export! evaluation out-path)
-                  (swap! live/watchers update filename (partial merge {:last-contents contents :last-eval evaluation})))))))))))
+                  (swap! live/watchers update filename (partial merge {:last-contents contents})))))))))))
 
 
 (def ^:private default-config
@@ -1540,13 +1530,23 @@
   ;; View a simple plot
   (view!
     [:div
-      [:markdown "shit me _timbres_, dawn?"]
+      [:md "shiver me _timbres_"]
       [:vega-lite
-        {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}]}
+        {:data {:values [{:a 1 :b 2} {:a 3 :b 5} {:a 4 :b 2}
+                         {:a 2.3 :b 2.1} {:a 3.5 :b 5.7} {:a 3 :b 9}]}
          :mark :point
-         :encoding {:x {:field :a}
-                    :y {:field :b}}}]]
+         :encoding {:x {:field :a :type :quantitative}
+                    :y {:field :b :type :quantitative}}}]]
     :port 10666)
+
+  (view! [:vega-lite
+          {:data {:values [{:x 1 :y 1}{:x 2.3 :y 2.1}{:x 3 :y 3}{:x 4 :y 4}{:x 5 :y 5}]}
+           :transform [{:calculate "info(datum.x / datum.y)" :as "ratio"}]
+           :mark {:type "line"}
+           :encoding {:x {:field "x" :type "quantitative"}
+                      :y {:field "y" :type "quantitative"}}}
+          {:log-level :debug}]
+         :port 10666)
 
   ;; View a more complex document
   (export!
@@ -1554,17 +1554,19 @@
      [:h1 "Greetings, Earthling"]
      [:p "Take us to your King of Kings. We demand tribute!."]
      [:h2 "Look, and behold"]
+     [:pprint {:yo :dawg}]
      [:vega-lite {:data {:values [{:a 2 :b 3} {:a 5 :b 2} {:a 7 :b 4}]}
                   :mark :point
                   :width 400
-                  :encoding {:x {:field "a"}
-                             :y {:field "b"}}}]]
+                  :encoding {:x {:field "a" :type :quantitative}
+                             :y {:field "b" :type :quantitative}}}]]
     ; Should be using options for mode vega/vega-lite TODO
     "test.html")
 
   ;; Run live view on a file, and see compiled changes real time
   (kill-watchers!)
   (live-view! "examples/test.md" :port 10666)
+  (live-view! "resources/oz/examples/clj/clj_test.clj")
 
 
   ;; Can kill file watchers and server manually if needed

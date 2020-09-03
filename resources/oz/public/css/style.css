@@ -68,8 +68,14 @@ code {
   line-height: 1.5;
   font-size: 14.5px;
   color: #606060;
-  padding-right: 4px;
-  padding-left: 4px;
+  margin-right: 4px;
+  margin-left: 4px;
+}
+
+pre {
+  line-height: 1.5;
+  font-size: 14.5px;
+  color: #606060;
 }
 
 a {

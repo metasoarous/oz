@@ -94,7 +94,7 @@
   ;; Can live reload code as well
 
   (oz/kill-watchers!)
-  (oz/live-reload! "dev/watchtest.clj")
+  (oz/live-view! "resources/oz/examples/clj/clj_test.clj")
 
   :end-examples)
 

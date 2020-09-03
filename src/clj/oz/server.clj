@@ -23,8 +23,11 @@
 
 (def default-port 10666)
 
+
+;; For some reason logging with log/info etc doesn't work as expected in handler functions; Not sure why.
+;; Is this why it's using infof etc as above?
 (log/set-level! :info)
-;; (reset! sente/debug-mode?_ true)
+;(reset! sente/debug-mode?_ false)
 
 (let [packer (sente-transit/get-transit-packer)
       ;; TODO CSRF token set to nil for now; Need to fix this https://github.com/metasoarous/oz/issues/122
@@ -46,6 +49,7 @@
            (fn [_ _ old new]
              (when (not= old new)
                (infof "Connected uids change: %s" new))))
+
 (defn connected-uids? []
   @connected-uids)
 
@@ -147,8 +151,8 @@
         (.exec (java.lang.Runtime/getRuntime) (str "xdg-open " uri)))
       (Thread/sleep 7500)
       (catch Throwable t
-        (log/error "Unable to open a browser tab for you. Please visit" (str "http://localhost:" port))
-        (log/error t)))))
+        (log/error "Unable to open a browser tab for you. Please visit" (str "http://localhost:" port))))))
+        ;(log/error t)))))
 
 
 (defn get-server-port [] (:port @web-server_))

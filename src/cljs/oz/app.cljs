@@ -10,7 +10,7 @@
             [taoensso.sente.packers.transit :as sente-transit]
             [oz.core :as core])
   (:require-macros
-   [cljs.core.async.macros :as asyncm :refer (go go-loop)]))
+    [cljs.core.async.macros :as asyncm :refer (go go-loop)]))
 
 (timbre/set-level! :info)
 (enable-console-print!)
@@ -93,6 +93,26 @@
                           [:code (pr-str error)]]
                          comp))}))
 
+(add-watch chsk-state ::chsk-connected?
+  (fn [_ _ _ old-value new-value]
+    ;; For some reason new-value v old-value appear to be switched
+    ;; So just going to use a fresh deref on the atom value
+    (when (:open? @chsk-state)
+      (js/console.log "chsk now open; sending connection established message.")
+      (go
+        (<! (async/timeout 1000))
+        (chsk-send! [::connection-established])))))
+    ;; TODO Consider whether we should initialize our own reconnection loop, so that we don't necessarily have
+    ;; open up a new window when we restart the process (and can reconnect faster). Main downside is if you
+    ;; don't realize you still have an old tab open that nabs the session, it won't open a new window; could be
+    ;; confusing
+    ;; This isn't right... need to have a :reconnecting state separately somewhere since this ends up getting
+    ;; triggered in an insane loop due to existing sente reconnection attempts stacking
+      ;(do
+        ;(js/console.log "oz chsk closed; attempting to reestablish connection")))))
+        ;(go
+          ;(<! (async/timeout 2000))
+          ;(sente/chsk-connect! chsk))))))
 
 (defn init []
   (start-router!)

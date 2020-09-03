@@ -114,6 +114,46 @@
        ANSI_RESET))
 
 
+(defn- process-form!
+  [ns-sym form new-form-evals]
+  (let [t0 (System/currentTimeMillis)
+        result-chan (async/chan 1)
+        timeout-chan (async/timeout 1000)
+        long-running? (async/chan 1)
+        error-chan (async/chan 1)]
+    ;; Create a timeout on the result, and log a "in processing" message if necessary
+    (async/go
+      (let [[_ chan] (async/alts! [result-chan timeout-chan error-chan])]
+        (when (= chan timeout-chan)
+          (log/info (color-str ANSI_YELLOW "Long running form being processed:\n" (ppstr form)))
+          (async/>! long-running? true))))
+    ;; actually run the code
+    (try
+      (binding [*ns* (create-ns ns-sym)]
+        (let [result (eval form)]
+          ;; put the result on the result chan, to let the go block above know we're done
+          (async/>!! result-chan :done)
+          ;; keep track of successfully run forms, so we don't redo work that completed
+          (swap! new-form-evals conj {:form form :eval result})
+          ;; If long running, log out how long it took
+          (when (async/poll! long-running?)
+            (println (color-str ANSI_YELLOW "Form processed in: " (/ (- (System/currentTimeMillis) t0) 1000.0) "s")))))
+      (catch Throwable t
+        (log/error (color-str ANSI_RED "Error processing form:\n" (ppstr form)))
+        (log/error t)
+        (async/>!! error-chan t)
+        (throw t)))))
+
+
+(defn compile-forms-hiccup
+  [form-evals]
+  [:div
+   (->> form-evals
+        ;; We only render as hiccup forms which are vector literals (for now)
+        (filter (fn [{:keys [form]}]
+                  (vector? form)))
+        (map :eval))])
+
 
 (defn reload-file! [_ _ {:keys [kind file]}]
   ;; ignore delete (some editors technically delete the file on every save!)
@@ -125,25 +165,24 @@
       ;; * forces at least a check if the file is changed at all before doing all the rest of the work below
       ;;   (not sure how much perf benefit there is here)
       ;; * there's sort of a bug and a feature: the (seq diff-forms) bit below ends up not working if
-      ;;   `last-forms` doesn't have everything, which will be the case if(f?) there was an error running
+      ;;   `forms` doesn't have everything, which will be the case if(f?) there was an error running
       ;;   things. This means changing a ns form (e.g.) will trigger an update on forms that failed
       ;; * this prevents the weird multiple callback issue with the way vim saves files creating 3/4 change
       ;;   events
       (when (not= contents last-contents)
         (swap! watchers assoc-in [filename :last-contents] contents)
         (let [forms (reader/read-string (str "[" contents "]"))
-              last-forms (get-in @watchers [filename :last-forms])
+              last-form-evals (get-in @watchers [filename :form-evals])
               ;; gather all the forms that differ from the last run, and any that follow a differing form
               ;; this may evolve into a full blown dependency graph thing
               diff-forms (->> (map vector
                                    (drop 1 forms)
-                                   (concat (drop 1 last-forms)
+                                   (concat (map :form last-form-evals)
                                            (repeat nil)))
                               (drop-while (fn [[f1 f2]] (= f1 f2)))
                               (map first))
               {:keys [ns-sym reference-forms]} (process-ns-form (first forms))
-              successful-forms (atom [])
-              final-result-chan (async/chan (async/sliding-buffer 1))]
+              new-form-evals (atom [])]
               ;; eventually add a final-form evaluation?
               ;final-form (atom nil)]
           ;; if there are differences, then do the thing
@@ -155,42 +194,16 @@
             ;; Evaluate each of the following forms thereafter differ from the last time we successfully ran
             (try
               (doseq [form diff-forms]
-                (let [t0 (System/currentTimeMillis)
-                      result-chan (async/chan 1)
-                      timeout-chan (async/timeout 1000)
-                      long-running? (async/chan 1)]
-                  ;; Create a timeout on the result, and log a "in processing" message if necessary
-                  (async/go
-                    (let [[_ chan] (async/alts! [result-chan timeout-chan])]
-                      (when (= chan timeout-chan)
-                        (log/info (color-str ANSI_YELLOW "Long running form being processed:\n" (ppstr form)))
-                        (async/>! long-running? true))))
-                  ;; actually run the code
-                  (try
-                    (binding [*ns* (create-ns ns-sym)]
-                      (let [result (eval form)]
-                        ;; put the result on the result chan, to let the go block above know we're done
-                        (async/>!! result-chan :done)
-                        (when result
-                          (async/>!! final-result-chan result))
-                        ;; keep track of successfully run forms, so we don't redo work that completed
-                        (swap! successful-forms conj form)
-                        ;; If long running, log out how long it took
-                        (if (async/poll! long-running?)
-                          (println (color-str ANSI_YELLOW "Form processed in: " (/ (- (System/currentTimeMillis) t0) 1000.0) "s")))))
-                    (catch Throwable t
-                      (log/error (color-str ANSI_RED "Error processing form:\n" (ppstr form)))
-                      (log/error t)
-                      (throw t)))))
+                (process-form! ns-sym form new-form-evals))
               (log/info (color-str ANSI_GREEN "Done reloading file: " filename "\n"))
               (catch Exception _
                 (log/error (color-str ANSI_RED "Unable to process all of file: " filename "\n"))))
-            ;; Update last-forms in our state atom, only counting those forms which successfully ran
-            (let [base-forms (take (- (count forms) (count diff-forms)) forms)
-                  new-forms (concat base-forms @successful-forms)
-                  final-result (async/poll! final-result-chan)]
-              (swap! watchers update filename #(merge % {:last-forms new-forms :last-eval final-result}))
-              final-result)))))))
+            ;; Update forms in our state atom, only counting those forms which successfully ran
+            (let [base-form-evals (take (- (count forms) (count diff-forms) 1) last-form-evals)
+                  form-evals (concat base-form-evals @new-form-evals)
+                  final-eval (:eval (last form-evals))]
+              (swap! watchers update filename #(merge % {:form-evals form-evals :final-eval final-eval}))
+              (compile-forms-hiccup form-evals))))))))
 
 
 (defn live-reload!
