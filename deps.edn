@@ -10,7 +10,7 @@
         com.taoensso/timbre {:mvn/version "4.10.0"}
         ;com.clojure-goes-fast/lazy-require {:mvn/version "0.1.1"}
         aleph {:mvn/version "0.4.6"}
-        ring {:mvn/version "1.7.1"}
+        ring {:mvn/version "1.8.1"}
         ring/ring-defaults {:mvn/version "0.3.2"}
         bk/ring-gzip {:mvn/version "0.3.0"}
         ring-cljsjs {:mvn/version "0.1.0"}
