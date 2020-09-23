@@ -23,8 +23,8 @@
            :tooltip true}
     :width 500
     :height 400
-    :encoding {:x {:field :power}
-               :y {:field :speed}
+    :encoding {:x {:field :power :type :quantitative}
+               :y {:field :speed :type :quantitative}
                :color {:field :engine}
                :size {:value 80}}}])
 
@@ -37,11 +37,25 @@
                  :as "sp-ratio"}]
     :width 500
     :height 400
-    :encoding {:x {:field :power}
-               :y {:field :speed}
+    :encoding {:x {:field :power :type :quantitative}
+               :y {:field :speed :type :quantitative}
                :color {:field :engine}
                :size {:value 80}}}
    {:log-level :debug}])
+
+(defn select-logging-example []
+  [oz/vega-lite
+   {:data {:values sample-data}
+    :mark {:type :point
+           :tooltip true}
+    :selection {:brush {:type :interval}}
+    :width 500
+    :height 400
+    :encoding {:x {:field :power :type :quantitative}
+               :y {:field :speed :type :quantitative}
+               :color {:field :engine}
+               :size {:value 80}}}
+   {:log-selections [:brush]}])
 
 (defn simple-data-table-example []
   [oz/data-table
@@ -61,12 +75,16 @@
   (devcards/reagent simple-vega-lite-example))
 
 (defcard log-level-card
-  "Simple vega-lite example"
+  "Simple vega-lite example with transform calculation logging"
   (devcards/reagent log-level-example))
 
 (defcard data-table-card
   "Simple data-table example"
   (devcards/reagent simple-data-table-example))
+
+(defcard select-logging-card
+  "Simple vega-lite example with basic selection logging"
+  (devcards/reagent select-logging-example))
 
 (defn ^:export main [] (devcards.core/start-devcard-ui!))
 

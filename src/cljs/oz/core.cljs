@@ -27,19 +27,28 @@
 
 (defn ^:no-doc embed-vega
   ([elem doc] (embed-vega elem doc {}))
-  ([elem doc opts]
+  ([elem doc {:as opts :keys [log-selections view-callback]}]
    (when doc
      (let [doc (clj->js doc)
-           opts (->> opts
-                     (merge {:renderer :canvas
-                             :mode "vega-lite"})
-                     (apply-log-level))
+           opts (-> opts
+                    (->> (merge {:renderer :canvas
+                                 :mode "vega-lite"}))
+                    (apply-log-level)
+                    (dissoc :log-selections))
            opts (merge {:renderer :canvas}
                         ;; Have to think about how we want the defaults here to behave
                        opts)]
-       (-> (vegaEmbed elem doc (clj->js opts))
-           (.catch (fn [err]
-                     (js/console.log err))))))))
+       (cond-> (vegaEmbed elem doc (clj->js opts))
+         log-selections (.then (fn [embed]
+                                 (let [view (.-view embed)]
+                                   (.addEventListener view "mouseup"
+                                     (fn [& _]
+                                       (doseq [selection log-selections]
+                                         (let [vals (.signal view (str (name selection)))]
+                                           (js/console.log vals))))))))
+         view-callback  (.then view-callback)
+         true           (.catch (fn [err]
+                                  (js/console.log err))))))))
 
 ;; WIP; TODO Finish figuring this out; A little thornier than I thought, because data can come in so many
 ;; different shapes; Should clojure.spec this out:
