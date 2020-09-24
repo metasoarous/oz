@@ -1026,11 +1026,10 @@
         (let [[_ opts] args]
           (s/valid? (to-spec opts) ret))))
 
-
 (defn compile
   "General purpose compilation function. Uses `:from-format` and `:to-format` parameters"
   {:arglists '([doc & {:keys [from-format to-format tag-compilers]}])}
-  ([doc opts]
+  ([doc {:as opts :keys [tag-compilers]}]
    ;; Support mode or from-format to `compile`, but require compile* registrations to use `:from-format`
    ;; This is maybe why we _do_ need this function
    (let [[from-format to-format :as key] (compiler-key doc opts)]
@@ -1041,13 +1040,14 @@
            (not ((set [from-format to-format]) :hiccup)))
        (compile* doc opts)
        (= :hiccup from-format)
-       (-> doc
-           (compile* (merge opts {:from-format :hiccup :to-format :hiccup}))
-           (compile* opts))
+       (cond-> doc
+         ;; check for tag-compilers before doing the hiccup -> hiccup conversions
+         tag-compilers (compile* (merge opts {:from-format :hiccup :to-format :hiccup}))
+         :always (compile* opts))
        (= :hiccup to-format)
-       (-> doc
-           (compile* opts)
-           (compile* (merge opts {:from-format :hiccup :to-format :hiccup})))))))
+       (cond-> doc
+         :always (compile* opts)
+         tag-compilers (compile* (merge opts {:from-format :hiccup :to-format :hiccup})))))))
 
 (deftest exercise-compile-args
   (is (s/exercise ::compile-args)))
