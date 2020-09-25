@@ -191,9 +191,9 @@
 
 (s/def ::head-extras ::hiccup)
 
-(def vega-version "5.13.0")
-(def vega-lite-version "4.13.1")
-(def vega-embed-version "6.9.0")
+(def vega-version "5.16.1")
+(def vega-lite-version "4.16.2")
+(def vega-embed-version "6.12.2")
 
 
 (s/fdef vega-cli-installed?
