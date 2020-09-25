@@ -13,8 +13,8 @@
     "vega-util": "1.15.3",
     "vega-embed": "6.12.2",
     "vega-tooltip": "0.24.2",
-    "vega-loader": "4.3.3",
-    "vega-canvas": "1.2.5"
+    "vega-loader": "4.3.2",
+    "vega-canvas": "1.2.4"
   },
   "devDependencies": {
     "create-react-class": "15.6.3",
