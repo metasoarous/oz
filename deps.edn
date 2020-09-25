@@ -13,7 +13,6 @@
         ring {:mvn/version "1.8.1"}
         ring/ring-defaults {:mvn/version "0.3.2"}
         bk/ring-gzip {:mvn/version "0.3.0"}
-        ring-cljsjs {:mvn/version "0.1.0"}
         compojure {:mvn/version "1.6.1"}
         ;hiccup {:mvn/version "1.0.5"}
         hiccup {:mvn/version "2.0.0-alpha2"}

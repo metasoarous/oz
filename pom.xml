@@ -4,7 +4,7 @@
   <groupId>metasoarous</groupId>
   <artifactId>oz</artifactId>
   <packaging>jar</packaging>
-  <version>1.6.0-alpha28</version>
+  <version>1.6.0-alpha29</version>
   <name>oz</name>
   <description>Great and powerful data visualizations and scientific documents in Clojure using Vega and Vega-lite</description>
   <url>http://github.com/metasoarous/oz</url>
@@ -80,11 +80,6 @@
       <groupId>org.clojure</groupId>
       <artifactId>spec.alpha</artifactId>
       <version>0.2.176</version>
-    </dependency>
-    <dependency>
-      <groupId>ring-cljsjs</groupId>
-      <artifactId>ring-cljsjs</artifactId>
-      <version>0.1.0</version>
     </dependency>
     <dependency>
       <groupId>compojure</groupId>
