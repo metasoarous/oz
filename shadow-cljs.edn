@@ -13,6 +13,7 @@
                      :compiler-options {:devcards true}
                      :modules {:devcards {:init-fn oz.core-devcards/main}}}
           :app {:target :browser
+                :compiler-options {:output-feature-set :es8}
                 :output-dir "resources/oz/public/js"
                 :modules {:app {:entries [oz.app]
                                 :init-fn oz.app/init}}
