@@ -773,7 +773,9 @@
             (shortcut-icon (or shortcut-icon-url "http://ozviz.io/oz.svg")))]
         ;; QUESTION Possible to embed these directly?
         (when-not omit-styles?
-          [[:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
+          [
+           ;[:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
+           [:style (slurp (io/resource "oz/public/css/style.css"))]
            [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
            [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}]]) 
         ;; TODO Ideally we wouldn't need these, and inclusion of the compiled oz target should be enough; However,
@@ -1536,8 +1538,9 @@
                          {:a 2.3 :b 2.1} {:a 3.5 :b 5.7} {:a 3 :b 9}]}
          :mark :point
          :encoding {:x {:field :a :type :quantitative}
-                    :y {:field :b :type :quantitative}}}]]
-    :port 10666)
+                    :y {:field :b :type :quantitative}}}]
+      [:p "What do you think about that?"]])
+    ;:port 10666)
 
   (view! [:vega-lite
           {:data {:values [{:x 1 :y 1}{:x 2.3 :y 2.1}{:x 3 :y 3}{:x 4 :y 4}{:x 5 :y 5}]}
