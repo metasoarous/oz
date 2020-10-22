@@ -8,16 +8,14 @@
   "dependencies": {
     "react": "16.13.1",
     "react-dom": "16.13.1",
-    "vega": "5.16.1",
-    "vega-lite": "4.16.2",
-    "vega-util": "1.15.3",
+    "vega": "5.17.0",
+    "vega-lite": "4.17.0",
+    "vega-util": "1.16.0",
     "vega-embed": "6.12.2",
-    "vega-tooltip": "0.24.2",
-    "vega-loader": "4.3.2",
-    "vega-canvas": "1.2.4"
+    "vega-canvas": "1.2.6"
   },
   "devDependencies": {
     "create-react-class": "15.6.3",
-    "shadow-cljs": "2.11.4"
+    "shadow-cljs": "2.11.5"
   }
 }
