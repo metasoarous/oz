@@ -871,22 +871,31 @@
    (export! doc filepath {}))
   ([doc filepath {:as opts :keys [to-format]}]
    ;; Infer the to-format based on filename, unless explicitly set
-   ;; TODO Check if this is safe if weird filename (no suffix?)
+   ;; TODO Consider what to do if we get a weird filename (no suffix?)
    (let [to-format (or to-format (filename-format filepath))]
-     (println "to-format:" to-format)
      (export!* doc filepath (merge opts {:to-format to-format}))))
   ([doc filepath opt-key opt-val & more-opts]
    (export! doc filepath (merge {opt-key opt-val} more-opts))))
-  
 
-;;; This should also be a defmulti
-;(defn export!
-  ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
-  ;[doc filepath & {:as opts :keys [to-format]}]
-  ;(spit filepath (html doc opts)))
-
-
+(defmethod export!* :png
+  ([doc filepath {:as opts}]
+   (let [from-format (first (compiler-key doc opts))]
+     (vega-cli (merge opts
+                      {:vega-doc doc
+                       :to-format :png
+                       :output-filename filepath
+                       :return-result? false})))))
 (comment
+  (export!
+    (read-string (slurp "resources/oz/examples/vega/basic-vega.edn"))
+    "vega-test.png"
+    :mode :vega)
+  (export!
+    {:data {:values [{:a 1 :b 2} {:a 3 :b 4}]}
+     :mark :point
+     :encoding {:x {:field :a}
+                :y {:field :b}}}
+    "vl-test.png")
   (export!
     [:div [:h1 "Hello, Dave"] [:p "Why are you doing that Dave?"]]
     "dave.html")
