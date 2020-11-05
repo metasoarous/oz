@@ -451,7 +451,7 @@
   [_] (s/cat :doc ::vega-lite :opts ::vega-compile-opts))
 (defmethod compile* [:vega-lite :svg]
   ;([doc opts] (vega-cli (merge opts {:vega-doc doc})))
-  ([doc _] (darkstar/vega-lite-spec->svg doc)))
+  ([doc _] (darkstar/vega-lite-spec->svg (json/encode doc))))
 
 (defmethod compile-args-spec [:vega-lite :vega]
   [_] (s/cat :doc ::vega-lite :opts ::vega-compile-opts))
@@ -470,7 +470,7 @@
   [_] (s/cat :doc ::vega :opts ::vega-compile-opts))
 (defmethod compile* [:vega :svg]
   ;([doc opts] (vega-cli (merge opts {:vega-doc doc})))
-  ([doc _] (darkstar/vega-spec->svg doc)))
+  ([doc _] (darkstar/vega-spec->svg (json/encode doc))))
 
 (defmethod compile-args-spec [:vega :pdf]
   [_] (s/cat :doc ::vega :opts ::vega-compile-opts))
@@ -885,7 +885,14 @@
                        :to-format :png
                        :output-filename filepath
                        :return-result? false})))))
+
 (comment
+  (export!
+    {:data {:values [{:a 1 :b 2} {:a 3 :b 4}]}
+     :mark :point
+     :encoding {:x {:field :a}
+                :y {:field :b}}}
+    "test.svg")
   (export!
     (read-string (slurp "resources/oz/examples/vega/basic-vega.edn"))
     "vega-test.png"
