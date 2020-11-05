@@ -44,6 +44,7 @@ check-clean-tree:
 .PHONY: build
 build:
 	rm -rf resources/oz/public/js && \
+	rm -rf .shadow-cljs && \
 	npm install && \
 	shadow-cljs release app lib && \
 	clojure -A:pack mach.pack.alpha.skinny --no-libs --project-path target/oz.jar
