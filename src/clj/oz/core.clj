@@ -867,6 +867,15 @@
 
 
 (defn export!
+  "Compile `doc` to `filepath` according to `opts` map. If `:to-format` is not specified, format is
+  inferred from the `filepath` extension.
+
+  Default behavior is to call `compile` on the doc, and spit the results to `filepath`. Thus, `opts`
+  map will in general be processed as with `compile`.
+
+  ALPHA FEATURE: You may override the export processing for a particular value of `:to-format` using the
+  export!* multimethod. However, as with `compile*`, this ability may be superceded by a more robust
+  registration function  in the future, so use at your own risk."
   ([doc filepath]
    (export! doc filepath {}))
   ([doc filepath {:as opts :keys [to-format]}]
