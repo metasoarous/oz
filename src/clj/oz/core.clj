@@ -1045,7 +1045,21 @@
           (s/valid? (to-spec opts) ret))))
 
 (defn compile
-  "General purpose compilation function. Uses `:from-format` and `:to-format` parameters"
+  "General purpose compilation function. Uses `:from-format` and `:to-format` parameters of `opts`
+  map to determine how to compile the `doc` argument. If `:from-format` is not specified, `:vega-lite`
+  is assumed for maps and `:hiccup` for vectors; `:to-format` option _must_ be specified.
+
+  If you are working with `:hiccup` (even as an intermediary, say between :markdown and :html), the
+  `:tag-compilers` map may specify a map of hiccup tags to functions taking and returning hiccup forms.
+
+  Specific compilations may support additional features. For example, compiling to `:html` will support
+  all of the options that the `oz/html` function supports.
+  
+  ALPHA FEATURE: This function can be extended by implementing the `compile*` method on key
+  [from-format to-format]. If you define one of these methods to or from `:hiccup`, it will automatically
+  be possible to compile from or to any other format for which `:hiccup` already has a compiler
+  definition. This functionality may be superceded by a registration function/API in the future, for
+  more robust registration of specs, available options documentation, etc."
   {:arglists '([doc & {:keys [from-format to-format tag-compilers]}])}
   ([doc {:as opts :keys [tag-compilers]}]
    ;; Support mode or from-format to `compile`, but require compile* registrations to use `:from-format`
