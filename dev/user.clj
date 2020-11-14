@@ -61,7 +61,7 @@
 
 
   ;; vega example
-  (def contour-plot (json/parse-string (slurp "resources/oz/examples/contour-lines.vega.json"))) 
+  (def contour-plot (json/parse-string (slurp "resources/oz/examples/vega/contour-lines.vega.json")))
   (oz/view! contour-plot :mode :vega)
 
   ;; Note that to publish vega, you must set :mode
