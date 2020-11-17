@@ -873,6 +873,9 @@
   Default behavior is to call `compile` on the doc, and spit the results to `filepath`. Thus, `opts`
   map will in general be processed as with `compile`.
 
+  As with compile, by default maps `doc` values will be assumed to be `:vega-lite`, unless `:mode`
+  or `:from-format` opts are explicitly set to `:vega`.
+
   ALPHA FEATURE: You may override the export processing for a particular value of `:to-format` using the
   export!* multimethod. However, as with `compile*`, this ability may be superceded by a more robust
   registration function  in the future, so use at your own risk."
