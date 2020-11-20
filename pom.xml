@@ -4,7 +4,7 @@
   <groupId>metasoarous</groupId>
   <artifactId>oz</artifactId>
   <packaging>jar</packaging>
-  <version>1.6.0-alpha32</version>
+  <version>1.6.0-alpha33</version>
   <name>oz</name>
   <description>Great and powerful data visualizations and scientific documents in Clojure using Vega and Vega-lite</description>
   <url>http://github.com/metasoarous/oz</url>
@@ -215,14 +215,6 @@
       <groupId>org.clojure</groupId>
       <artifactId>core.async</artifactId>
       <version>0.4.490</version>
-    </dependency>
-    <!--This must be left in here so that cljdocs can build;
-      can't use :scope "provided" in deps.edn, since doesn't propogate through.-->
-    <dependency>
-      <groupId>clojupyter</groupId>
-      <artifactId>clojupyter</artifactId>
-      <version>0.3.2</version>
-      <scope>provided</scope>
     </dependency>
   </dependencies>
 </project>

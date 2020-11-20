@@ -56,6 +56,7 @@ release: check-clean-tree build
 	git commit -m "add build targets" && \
 	git push origin && \
 	clojure -Spom && \
+	./bin/munge-provided-deps.clj && \
 	mvn -e deploy:deploy-file -Dfile=target/oz.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DpomFile=pom.xml
 
 .PHONY: clean
