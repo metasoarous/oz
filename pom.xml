@@ -220,7 +220,7 @@
       can't use :scope "provided" in deps.edn, since doesn't propogate through.-->
     <dependency>
       <groupId>clojupyter</groupId>
-      <artifactId>clojupyter/artifactId>
+      <artifactId>clojupyter</artifactId>
       <version>0.3.2</version>
       <scope>provided</scope>
     </dependency>
