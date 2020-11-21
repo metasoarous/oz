@@ -1,4 +1,4 @@
-(ns clj-test)
+(ns oz.examples.clj.clj-test)
 
 [:h1 "yo dawgs"]
 
