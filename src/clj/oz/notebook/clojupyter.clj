@@ -71,21 +71,6 @@
      ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
      ;; rendering using the components above. Leave regular hiccup unchanged).
      ;; TODO finish writing; already hooked in below so will break now
-     (clojure.walk/prewalk
-       (fn [x] (if (and (coll? x) (#{:vega :vega-lite} (first x)))
-                 (embed-fn x)
-                 x))
-       spec))
-    ([spec]
-     (embed spec {})))
-
-  (defn ^:no-doc embed
-    "Take hiccup or vega/lite spec and embed the vega/lite portions using vegaEmbed, as hiccup :div and :script blocks.
-    When rendered, should present as live html page; Currently semi-private, may be made fully public in future."
-    ([spec {:as opts :keys [embed-fn] :or {embed-fn live-embed}}]
-     ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
-     ;; rendering using the components above. Leave regular hiccup unchanged).
-     ;; TODO finish writing; already hooked in below so will break now
      (if (map? spec)
        (embed-fn spec)
        (clojure.walk/prewalk
@@ -107,7 +92,7 @@
         (clojupyter.protocol.mime-convertible/stream-to-string
           ;; TODO switch back to oz.core/embed once this issue is resolved
           ;{:text/html (hiccup/html (oz/embed spec {:embed-fn live-embed}))}
-          {:text/html (hiccup/html (embed spec {:embed-fn live-embed}))}))))
+          {:text/html (hiccup/html (oz/embed-for-html spec))}))))
   
   (catch Exception e
     (log/debug "Unable to compile oz.notebook.clojupyter; Please explicitly add clojupyter to your dependencies if you would like to use it.")))

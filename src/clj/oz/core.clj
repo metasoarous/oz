@@ -711,7 +711,7 @@
   [:code (pr-str data)])
 
 
-(defn- embed-for-html
+(defn embed-for-html
   ([doc compile-opts]
    (compile-tags doc
                  {:vega (partial embed-vega-form compile-opts)
@@ -1575,7 +1575,6 @@
          [:br]
          doc])])
 
-
   ;; View a simple plot
   (view!
     [:div
@@ -1637,6 +1636,16 @@
     :view? true
     :port 10666)
     ;:root-dir "examples/static-site/build")
+
+  (clojure.walk/postwalk
+    (fn [{:as elmt :keys [tag attrs]}]
+      (if tag
+        (update elmt :attrs merge attrs)
+        elmt))
+    {:tag "shit"
+     :content
+     [{:tag "gangsta"
+       :content "yo"}]})
 
   :end-comment)
 

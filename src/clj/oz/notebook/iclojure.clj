@@ -18,5 +18,5 @@
        :content spec}
       ;; otherwise assume hiccup, run embed code
       {:content-type "text/html"
-       :content (hiccup/html (oz/embed spec))})))
+       :content (hiccup/html (oz/embed-for-html spec))})))
 
