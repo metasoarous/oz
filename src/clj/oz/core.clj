@@ -711,18 +711,25 @@
   [:code (pr-str data)])
 
 
-(defn embed-for-html
+(defn ^:no-doc embed-for-html
+  "This is a semi-private function that takes a hiccup or vega document and uses [[compile-tags]] to return hiccup that:
+  * embeds any vega documents, by default as both a compiled png and as a live view
+  * compiled `:markdown` or `:md` blocks to hiccup
+  * `:pprint` blocks as pretty printed strings in pre blocks
+  * `:print` blocks similarly"
   ([doc compile-opts]
-   (compile-tags doc
-                 {:vega (partial embed-vega-form compile-opts)
-                  :vega-lite (partial embed-vega-form compile-opts)
-                  :markdown #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
-                  :md       #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
-                  :pprint   (comp pprint-hiccup second)
-                  :print    (comp print-hiccup second)}))
-                  ;; TODO Add these; Will take front end resolvers as well
-                  ;:leaflet-vega (partial embed-vega-form compile-opts)
-                  ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
+   (if (map? doc)
+     (embed-for-html [:vega-lite doc] (compile-opts))
+     (compile-tags doc
+                   {:vega (partial embed-vega-form compile-opts)
+                    :vega-lite (partial embed-vega-form compile-opts)
+                    :markdown #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
+                    :md       #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
+                    :pprint   (comp pprint-hiccup second)
+                    :print    (comp print-hiccup second)})))
+                    ;; TODO Add these; Will take front end resolvers as well
+                    ;:leaflet-vega (partial embed-vega-form compile-opts)
+                    ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
   ([doc]
    (embed-for-html doc {})))
 
