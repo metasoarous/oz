@@ -98,7 +98,7 @@
 (s/def ::vega-like
   (s/or :vega-lite ::vega-lite :vega ::vega))
 
-(deftest exercise-vega
+(deftest ^:no-doc exercise-vega
   (is (sample ::vega))
   (is (s/exercise ::vega-like)))
 
@@ -119,14 +119,14 @@
         (s/gen (s/cat :tag ::tag :body (s/* any?)))))))
 
 ;; Translate to tests?
-(deftest exercise-hiccup
+(deftest ^:no-doc exercise-hiccup
   (is (s/exercise ::hiccup))
   (is (s/conform ::hiccup [:div {:styles {}} [:h1 "some shit"] [:p "ya know?"]])))
 
 
 (s/def ::document (s/or :hiccup ::hiccup :vega map?))
 
-(deftest exercise-document
+(deftest ^:no-doc exercise-document
   (is (s/exercise ::document)))
 
 (s/def ::input-filename string?)
@@ -146,7 +146,7 @@
 (s/def ::base-vega-compile-opts
   (s/keys :opt-un []))
 
-(defn choose-vega-compiler
+(defn ^:no-doc choose-vega-compiler
   [{:keys [vega-compiler to-format]}]
   (or vega-compiler
       ;; Prefer grall for svg and vega output
@@ -169,7 +169,7 @@
   (s/multi-spec vega-compile-opts-spec (fn [genval _] genval)))
 
 
-(deftest exercise-vega-cli-opts
+(deftest ^:no-doc exercise-vega-cli-opts
   (is (s/exercise ::vega-cli-opts))
   (is (s/exercise ::vega-compile-opts)))
 
@@ -205,7 +205,7 @@
 (def installed-clis
   (atom {}))
 
-(defn -check-vega-cli-installed? [mode]
+(defn ^:no-doc -check-vega-cli-installed? [mode]
   (= 0 (:exit (shell/sh "which" (case mode :vega-lite "vl2svg" :vega "vg2svg")))))
 
 (defn- vega-cli-installed? [mode]
@@ -216,7 +216,7 @@
         (swap! installed-clis mode status)
         status)))
 
-(deftest test-vega-cli-installed?
+(deftest ^:no-doc test-vega-cli-installed?
   (is (= true (vega-cli-installed? :vega)))
   (is (= true (vega-cli-installed? :vega-lite))))
 
@@ -310,7 +310,7 @@
 (s/def ::tag-compilers
   (s/map-of ::tag ::tag-compiler))
 
-(deftest exercise-tag-compiler
+(deftest ^:no-doc exercise-tag-compiler
   (is (s/exercise ::tag-compiler)))
 
 ;; TODO QUESTION
@@ -335,7 +335,7 @@
      [(get extension-formats from-format from-format)
       (or to-format :hiccup)])))
 
-(defmulti compile-args-spec
+(defmulti ^:no-doc compile-args-spec
   (partial apply compiler-key))
 
 ;; Warning! Changing the defmulti above doesn't take on reload! Have to restart repl :-/
@@ -397,7 +397,7 @@
     (io/copy xin xout)
     (.toByteArray xout)))
 
-(defn bytes->file
+(defn ^:no-doc bytes->file
   [file bytes]
   (with-open [out (io/output-stream file)]
     (.write out bytes)))
@@ -541,7 +541,7 @@
         :else form))
     doc))
 
-(deftest test-apply-tag-compilers
+(deftest ^:no-doc test-apply-tag-compilers
   (is (rt/successful? (rt/check `compile-tags {} {:num-tests 5}))))
 
 
@@ -733,7 +733,7 @@
   ([doc]
    (embed-for-html doc {})))
 
-(deftest functions-as-components
+(deftest ^:no-doc functions-as-components
   (testing "should process nested tags"
     (is (= [:div {} [:p {} "yo " [:strong {} "dawg"]]]
            (embed-for-html [(fn [] [:md "yo **dawg**"])])))))
@@ -1100,10 +1100,10 @@
          :always (compile* opts)
          tag-compilers (compile* (merge opts {:from-format :hiccup :to-format :hiccup})))))))
 
-(deftest exercise-compile-args
+(deftest ^:no-doc exercise-compile-args
   (is (s/exercise ::compile-args)))
 
-(deftest test-compile
+(deftest ^:no-doc test-compile
   (is (rt/successful? (rt/check `compile {} {:num-tests 2}))))
 
 
