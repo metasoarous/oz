@@ -831,10 +831,10 @@
    (html doc {})))
 
 (s/def ::html-output-opts
-  (s/merge ::html-head-opts ::html-embed-opts))
+  (s/merge ::html-head-opts ::html-embed-opts ::vega-cli-opts))
 
 (defmethod compile-args-spec [:hiccup :html]
-  ([_] (s/cat :doc ::hiccup :opts ::vega-cli-opts)))
+  ([_] (s/cat :doc ::hiccup :opts ::html-output-opts)))
 
 (defmethod compile* [:hiccup :html]
   ([doc opts] (html doc opts)))
