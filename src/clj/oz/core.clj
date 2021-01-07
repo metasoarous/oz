@@ -942,7 +942,8 @@
                              (seq (set/intersection classes #{:hiccup :edn-hiccup :json-hiccup})) :hiccup)
                   src-type (cond
                              (seq (set/intersection classes #{:edn :edn-vega :edn-vega-lite :edn-hiccup})) :edn
-                             (seq (set/intersection classes #{:json :json-vega :json-vega-lite :json-hiccup})) :json)
+                             (seq (set/intersection classes #{:json :json-vega :json-vega-lite :json-hiccup})) :json
+                             (seq (set/intersection classes #{:yaml :yaml-vega :yaml-vega-lite :yaml-hiccup})) :yaml)
                   data (case src-type
                          :edn (edn/read-string src)
                          :json (json/parse-string src keyword)
