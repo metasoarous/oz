@@ -20,8 +20,10 @@
       :aliases
       :clojupyter
       :extra-deps
-      (get 'clojupyter)
+      (get 'clojupyter/clojupyter)
       :mvn/version))
+
+(println "clojupyter version is:" clojupyter-version)
 
 (def clojupyter-dep
   (xml/sexp-as-element
