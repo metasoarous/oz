@@ -11,10 +11,12 @@
    :style ["point"],
    :from {:data "source_0"},
    :encode
-   {:update
+   {:enter
+    {:tooltip {:signal :datum}}
+    :update
     {:stroke {:scale "color", :field "Origin"},
      :x {:scale "x", :field "Horsepower"},
-     :y {:scale "y", :field "Miles_per_Gallon"}}}}],
+     :y {:scale "y", :field "Miles_per_Gallon"}}}}]
  :scales
  [{:name "x",
    :type "linear",

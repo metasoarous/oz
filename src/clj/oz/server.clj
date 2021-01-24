@@ -3,7 +3,6 @@
    [clojure.string :as str]
    [ring.middleware.defaults]
    [ring.middleware.gzip :refer [wrap-gzip]]
-   [ring.middleware.cljsjs :refer [wrap-cljsjs]]
    [ring.middleware.anti-forgery :refer (*anti-forgery-token*)]
    [ring.util.response :as response]
    [compojure.core :as comp :refer (defroutes GET POST)]
@@ -102,7 +101,6 @@
 (def main-ring-handler
   (-> my-routes
       (ring.middleware.defaults/wrap-defaults ring.middleware.defaults/site-defaults)
-      (wrap-cljsjs)
       (wrap-gzip)))
 
 (defmulti -event-msg-handler :id)

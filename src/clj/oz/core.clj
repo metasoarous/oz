@@ -98,7 +98,7 @@
 (s/def ::vega-like
   (s/or :vega-lite ::vega-lite :vega ::vega))
 
-(deftest exercise-vega
+(deftest ^:no-doc exercise-vega
   (is (sample ::vega))
   (is (s/exercise ::vega-like)))
 
@@ -119,14 +119,14 @@
         (s/gen (s/cat :tag ::tag :body (s/* any?)))))))
 
 ;; Translate to tests?
-(deftest exercise-hiccup
+(deftest ^:no-doc exercise-hiccup
   (is (s/exercise ::hiccup))
   (is (s/conform ::hiccup [:div {:styles {}} [:h1 "some shit"] [:p "ya know?"]])))
 
 
 (s/def ::document (s/or :hiccup ::hiccup :vega map?))
 
-(deftest exercise-document
+(deftest ^:no-doc exercise-document
   (is (s/exercise ::document)))
 
 (s/def ::input-filename string?)
@@ -146,7 +146,7 @@
 (s/def ::base-vega-compile-opts
   (s/keys :opt-un []))
 
-(defn choose-vega-compiler
+(defn ^:no-doc choose-vega-compiler
   [{:keys [vega-compiler to-format]}]
   (or vega-compiler
       ;; Prefer grall for svg and vega output
@@ -169,7 +169,7 @@
   (s/multi-spec vega-compile-opts-spec (fn [genval _] genval)))
 
 
-(deftest exercise-vega-cli-opts
+(deftest ^:no-doc exercise-vega-cli-opts
   (is (s/exercise ::vega-cli-opts))
   (is (s/exercise ::vega-compile-opts)))
 
@@ -191,9 +191,9 @@
 
 (s/def ::head-extras ::hiccup)
 
-(def vega-version "5.13.0")
-(def vega-lite-version "4.13.1")
-(def vega-embed-version "6.9.0")
+(def vega-version "5.17.0")
+(def vega-lite-version "4.17.0")
+(def vega-embed-version "6.12.2")
 
 
 (s/fdef vega-cli-installed?
@@ -205,7 +205,7 @@
 (def installed-clis
   (atom {}))
 
-(defn -check-vega-cli-installed? [mode]
+(defn ^:no-doc -check-vega-cli-installed? [mode]
   (= 0 (:exit (shell/sh "which" (case mode :vega-lite "vl2svg" :vega "vg2svg")))))
 
 (defn- vega-cli-installed? [mode]
@@ -216,7 +216,7 @@
         (swap! installed-clis mode status)
         status)))
 
-(deftest test-vega-cli-installed?
+(deftest ^:no-doc test-vega-cli-installed?
   (is (= true (vega-cli-installed? :vega)))
   (is (= true (vega-cli-installed? :vega-lite))))
 
@@ -310,7 +310,7 @@
 (s/def ::tag-compilers
   (s/map-of ::tag ::tag-compiler))
 
-(deftest exercise-tag-compiler
+(deftest ^:no-doc exercise-tag-compiler
   (is (s/exercise ::tag-compiler)))
 
 ;; TODO QUESTION
@@ -335,7 +335,7 @@
      [(get extension-formats from-format from-format)
       (or to-format :hiccup)])))
 
-(defmulti compile-args-spec
+(defmulti ^:no-doc compile-args-spec
   (partial apply compiler-key))
 
 ;; Warning! Changing the defmulti above doesn't take on reload! Have to restart repl :-/
@@ -397,7 +397,7 @@
     (io/copy xin xout)
     (.toByteArray xout)))
 
-(defn bytes->file
+(defn ^:no-doc bytes->file
   [file bytes]
   (with-open [out (io/output-stream file)]
     (.write out bytes)))
@@ -451,7 +451,7 @@
   [_] (s/cat :doc ::vega-lite :opts ::vega-compile-opts))
 (defmethod compile* [:vega-lite :svg]
   ;([doc opts] (vega-cli (merge opts {:vega-doc doc})))
-  ([doc _] (darkstar/vega-lite-spec->svg doc)))
+  ([doc _] (darkstar/vega-lite-spec->svg (json/encode doc))))
 
 (defmethod compile-args-spec [:vega-lite :vega]
   [_] (s/cat :doc ::vega-lite :opts ::vega-compile-opts))
@@ -470,7 +470,7 @@
   [_] (s/cat :doc ::vega :opts ::vega-compile-opts))
 (defmethod compile* [:vega :svg]
   ;([doc opts] (vega-cli (merge opts {:vega-doc doc})))
-  ([doc _] (darkstar/vega-spec->svg doc)))
+  ([doc _] (darkstar/vega-spec->svg (json/encode doc))))
 
 (defmethod compile-args-spec [:vega :pdf]
   [_] (s/cat :doc ::vega :opts ::vega-compile-opts))
@@ -541,7 +541,7 @@
         :else form))
     doc))
 
-(deftest test-apply-tag-compilers
+(deftest ^:no-doc test-apply-tag-compilers
   (is (rt/successful? (rt/check `compile-tags {} {:num-tests 5}))))
 
 
@@ -711,22 +711,29 @@
   [:code (pr-str data)])
 
 
-(defn- embed-for-html
+(defn ^:no-doc embed-for-html
+  "This is a semi-private function that takes a hiccup or vega document and uses [[compile-tags]] to return hiccup that:
+  * embeds any vega documents, by default as both a compiled png and as a live view
+  * compiled `:markdown` or `:md` blocks to hiccup
+  * `:pprint` blocks as pretty printed strings in pre blocks
+  * `:print` blocks similarly"
   ([doc compile-opts]
-   (compile-tags doc
-                 {:vega (partial embed-vega-form compile-opts)
-                  :vega-lite (partial embed-vega-form compile-opts)
-                  :markdown #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
-                  :md       #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
-                  :pprint   (comp pprint-hiccup second)
-                  :print    (comp print-hiccup second)}))
-                  ;; TODO Add these; Will take front end resolvers as well
-                  ;:leaflet-vega (partial embed-vega-form compile-opts)
-                  ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
+   (if (map? doc)
+     (embed-for-html [:vega-lite doc] (compile-opts))
+     (compile-tags doc
+                   {:vega (partial embed-vega-form compile-opts)
+                    :vega-lite (partial embed-vega-form compile-opts)
+                    :markdown #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
+                    :md       #(compile (second %) (merge compile-opts {:from-format :md :to-format :hiccup}))
+                    :pprint   (comp pprint-hiccup second)
+                    :print    (comp print-hiccup second)})))
+                    ;; TODO Add these; Will take front end resolvers as well
+                    ;:leaflet-vega (partial embed-vega-form compile-opts)
+                    ;:leaflet-vega-lite (partial embed-vega-form compile-opts)}))
   ([doc]
    (embed-for-html doc {})))
 
-(deftest functions-as-components
+(deftest ^:no-doc functions-as-components
   (testing "should process nested tags"
     (is (= [:div {} [:p {} "yo " [:strong {} "dawg"]]]
            (embed-for-html [(fn [] [:md "yo **dawg**"])])))))
@@ -773,7 +780,9 @@
             (shortcut-icon (or shortcut-icon-url "http://ozviz.io/oz.svg")))]
         ;; QUESTION Possible to embed these directly?
         (when-not omit-styles?
-          [[:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
+          [
+           ;[:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
+           [:style (slurp (io/resource "oz/public/css/style.css"))]
            [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
            [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}]]) 
         ;; TODO Ideally we wouldn't need these, and inclusion of the compiled oz target should be enough; However,
@@ -822,10 +831,10 @@
    (html doc {})))
 
 (s/def ::html-output-opts
-  (s/merge ::html-head-opts ::html-embed-opts))
+  (s/merge ::html-head-opts ::html-embed-opts ::vega-cli-opts))
 
 (defmethod compile-args-spec [:hiccup :html]
-  ([_] (s/cat :doc ::hiccup :opts ::vega-cli-opts)))
+  ([_] (s/cat :doc ::hiccup :opts ::html-output-opts)))
 
 (defmethod compile* [:hiccup :html]
   ([doc opts] (html doc opts)))
@@ -865,26 +874,54 @@
 
 
 (defn export!
+  "Compile `doc` to `filepath` according to `opts` map. If `:to-format` is not specified, format is
+  inferred from the `filepath` extension.
+
+  Default behavior is to call `compile` on the doc, and spit the results to `filepath`. Thus, `opts`
+  map will in general be processed as with `compile`.
+
+  As with compile, by default maps `doc` values will be assumed to be `:vega-lite`, unless `:mode`
+  or `:from-format` opts are explicitly set to `:vega`.
+
+  ALPHA FEATURE: You may override the export processing for a particular value of `:to-format` using the
+  export!* multimethod. However, as with `compile*`, this ability may be superceded by a more robust
+  registration function  in the future, so use at your own risk."
   ([doc filepath]
    (export! doc filepath {}))
   ([doc filepath {:as opts :keys [to-format]}]
    ;; Infer the to-format based on filename, unless explicitly set
-   ;; TODO Check if this is safe if weird filename (no suffix?)
+   ;; TODO Consider what to do if we get a weird filename (no suffix?)
    (let [to-format (or to-format (filename-format filepath))]
-     (println "to-format:" to-format)
      (export!* doc filepath (merge opts {:to-format to-format}))))
   ([doc filepath opt-key opt-val & more-opts]
    (export! doc filepath (merge {opt-key opt-val} more-opts))))
-  
 
-;;; This should also be a defmulti
-;(defn export!
-  ;"In alpha; Export doc to an html file. May eventually have other options, including svg, jpg & pdf available"
-  ;[doc filepath & {:as opts :keys [to-format]}]
-  ;(spit filepath (html doc opts)))
-
+(defmethod export!* :png
+  ([doc filepath {:as opts}]
+   (let [from-format (first (compiler-key doc opts))]
+     (vega-cli (merge opts
+                      {:vega-doc doc
+                       :to-format :png
+                       :output-filename filepath
+                       :return-result? false})))))
 
 (comment
+  (export!
+    {:data {:values [{:a 1 :b 2} {:a 3 :b 4}]}
+     :mark :point
+     :encoding {:x {:field :a}
+                :y {:field :b}}}
+    "test.svg")
+  (export!
+    (read-string (slurp "resources/oz/examples/vega/basic-vega.edn"))
+    "vega-test.png"
+    :mode :vega)
+  (export!
+    {:data {:values [{:a 1 :b 2} {:a 3 :b 4}]}
+     :mark :point
+     :encoding {:x {:field :a}
+                :y {:field :b}}}
+    "vl-test.png")
   (export!
     [:div [:h1 "Hello, Dave"] [:p "Why are you doing that Dave?"]]
     "dave.html")
@@ -905,7 +942,8 @@
                              (seq (set/intersection classes #{:hiccup :edn-hiccup :json-hiccup})) :hiccup)
                   src-type (cond
                              (seq (set/intersection classes #{:edn :edn-vega :edn-vega-lite :edn-hiccup})) :edn
-                             (seq (set/intersection classes #{:json :json-vega :json-vega-lite :json-hiccup})) :json)
+                             (seq (set/intersection classes #{:json :json-vega :json-vega-lite :json-hiccup})) :json
+                             (seq (set/intersection classes #{:yaml :yaml-vega :yaml-vega-lite :yaml-hiccup})) :yaml)
                   data (case src-type
                          :edn (edn/read-string src)
                          :json (json/parse-string src keyword)
@@ -1026,11 +1064,24 @@
         (let [[_ opts] args]
           (s/valid? (to-spec opts) ret))))
 
-
 (defn compile
-  "General purpose compilation function. Uses `:from-format` and `:to-format` parameters"
+  "General purpose compilation function. Uses `:from-format` and `:to-format` parameters of `opts`
+  map to determine how to compile the `doc` argument. If `:from-format` is not specified, `:vega-lite`
+  is assumed for maps and `:hiccup` for vectors; `:to-format` option _must_ be specified.
+
+  If you are working with `:hiccup` (even as an intermediary, say between :markdown and :html), the
+  `:tag-compilers` map may specify a map of hiccup tags to functions taking and returning hiccup forms.
+
+  Specific compilations may support additional features. For example, compiling to `:html` will support
+  all of the options that the `oz/html` function supports.
+  
+  ALPHA FEATURE: This function can be extended by implementing the `compile*` method on key
+  [from-format to-format]. If you define one of these methods to or from `:hiccup`, it will automatically
+  be possible to compile from or to any other format for which `:hiccup` already has a compiler
+  definition. This functionality may be superceded by a registration function/API in the future, for
+  more robust registration of specs, available options documentation, etc."
   {:arglists '([doc & {:keys [from-format to-format tag-compilers]}])}
-  ([doc opts]
+  ([doc {:as opts :keys [tag-compilers]}]
    ;; Support mode or from-format to `compile`, but require compile* registrations to use `:from-format`
    ;; This is maybe why we _do_ need this function
    (let [[from-format to-format :as key] (compiler-key doc opts)]
@@ -1041,18 +1092,19 @@
            (not ((set [from-format to-format]) :hiccup)))
        (compile* doc opts)
        (= :hiccup from-format)
-       (-> doc
-           (compile* (merge opts {:from-format :hiccup :to-format :hiccup}))
-           (compile* opts))
+       (cond-> doc
+         ;; check for tag-compilers before doing the hiccup -> hiccup conversions
+         tag-compilers (compile* (merge opts {:from-format :hiccup :to-format :hiccup}))
+         :always (compile* opts))
        (= :hiccup to-format)
-       (-> doc
-           (compile* opts)
-           (compile* (merge opts {:from-format :hiccup :to-format :hiccup})))))))
+       (cond-> doc
+         :always (compile* opts)
+         tag-compilers (compile* (merge opts {:from-format :hiccup :to-format :hiccup})))))))
 
-(deftest exercise-compile-args
+(deftest ^:no-doc exercise-compile-args
   (is (s/exercise ::compile-args)))
 
-(deftest test-compile
+(deftest ^:no-doc test-compile
   (is (rt/successful? (rt/check `compile {} {:num-tests 2}))))
 
 
@@ -1160,7 +1212,7 @@
   * `:public`: default false
   * `:description`: auto generated based on doc"
   [doc & {:as opts
-          :keys [name description public]
+          :keys [name description public pretty]
           :or {public false}}]
   (let [type (doc-type doc)
         name (or name
@@ -1172,8 +1224,12 @@
                         :ozviz "Ozviz document; To load go to https://ozviz.io/#/gist/<gist-id>."
                         :vega "Vega/Vega-Lite viz; To load go to https://vega.github.io/editor"))
         doc-string (case type
-                     :ozviz (pr-str doc)
-                     :vega (json/generate-string doc))
+                     :ozviz (if pretty
+                              (with-out-str (clojure.pprint/pprint doc))
+                              (pr-str doc))
+                     :vega (if pretty
+                             (json/generate-string doc {:pretty true})
+                             (json/generate-string doc)))
         create-gist-opts (merge {:description description :public public}
                                 (auth-args opts))
         gist (gists/create-gist {name doc-string} create-gist-opts)]
@@ -1217,7 +1273,8 @@
   Additional options:
   * `:public`: default false
   * `:description`: auto generated based on doc
-  * `:return-full-gist`: return the full tentacles gist api response data"
+  * `:return-full-gist`: return the full tentacles gist api response data
+  * `:pretty` : pretty print the published spec"
   [doc & {:as opts
           :keys [mode return-full-gist]
           :or {mode :vega-lite}}]
@@ -1526,7 +1583,6 @@
          [:br]
          doc])])
 
-
   ;; View a simple plot
   (view!
     [:div
@@ -1536,8 +1592,9 @@
                          {:a 2.3 :b 2.1} {:a 3.5 :b 5.7} {:a 3 :b 9}]}
          :mark :point
          :encoding {:x {:field :a :type :quantitative}
-                    :y {:field :b :type :quantitative}}}]]
-    :port 10666)
+                    :y {:field :b :type :quantitative}}}]
+      [:p "What do you think about that?"]])
+    ;:port 10666)
 
   (view! [:vega-lite
           {:data {:values [{:x 1 :y 1}{:x 2.3 :y 2.1}{:x 3 :y 3}{:x 4 :y 4}{:x 5 :y 5}]}
@@ -1587,6 +1644,16 @@
     :view? true
     :port 10666)
     ;:root-dir "examples/static-site/build")
+
+  (clojure.walk/postwalk
+    (fn [{:as elmt :keys [tag attrs]}]
+      (if tag
+        (update elmt :attrs merge attrs)
+        elmt))
+    {:tag "shit"
+     :content
+     [{:tag "gangsta"
+       :content "yo"}]})
 
   :end-comment)
 

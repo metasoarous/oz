@@ -82,4 +82,8 @@ a {
   color: darkblue;
 }
 
+div.vega-embed div.chart-wrapper {
+  height: auto;
+}
+
 

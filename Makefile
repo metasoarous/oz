@@ -44,8 +44,9 @@ check-clean-tree:
 .PHONY: build
 build:
 	rm -rf resources/oz/public/js && \
+	rm -rf .shadow-cljs && \
 	npm install && \
-	shadow-cljs release app lib && \
+	clojure -M:shadow-cljs release app lib && \
 	clojure -A:pack mach.pack.alpha.skinny --no-libs --project-path target/oz.jar
 
 .PHONY: release
@@ -55,6 +56,7 @@ release: check-clean-tree build
 	git commit -m "add build targets" && \
 	git push origin && \
 	clojure -Spom && \
+	./bin/munge-provided-deps.clj && \
 	mvn -e deploy:deploy-file -Dfile=target/oz.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DpomFile=pom.xml
 
 .PHONY: clean

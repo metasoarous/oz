@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>metasoarous</groupId>
   <artifactId>oz</artifactId>
   <packaging>jar</packaging>
-  <version>1.6.0-alpha26</version>
+  <version>1.6.0-alpha35-SNAPSHOT</version>
   <name>oz</name>
   <description>Great and powerful data visualizations and scientific documents in Clojure using Vega and Vega-lite</description>
   <url>http://github.com/metasoarous/oz</url>
@@ -74,7 +73,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.10.0</version>
+      <version>1.10.1</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -82,14 +81,14 @@
       <version>0.2.176</version>
     </dependency>
     <dependency>
-      <groupId>ring-cljsjs</groupId>
-      <artifactId>ring-cljsjs</artifactId>
-      <version>0.1.0</version>
-    </dependency>
-    <dependency>
       <groupId>compojure</groupId>
       <artifactId>compojure</artifactId>
       <version>1.6.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.taoensso</groupId>
+      <artifactId>encore</artifactId>
+      <version>2.120.0</version>
     </dependency>
     <dependency>
       <groupId>markdown-to-hiccup</groupId>
@@ -109,7 +108,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojurescript</artifactId>
-      <version>1.10.439</version>
+      <version>1.10.764</version>
     </dependency>
     <dependency>
       <groupId>respeced</groupId>
@@ -150,6 +149,11 @@
       <groupId>com.taoensso</groupId>
       <artifactId>sente</artifactId>
       <version>1.13.1</version>
+    </dependency>
+    <dependency>
+      <groupId>devcards</groupId>
+      <artifactId>devcards</artifactId>
+      <version>0.2.6</version>
     </dependency>
     <dependency>
       <groupId>reagent</groupId>
@@ -209,7 +213,7 @@
     <dependency>
       <groupId>ring</groupId>
       <artifactId>ring</artifactId>
-      <version>1.7.1</version>
+      <version>1.8.1</version>
     </dependency>
     <dependency>
       <groupId>bk</groupId>
@@ -221,5 +225,5 @@
       <artifactId>core.async</artifactId>
       <version>0.4.490</version>
     </dependency>
-  </dependencies>
+  <dependency><groupId>clojupyter</groupId><artifactId>clojupyter</artifactId><version>0.3.2</version><scope>provided</scope></dependency></dependencies>
 </project>

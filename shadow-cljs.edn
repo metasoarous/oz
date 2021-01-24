@@ -1,10 +1,4 @@
-{:source-paths ["src/cljs"]
- ;:deps true
- :dependencies [[reagent "1.0.0-alpha2"]
-                [devcards "0.2.6"]
-                [com.taoensso/timbre "4.10.0"]
-                [com.taoensso/encore "2.120.0"]
-                [com.taoensso/sente "1.13.1"]]
+{:deps true
  :builds {:lib {:target :browser
                 :output-dir "resources/oz/public/js"
                 :modules {:oz {:entries [oz.core]}}}
@@ -13,6 +7,7 @@
                      :compiler-options {:devcards true}
                      :modules {:devcards {:init-fn oz.core-devcards/main}}}
           :app {:target :browser
+                :compiler-options {:output-feature-set :es8}
                 :output-dir "resources/oz/public/js"
                 :modules {:app {:entries [oz.app]
                                 :init-fn oz.app/init}}

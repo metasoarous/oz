@@ -45,7 +45,7 @@ Here's another which focuses on the philosophical ideas behind Vega & Vega-Lite,
 [![Seajure Clojure + Vega/Vega-Lite talk](https://i.imgur.com/SmIPUQtm.png)](https://www.youtube.com/watch?v=hXq5Bb40zZY)
 
 This Readme is the canonical entry point for learning about Oz.
-You may also want to check out the [clojdoc page](https://cljdoc.org/d/metasoarous/oz) (if you're not there already) for API & other docs, and look at the [examples directory](https://github.com/metasoarous/oz/tree/master/examples) of this project (references occassionally below).
+You may also want to check out the [clojdoc page](https://cljdoc.org/d/metasoarous/oz) (if you're not there already) for API & other docs, and look at the [examples directory](https://github.com/metasoarous/oz/tree/master/resources/oz/examples) of this project (references occassionally below).
 
 
 ### Ecosystem
@@ -483,12 +483,24 @@ The great thing about static sites is that they are easy and cheap to deploy and
 
 ## Local CLJS development
 
-Oz is now compiled (on the cljs side) with [Shadow-CLJS](http://shadow-cljs.org/).
-A typical workflow involves running `shadow-cljs watch app devcards`.
-This will compile both the `app.js` and `devcards.js` compile targets (to `resources/oz/public/js/`), meaning you can run the REPL/JVM tooling locally, and it will serve up the latest edition of the `app.js` for calling `view!`, etc.
-But also, visiting <https://localhost:7125/devcards.html> will pull up a live view of a set of example components defined at `src/cljs/oz/core_devcards.cljs`.
+Oz is now compiled (on the cljs side) with [Shadow-CLJS](http://shadow-cljs.org/), together with the Clojure CLI tooling.
+A typical workflow involves running `clj -M:shadow-cljs watch devcards app` (note, older versions of `clj` use `-A` instead of `-M`; consider updating).
+This will watch your cljs files for changes, and immediately compile both the `app.js` and `devcards.js` targets (to `resources/oz/public/js/`).
+
+In general, the best way to develop is to visit <https://localhost:7125/devcards.html>, which will pull up a live view of a set of example Reagent components defined at `src/cljs/oz/core_devcards.cljs`.
 This is the easiest way to tweak functionality and test new features, as editing `src/cljs/oz/core.cljs` will trigger updates to the devcards views.
 
+If it's necessary or desirable to test the app (live-view, etc) functionality  "in-situ", you can also use the normal Clj REPL utilities to feed plots to the `app.js` target using `oz/view!`, etc.
+Note that if you do this, you will need to use whatever port is passed to `oz/view!` (by default, 10666) and not the one printed out when you start `clj -M:shadow-cljs`.
+
+See documentation for your specific editing environment if you'd like your editor to be able to connect to the Shadow-CLJS repl.
+For `vim-fireplace`, the initial Clj connection should establish itself automatically when you attempt to evaluate your first form.
+From there simply execute the vim command `:CljEval (shadow/repl :app)`, and you should be able to evaluate code in the `*.cljs` files from vim.
+Code in `*.clj` files should also continue to evaluate as before as well.
+
+IMPORTANT NOTE: If you end up deploying a version of Oz to Clojars or elsewhere, make sure you stop your `clj -M:shadow-cljs watch` process before running `make release`.
+If you don't, shadow will continue watching files and rebuild js compilation targets with dev time configuration (shadow, less minification, etc), that shouldn't be in the final release build.
+If however you are simply making changes and pushing up for me to release, please just leave any compiled changes to the js targets out of your commits.
 
 
 ## Debugging & updating Vega/Vega-Lite versions
