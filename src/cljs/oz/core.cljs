@@ -105,7 +105,7 @@
   (swap! live-viewers-state merge live-views))
 
 
-(def default-data-table-opts
+(def ^:no-doc default-data-table-opts
   {:per-page 50
    :tr-style {}
    :td-style {:padding-right 10}

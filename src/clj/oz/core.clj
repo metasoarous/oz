@@ -202,7 +202,7 @@
         :fn (fn [{:keys [args ret]}]
               ret))
 
-(def installed-clis
+(def ^:no-doc installed-clis
   (atom {}))
 
 (defn ^:no-doc -check-vega-cli-installed? [mode]
@@ -326,7 +326,7 @@
   (last (string/split filename #"\.")))
 
 ;; QUESTION Does this need to be pluggable?
-(def extension-formats
+(def ^:no-doc extension-formats
   {:md :markdown})
 
 (defn- compiler-key
@@ -653,7 +653,7 @@
     :src (str "data:image/png;base64," (base64-encode bytes))}])
 
 
-(def default-embed-opts
+(def ^:no-doc default-embed-opts
   {:static-embed :png
    :live-embed? true})
 
@@ -1658,7 +1658,7 @@
   :end-comment)
 
 
-(def help-message
+(def ^:no-doc help-message
   "args: command, &args
   command options
   ")
