@@ -18,7 +18,7 @@
 (try
   (require '[clojupyter.protocol.mime-convertible :as mc])
 
-  (def require-string
+  (def ^:no-doc require-string
     (str "
   <div>
     <div id='uuid-%s'></div>
