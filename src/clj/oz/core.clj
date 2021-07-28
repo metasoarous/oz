@@ -132,13 +132,14 @@
 (s/def ::input-filename string?)
 (s/def ::output-filename string?)
 (s/def ::return-result? boolean?)
+(s/def ::scale pos?)
 
 
 ; Spec for vega-cli
 
 (s/def ::vega-cli-opts
   (s/keys :req-un [(or ::vega ::vega-lite ::input-filename) ::to-format]
-          :opt-un [::from-format ::return-result? ::output-filename]))
+          :opt-un [::from-format ::return-result? ::output-filename ::scale]))
 
 (s/def ::vega-compiler
   #{:vega-cli :graal})
@@ -406,8 +407,8 @@
   "Takes either doc or the contents of input-filename, and uses the vega/vega-lite cli tools to translate to the specified format.
   If both doc and input-filename are present, writes doc to input-filename for running cli tool (otherwise, a tmp file is used).
   This var is semi-public; It's under consideration for fully public inclusion, but consider it alpha for now."
-  ([{:keys [vega-doc from-format to-format mode input-filename output-filename return-result?] ;; TODO may add seed and scale eventually
-     :or {to-format :svg mode :vega-lite return-result? true}}]
+  ([{:keys [vega-doc from-format to-format mode input-filename output-filename return-result? scale] ;; TODO may add seed eventually
+     :or {to-format :svg mode :vega-lite return-result? true scale 1}}]
    {:pre [(#{:vega-lite :vega} (or from-format mode))
           (#{:png :pdf :svg :vega} to-format)
           (or vega-doc input-filename)]}
@@ -421,7 +422,7 @@
              ;; Write out the vega-doc file, and run the vega(-lite) cli command
              _ (when vega-doc
                  (spit input-filename (json/encode vega-doc)))
-             {:keys [out exit err]} (shell/sh command input-filename output-filename)]
+             {:keys [out exit err]} (shell/sh command (str "-s" scale) input-filename output-filename)]
          (log/info "input:" input-filename)
          (log/info "output:" output-filename)
          (if (= exit 0)
@@ -641,7 +642,8 @@
 (s/def ::vega-embed-opts
   (s/keys
     :opt-un [::static-embed
-             ::live-embed?]))
+             ::live-embed?
+             ::scale]))
 
 (defn- base64-encode [bytes]
   (.encodeToString (java.util.Base64/getEncoder) bytes))
@@ -655,7 +657,8 @@
 
 (def ^:no-doc default-embed-opts
   {:static-embed :png
-   :live-embed? true})
+   :live-embed? true
+   :scale 1})
 
 (defn embed-vega-form
   "Embed a single Vega-Lite/Vega visualization as hiccup representing a live/interactive embedding as hiccup;
