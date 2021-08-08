@@ -481,6 +481,21 @@ You can also use GitHub Pages or S3 or really whatever if you prefer.
 The great thing about static sites is that they are easy and cheap to deploy and scale, so you have plenty of options at your disposal.
 
 
+## EDN translation caveats in expression strings
+
+In general, it's pretty easy to translate specs between EDN (Clojure data) and JSON.
+However, there is one place where you can get a little tripped up if you don't know what to do, and that's in [expressions](https://vega.github.io/vega-lite/docs/types.html#expression) (as used in [calculate](https://vega.github.io/vega-lite/docs/calculate.html) and [filter](https://vega.github.io/vega-lite/docs/filter.html) transforms).
+
+The expression you see in the Vega docs typically look like `{"calculate": "datum.attr * 2", "as": "attr2"}` (as JSON).
+However, in Clojure, we often use kebab cased keywords for data map keys (e.g. `:cool-attr`).
+For these attributes, you obviously can't use `datum.cool-attr`, since this will be interpretted as `data.cool - attr`, and either error out or not produce the desired result.
+Instead you'll need to use `datum['cool-attr']` in your expressions when your keys are kebab cased.
+
+This may be easy to miss, since most of the docs assume that you're working with camel or snake cased keys.
+It is mentioned somewhere in there if you look, but tends to bite us Clojurists more frequently than practitioners of other languages, and so isn't particularly front and center.
+Once you know the trick though, you should be on your way.
+
+
 ## Local CLJS development
 
 Oz is now compiled (on the cljs side) with [Shadow-CLJS](http://shadow-cljs.org/), together with the Clojure CLI tooling.
