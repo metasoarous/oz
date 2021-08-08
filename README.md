@@ -255,7 +255,7 @@ See the `view!` method in the namespaces `oz.notebook.clojupyter` and `oz.notebo
 
 ### Requiring in Clojupyter
 
-Take a look at the [example clojupyter notebook](https://github.com/metasoarous/oz/tree/master/examples/clojupyter-example.ipynb).
+Take a look at the [example clojupyter notebook](https://github.com/metasoarous/oz/blob/master/resources/oz/examples/notebook/clojupyter-example.ipynb).
 
 If you have docker installed you can run the following to build and run a jupyter container with clojupyter installed.
 
@@ -265,7 +265,7 @@ docker run --rm -p 8888:8888 kxxoling/jupyter-clojure-docker
 
 Note that if you get a permission related error, you may need to run this command like `sudo docker run ...`.
 
-Once you have a notebook up and running you can either import the [example clojupyter notebook](https://github.com/metasoarous/oz/tree/master/examples/clojupyter-example.ipynb) or manually add something like:
+Once you have a notebook up and running you can either import the [example clojupyter notebook](https://github.com/metasoarous/oz/blob/master/resources/oz/examples/notebook/clojupyter-example.ipynb) or manually add something like:
 
 ```clojure
 (require '[clojupyter.misc.helper :as helper])
