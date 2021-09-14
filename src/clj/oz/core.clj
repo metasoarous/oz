@@ -192,8 +192,8 @@
 
 (s/def ::head-extras ::hiccup)
 
-(def vega-version "5.17.0")
-(def vega-lite-version "4.17.0")
+(def vega-version "5.20.0")
+(def vega-lite-version "5.1.0")
 (def vega-embed-version "6.12.2")
 
 
