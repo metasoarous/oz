@@ -6,17 +6,17 @@
   "author": "Christopher Small",
   "license": "ISC",
   "dependencies": {
+    "marked": "1.2.5",
     "react": "16.13.1",
     "react-dom": "16.13.1",
-    "vega": "5.17.0",
-    "vega-lite": "4.17.0",
-    "vega-util": "1.16.0",
-    "vega-embed": "6.12.2",
+    "vega": "5.20.0",
     "vega-canvas": "1.2.6",
-    "marked": "1.2.5"
+    "vega-embed": "6.12.2",
+    "vega-lite": "5.1.0",
+    "vega-util": "1.16.0"
   },
   "devDependencies": {
     "create-react-class": "15.6.3",
-    "shadow-cljs": "2.11.5"
+    "shadow-cljs": "2.15.8"
   }
 }

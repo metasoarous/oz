@@ -1,6 +1,7 @@
 {:paths ["src/clj" "src/cljs" "resources"]
- :deps {org.clojure/clojure {:mvn/version "1.10.1"}
-        org.clojure/clojurescript {:mvn/version "1.10.764"} ;; equivalent of :scope "provided"?
+ :deps {org.clojure/clojure {:mvn/version "1.10.3"}
+        org.clojure/clojurescript {:mvn/version "1.10.879"} ;; equivalent of :scope "provided"?
+        com.google.javascript/closure-compiler-unshaded {:mvn/version "v20210505"}
         ;; this appears to be necessary for fiwheel to work for some applications
         org.clojure/tools.reader {:mvn/version "1.3.2"}
         org.clojure/core.async {:mvn/version "0.4.490"}
@@ -43,7 +44,7 @@
  :aliases {:dev {:extra-paths ["dev"]
                  :extra-deps {alembic/alembic {:mvn/version "0.3.2"}}}
                               ;binaryage/devtools {:mvn/version "0.9.10"}}}
-           :shadow-cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.11.5"}
+           :shadow-cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.15.8"}
                                       cider/cider-nrepl {:mvn/version "0.21.1"}}
                          :main-opts ["-m" "shadow.cljs.devtools.cli"]}
            :codox {:extra-deps {codox/codox {:mvn/version "0.10.7"}}
