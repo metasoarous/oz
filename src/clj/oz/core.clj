@@ -833,6 +833,14 @@
   ([doc]
    (html doc {})))
 
+(defmethod compile* [:vega-lite :html]
+  ([doc opts]
+   (html doc (assoc opts :from-format :vega-lite))))
+
+(defmethod compile* [:vega :html]
+  ([doc opts]
+   (html doc (assoc opts :from-format :vega))))
+
 (s/def ::html-output-opts
   (s/merge ::html-head-opts ::html-embed-opts ::vega-cli-opts))
 
@@ -1089,7 +1097,8 @@
    ;; This is maybe why we _do_ need this function
    (let [[from-format to-format :as key] (compiler-key doc opts)]
      ;(log/debug "compile key is" (with-out-str (pp/pprint key)))
-     (assert (s/valid? ::registered-compiler-key key))
+     (assert (s/valid? ::registered-compiler-key key)
+             (str "Unregistered compile key: " (pr-str key)))
      (cond
        (or (= :hiccup from-format to-format)
            (not ((set [from-format to-format]) :hiccup)))
