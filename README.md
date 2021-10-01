@@ -502,7 +502,7 @@ Oz is now compiled (on the cljs side) with [Shadow-CLJS](http://shadow-cljs.org/
 A typical workflow involves running `clj -M:shadow-cljs watch devcards app` (note, older versions of `clj` use `-A` instead of `-M`; consider updating).
 This will watch your cljs files for changes, and immediately compile both the `app.js` and `devcards.js` targets (to `resources/oz/public/js/`).
 
-In general, the best way to develop is to visit <https://localhost:7125/devcards.html>, which will pull up a live view of a set of example Reagent components defined at `src/cljs/oz/core_devcards.cljs`.
+In general, the best way to develop is to visit <http://localhost:7125/devcards.html>, which will pull up a live view of a set of example Reagent components defined at `src/cljs/oz/core_devcards.cljs`.
 This is the easiest way to tweak functionality and test new features, as editing `src/cljs/oz/core.cljs` will trigger updates to the devcards views.
 
 If it's necessary or desirable to test the app (live-view, etc) functionality  "in-situ", you can also use the normal Clj REPL utilities to feed plots to the `app.js` target using `oz/view!`, etc.
