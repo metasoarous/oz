@@ -8,18 +8,18 @@
         cheshire/cheshire {:mvn/version "5.8.1"}
         clj-http/clj-http {:mvn/version "3.9.1"}
         com.taoensso/sente {:mvn/version "1.13.1"}
-        com.taoensso/timbre {:mvn/version "4.10.0"}
-        com.taoensso/encore {:mvn/version "2.120.0"}
+        com.taoensso/timbre {:mvn/version "5.1.2"}
+        com.taoensso/encore {:mvn/version "3.19.0"}
         devcards/devcards {:mvn/version "0.2.6"}
         reagent/reagent {:mvn/version "0.10.0"}
-        clojupyter/clojupyter {:mvn/version "0.3.2"
+        clojupyter/clojupyter {:mvn/version "0.3.3-alpha2"
                                :exclusions [hiccup/hiccup]
                                :optional true}
         ;; consider using this for lazy loading clojupyter stuff
         ;com.clojure-goes-fast/lazy-require {:mvn/version "0.1.1"}
         aleph/aleph {:mvn/version "0.4.6"}
-        ring/ring {:mvn/version "1.8.1"}
-        ring/ring-defaults {:mvn/version "0.3.2"}
+        ring/ring {:mvn/version "1.9.4"}
+        ring/ring-defaults {:mvn/version "0.3.3"}
         bk/ring-gzip {:mvn/version "0.3.0"}
         compojure/compojure {:mvn/version "1.6.1"}
         hiccup/hiccup {:mvn/version "2.0.0-alpha2"}
@@ -30,21 +30,21 @@
         markdown-to-hiccup/markdown-to-hiccup {:mvn/version "0.6.2"}
         org.flatland/ordered {:mvn/version "1.5.7"}
         io.forward/yaml {:mvn/version "1.0.9"}
-        commonmark-hiccup/commonmark-hiccup {:mvn/version "0.1.0"}
+        ;commonmark-hiccup/commonmark-hiccup {:mvn/version "0.2.0"}
         org.clojure/spec.alpha {:mvn/version "0.2.176"}
         irresponsible/tentacles {:mvn/version "0.6.3"}
         respeced/respeced {:mvn/version "0.0.1"}
         org.clojure/test.check {:mvn/version "0.10.0"}
         hawk/hawk {:mvn/version "0.2.11"}
         metasoarous/darkstar {:mvn/version "0.1.0"}}
-        ;applied-science/darkstar {:git/url "https://github.com/applied-science/darkstar/"
+        ;APPLied-science/darkstar {:git/url "https://github.com/applied-science/darkstar/"
                                   ;:sha "ef93147377d09a3894959c2c43faabf1a527a7d5"}}
         ;timofreiberg/bultitude {:mvn/version "0.3.0"}
         ;org.clojure/tools.namespace {:mvn/version "0.2.11"}
  :aliases {:dev {:extra-paths ["dev"]
                  :extra-deps {alembic/alembic {:mvn/version "0.3.2"}}}
                               ;binaryage/devtools {:mvn/version "0.9.10"}}}
-           :shadow-cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.15.8"}
+           :shadow-cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.15.10"}
                                       cider/cider-nrepl {:mvn/version "0.21.1"}}
                          :main-opts ["-m" "shadow.cljs.devtools.cli"]}
            :codox {:extra-deps {codox/codox {:mvn/version "0.10.7"}}
