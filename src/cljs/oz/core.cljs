@@ -27,17 +27,21 @@
 
 (defn ^:no-doc embed-vega
   ([elem doc] (embed-vega elem doc {}))
-  ([elem doc opts]
+  ([elem doc {:as opts :keys [view-callback]}]
    (when doc
      (let [doc (clj->js doc)
-           opts (->> opts
-                     (merge {:renderer :canvas
-                             :mode "vega-lite"})
-                     (apply-log-level))
+           opts (-> opts
+                    (dissoc :view-callback)
+                    (->> (merge {:renderer :canvas
+                                 :mode "vega-lite"}))
+                    (apply-log-level))
            opts (merge {:renderer :canvas}
                         ;; Have to think about how we want the defaults here to behave
                        opts)]
        (-> (vegaEmbed elem doc (clj->js opts))
+           (.then (fn [res]
+                    (when view-callback
+                      (view-callback (.-view res)))))
            (.catch (fn [err]
                      (js/console.log err))))))))
 

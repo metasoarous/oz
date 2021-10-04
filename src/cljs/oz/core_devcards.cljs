@@ -43,6 +43,23 @@
                :size {:value 80}}}
    {:log-level :debug}])
 
+(defn view-callback-example []
+  [oz/vega-lite
+   {:data {:values sample-data}
+    :mark {:type :point
+           :tooltip true}
+    :width 500
+    :height 400
+    :encoding {:x {:field :power}
+               :y {:field :speed}
+               :color {:field :engine}
+               :size {:value 80}}}
+   {:view-callback
+    (fn [view]
+      (js/console.log "executing view-callback option to oz/vega-lite component")
+      (js/console.log "view object" view))}])
+
+
 (defn simple-data-table-example []
   [oz/data-table
    sample-data
@@ -61,8 +78,12 @@
   (devcards/reagent simple-vega-lite-example))
 
 (defcard log-level-card
-  "Simple vega-lite example"
+  "vega-lite spec with log-level set"
   (devcards/reagent log-level-example))
+
+(defcard view-callback-example-card
+  "vega-lite visualization executing a callback with the view object (check console log for logging result)"
+  (devcards/reagent view-callback-example))
 
 (defcard data-table-card
   "Simple data-table example"
