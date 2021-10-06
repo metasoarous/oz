@@ -75,7 +75,7 @@
     <dependency>
       <groupId>clojupyter</groupId>
       <artifactId>clojupyter</artifactId>
-      <version>0.3.2</version>
+      <version>0.3.3-alpha2</version>
       <exclusions>
         <exclusion>
           <groupId>hiccup</groupId>
@@ -97,7 +97,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>encore</artifactId>
-      <version>2.120.0</version>
+      <version>3.19.0</version>
     </dependency>
     <dependency>
       <groupId>markdown-to-hiccup</groupId>
@@ -107,7 +107,7 @@
     <dependency>
       <groupId>ring</groupId>
       <artifactId>ring-defaults</artifactId>
-      <version>0.3.2</version>
+      <version>0.3.3</version>
     </dependency>
     <dependency>
       <groupId>com.cognitect</groupId>
@@ -150,11 +150,6 @@
       <version>2.0.0-alpha2</version>
     </dependency>
     <dependency>
-      <groupId>commonmark-hiccup</groupId>
-      <artifactId>commonmark-hiccup</artifactId>
-      <version>0.1.0</version>
-    </dependency>
-    <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>sente</artifactId>
       <version>1.13.1</version>
@@ -172,7 +167,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>timbre</artifactId>
-      <version>4.10.0</version>
+      <version>5.1.2</version>
     </dependency>
     <dependency>
       <groupId>com.cognitect</groupId>
@@ -227,7 +222,7 @@
     <dependency>
       <groupId>ring</groupId>
       <artifactId>ring</artifactId>
-      <version>1.8.1</version>
+      <version>1.9.4</version>
     </dependency>
     <dependency>
       <groupId>bk</groupId>
