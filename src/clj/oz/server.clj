@@ -3,10 +3,11 @@
    [clojure.string :as str]
    [ring.middleware.defaults]
    [ring.middleware.gzip :refer [wrap-gzip]]
-   [ring.middleware.anti-forgery :refer (*anti-forgery-token*)]
+   [ring.middleware.anti-forgery :as anti-forgery :refer (*anti-forgery-token*)]
    [ring.util.response :as response]
    [compojure.core :as comp :refer (defroutes GET POST)]
    [compojure.route :as route]
+   [hiccup.core :as hiccup]
    [clojure.core.async :as async  :refer (<! <!! >! >!! put! chan go go-loop)]
    [taoensso.encore :as encore :refer (have have?)]
    [taoensso.timbre :as log :refer (tracef debugf infof warnf errorf)]
@@ -65,15 +66,36 @@
 
 (defonce current-root-dir (atom ""))
 
+;; This should maybe be made dynamic...
+(defn index-page [ring-req]
+  (hiccup/html
+    [:html
+     [:head
+      [:meta {:charset "UTF-8"}]
+      [:title "Oz document"]
+      [:meta {:content "Oz document" :name "description"}]
+      [:meta {:content "width=device-width, initial-scale=1" :name "viewport"}]
+      [:link {:href "oz.svg" :rel "shortcut icon" :type "image/x-icon"}]
+      [:link {:href "css/style.css" :rel "stylesheet" :type "text/css"}]
+      [:link {:href "https://fonts.googleapis.com/css?family=Open+Sans" :rel "stylesheet"}]
+      [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"
+                :type "text/javascript"}]]
+     [:body
+       [:div#sente-csrf-token {:style {:display "none"} :data-csrf-token (:anti-forgery-token ring-req)}]
+       [:div {:id "app"}
+        [:h2 "oz"]
+        [:p "pay no attention"]]
+       [:div {:class "vg-tooltip" :id "vis-tooltip"}]
+       [:script {:src "js/app.js" :type "text/javascript"}]]]))
+
 (defroutes my-routes
   (GET  "/" req (response/content-type
                   {:status 200
                    :session (if (session-uid req)
                               (:session req)
                               (assoc (:session req) :uid (unique-id)))
-                   :body (io/input-stream (io/resource "oz/public/index.html"))}
+                   :body (index-page req)}
                   "text/html"))
-  (GET "/token" req (json/generate-string {:csrf-token *anti-forgery-token*}))
   (GET  "/chsk" req
         (debugf "/chsk got: %s" req)
         (ring-ajax-get-or-ws-handshake req))
@@ -101,6 +123,7 @@
 (def main-ring-handler
   (-> my-routes
       (ring.middleware.defaults/wrap-defaults ring.middleware.defaults/site-defaults)
+      (anti-forgery/wrap-anti-forgery)
       (wrap-gzip)))
 
 (defmulti -event-msg-handler :id)

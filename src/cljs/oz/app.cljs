@@ -19,9 +19,17 @@
                             :view-spec nil
                             :error nil}))
 
+(def ?csrf-token
+  (when-let [el (.getElementById js/document "sente-csrf-token")]
+    (.getAttribute el "data-csrf-token")))
+
+(when-not ?csrf-token
+  (js/console.log "WARNING! No csrf token found! Websocket connection will likely fail."))
+
 (let [packer (sente-transit/get-transit-packer)
       {:keys [chsk ch-recv send-fn state]}
       (sente/make-channel-socket-client! "/chsk"
+                                         ?csrf-token
                                          {:type :auto
                                           :packer packer})]
   (def chsk chsk)

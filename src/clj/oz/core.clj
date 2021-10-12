@@ -263,8 +263,6 @@
   (log/warn "DEPRECATED! Please switch from start-plot-server! to start-server!")
   (apply server/start-server! args))
 
-(defonce ^{:private true} cookie-store (clj-http.cookies/cookie-store))
-(defonce ^{:private true} anti-forgery-token (atom nil))
 
 (defn- prepare-server-for-view!
   [port host]
@@ -272,14 +270,7 @@
   (when (or (not= (server/get-server-port) port)
             (not (server/web-server-started?)))
     (log/info "Starting up server on port" port)
-    (start-server! port))
-  (when-not @anti-forgery-token
-    (when-let [token (:csrf-token
-                      (json/parse-string
-                       (:body (client/get (str "http://" host ":" port "/token")
-                                          {:cookie-store cookie-store}))
-                       keyword))]
-      (reset! anti-forgery-token token))))
+    (start-server! port)))
 
 
 ;; Main view functions

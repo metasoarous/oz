@@ -7,7 +7,7 @@
         org.clojure/core.async {:mvn/version "0.4.490"}
         cheshire/cheshire {:mvn/version "5.8.1"}
         clj-http/clj-http {:mvn/version "3.9.1"}
-        com.taoensso/sente {:mvn/version "1.13.1"}
+        com.taoensso/sente {:mvn/version "1.16.2"}
         com.taoensso/timbre {:mvn/version "5.1.2"}
         com.taoensso/encore {:mvn/version "3.19.0"}
         devcards/devcards {:mvn/version "0.2.6"}
