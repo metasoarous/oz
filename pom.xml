@@ -152,7 +152,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>sente</artifactId>
-      <version>1.13.1</version>
+      <version>1.16.2</version>
     </dependency>
     <dependency>
       <groupId>devcards</groupId>
