@@ -67,7 +67,11 @@
   [{:as ev-msg :keys [?data]}]
   (let [[id msg] ?data]
     (case id
-      :oz.core/view-doc (swap! app-state merge {:view-spec msg :error nil})
+      :oz.core/view-doc
+      (do (swap! app-state merge {:view-spec msg :error nil})
+          (async/go
+            (<! (async/timeout 50))
+            (.typeset js/MathJax)))
       (debugf "Push event from server: %s" ?data))))
 
 
@@ -121,6 +125,11 @@
         ;(go
           ;(<! (async/timeout 2000))
           ;(sente/chsk-connect! chsk))))))
+
+(async/go-loop []
+  (<! (async/timeout 2000))
+  (.typeset js/MathJax)
+  (recur))
 
 (defn init []
   (start-router!)

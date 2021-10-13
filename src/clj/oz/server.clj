@@ -78,7 +78,7 @@
       [:link {:href "oz.svg" :rel "shortcut icon" :type "image/x-icon"}]
       [:link {:href "css/style.css" :rel "stylesheet" :type "text/css"}]
       [:link {:href "https://fonts.googleapis.com/css?family=Open+Sans" :rel "stylesheet"}]
-      [:script {:src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"
+      [:script {:src "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
                 :type "text/javascript"}]]
      [:body
        [:div#sente-csrf-token {:style {:display "none"} :data-csrf-token (:anti-forgery-token ring-req)}]
