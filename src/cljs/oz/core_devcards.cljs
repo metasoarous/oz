@@ -61,7 +61,7 @@
   (devcards/reagent simple-vega-lite-example))
 
 (defcard log-level-card
-  "Simple vega-lite example"
+  "Simple vega-lite example with explicitly set log level"
   (devcards/reagent log-level-example))
 
 (defcard data-table-card
