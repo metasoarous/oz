@@ -92,13 +92,15 @@
    (vega doc (merge opts {:mode "vega-lite"}))))
 
 
-(def ^:private live-viewers-state
+(defonce ^:private live-viewers-state
   (r/atom {:vega vega
            :vega-lite vega-lite}))
 
 (defn register-live-view
   [key component]
   (swap! live-viewers-state assoc key component))
+
+;@live-viewers-state
 
 (defn register-live-views
   [& {:as live-views}]
@@ -188,15 +190,33 @@
   ;; prewalk spec, rendering special hiccup tags like :vega and :vega-lite, and potentially other composites,
   ;; rendering using the components above. Leave regular hiccup unchanged).
   ;; TODO finish writing; already hooked in below so will break now
-  (let [live-viewers @live-viewers-state
-        live-viewer-keys (set (keys live-viewers))]
+  (let [live-viewers @live-viewers-state]
     (clojure.walk/prewalk
-      (fn [x] (if (and (coll? x) (live-viewer-keys (first x)))
-                (into
-                  [(get live-viewers (first x))]
-                  (rest x))
+      (fn [x] (if-let [component-fn (and (coll? x) (live-viewers (first x)))]
+                (into [component-fn] (rest x))
                 x))
       doc)))
+
+
+;(def remote-zipper)
+
+;(let [live-viewers @live-viewers-state
+      ;live-viewer-keys (set (keys live-viewers))]
+  ;(clojure.walk/postwalk
+    ;(fn [x]
+      ;(println "visiting node: " x)
+      ;(if (and (coll? x) (live-viewer-keys (first x)))
+        ;(into
+          ;[(get live-viewers (first x))]
+          ;(rest x))
+        ;x))
+    ;[:div
+     ;[:h1 "hello dawg"]
+     ;[:vega-lite {:data {:values [{:a 1 :b 2} {:a 3 :b 4}]}
+                  ;:mark :point
+                  ;:encoding {:x {:field :a}
+                             ;:y {:field :b}}}]]))
+
 
 
 ;; TODO Rename this to live-view; But need to make sure to edit in the repl tooling application code as well,

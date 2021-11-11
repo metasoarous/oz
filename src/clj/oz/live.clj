@@ -5,6 +5,7 @@
             [clojure.string :as string]
             [clojure.pprint :as pprint]
             [clojure.java.io :as io]
+            ;[oz.next :as next]
             [clojure.core.async :as async]))
 
 
@@ -65,16 +66,21 @@
 
 ;; watching process ns form
 
-(defn watch! [watch-path f]
-  (when-not (get @watchers watch-path)
-    ;; Call the function on first watch, so that you don't have to do a no-op save to initialize things
-    (f watch-path {} {:kind :create :file (io/file watch-path)})
-    (let [watcher
-          (hawk/watch! [{:paths [watch-path]
-                         :handler (fn [context event]
-                                    (f watch-path context event))}])]
-      (swap! watchers assoc-in [watch-path :watcher] watcher)
-      ::success!)))
+(defn watch!
+  "Takes a watch path, and a function with args (watch-path, event), where event looks like
+  {:keys [file type filename watch-path]}"
+  [watch-path f]
+  (let [decorate-event (fn [{:as event :keys [file]}]
+                         (assoc event
+                                :filename (.getPath file)
+                                :watch-path watch-path))]
+    (when-not (get @watchers watch-path)
+      (f (decorate-event {:kind :create :file (io/file watch-path)}))
+      (let [watcher
+            (hawk/watch! [{:paths [watch-path]
+                           :handler (fn [_ event] (f (decorate-event event)))}])]
+        (swap! watchers assoc-in [watch-path :watcher] watcher)
+        ::success!))))
 
 
 (defn process-ns-form
@@ -154,8 +160,7 @@
                   (vector? form)))
         (map :eval))])
 
-
-(defn reload-file! [_ _ {:keys [kind file]}]
+(defn reload-file! [{:keys [kind file]}]
   ;; ignore delete (some editors technically delete the file on every save!)
   (when (#{:modify :create} kind)
     (let [filename (canonical-path file)
@@ -205,6 +210,10 @@
               (swap! watchers update filename #(merge % {:form-evals form-evals :final-eval final-eval}))
               (compile-forms-hiccup form-evals))))))))
 
+
+
+;; Plugging this all together into the final API calls.
+;; This will all switch over to reload-file-next! when it's ready.
 
 (defn live-reload!
   "Watch a clj file for changes, and re-evaluate only those lines which have changed, together with all following lines.

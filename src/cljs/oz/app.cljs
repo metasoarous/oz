@@ -8,7 +8,8 @@
             [clojure.stacktrace :as st]
             [taoensso.sente :as sente :refer (cb-success?)]
             [taoensso.sente.packers.transit :as sente-transit]
-            [oz.core :as core])
+            [oz.core :as core]
+            [re-highlight.core :as highlight])
   (:require-macros
     [cljs.core.async.macros :as asyncm :refer (go go-loop)]))
 
@@ -16,8 +17,21 @@
 (enable-console-print!)
 
 (defonce app-state (r/atom {:text "Pay no attention to the man behind the curtain!"
-                            :view-spec nil
+                            :document nil
+                            :async-block-results {}
                             :error nil}))
+
+;; TODO Build in garbage collection, so that results are cleared out after they haven't been used some set
+;; number of times
+
+(defonce async-block-results (r/cursor app-state [:async-block-results]))
+;(add-watch async-block-results
+           ;:async-block-results-update
+           ;(fn [k r o n]
+             ;(js/console.log "XXX" n)))
+
+@async-block-results
+;(:document @app-state)
 
 (let [packer (sente-transit/get-transit-packer)
       {:keys [chsk ch-recv send-fn state]}
@@ -29,39 +43,145 @@
   (def chsk-send! send-fn)
   (def chsk-state state))
 
-(defmulti -event-msg-handler :id)
+
+;; Handle top level sente wire connection details
+
+(defmulti -sente-event-handler
+  "Handles the sente messages coming off the wire, which are important for managing the lifecycle of
+  the sente connection."
+  :id)
 
 (defn event-msg-handler [{:as ev-msg :keys [id ?data event]}]
   (debugf "Event: %s" event) []
-  (-event-msg-handler ev-msg))
+  (-sente-event-handler ev-msg))
 
-(defmethod -event-msg-handler :default
+(defmethod -sente-event-handler :default
   [{:as ev-msg :keys [event]}]
   (debugf "Unhandled event: %s" event))
 
-(defmethod -event-msg-handler :chsk/state
+(defmethod -sente-event-handler :chsk/state
   [{:as ev-msg :keys [?data]}]
   (let [[old-state-map new-state-map] (have vector? ?data)]
     (if (:first-open? new-state-map)
       (debugf "Channel socket successfully established!: %s" ?data)
       (debugf "Channel socket state change: %s" ?data))))
 
-(defmethod -event-msg-handler :chsk/handshake
+(defmethod -sente-event-handler :chsk/handshake
   [{:as ev-msg :keys [?data]}]
   (let [[?uid ?csrf-token ?handshake-data] ?data]
     (debugf "Handshake: %s" ?data)))
 
 
 
-;; This is the main event handler; If we want to do cool things with other kinds of data going back and forth,
-;; this is where we'll inject it.
-(defmethod -event-msg-handler :chsk/recv
+;; Handle domain messages coming off the wire
+
+(defmulti message-handler
+  "Handler for domain messages off the wire."
+  first)
+
+;; fallback; log out to console
+(defmethod message-handler :default
+  [data]
+  (debugf "Unrecognized push event from server: %s" data))
+
+;; install the message-handler
+(defmethod -sente-event-handler :chsk/recv
   [{:as ev-msg :keys [?data]}]
   (let [[id msg] ?data]
-    (case id
-      :oz.core/view-doc (swap! app-state merge {:view-spec msg :error nil})
-      (debugf "Push event from server: %s" ?data))))
+    (message-handler ?data)))
 
+
+;; old view-doc method
+(defmethod message-handler :oz.core/view-doc
+  [[_ msg]]
+  (swap! app-state merge {:document msg :error nil}))
+
+;(defmethod message-handler :oz.core/view-block
+  ;[[_ {:keys [id block-eval]}]]
+  ;(swap! app-state assoc-in [:blocks id] block-eval))
+
+(defmethod message-handler :oz.core/async-block-results
+  [[_ {:as block :keys [id]}]]
+  (js/console.log ":oz.core/async-block-results are in for block id: " (pr-str id))
+  (js/console.log "block:" (pr-str block))
+  (swap! async-block-results assoc id block))
+
+
+;; build our custom views for code blocks and such
+
+;; questios:
+;; * [ ] how do we keep track of what blocks need to be garbage collected?
+;;   * [ ] can we attach a will-unmount hook to the components?
+;;   * right now we are banking on using the existing tree-traversing to make sure
+
+;(defn get-block-result
+  ;[id]
+  ;(r/cursor async-block-results [id]))
+
+(defn get-block-result
+  [id]
+  (r/reaction
+    (get @async-block-results id)))
+
+(defn src-view [{:keys [id code-str]}]
+  [highlight/highlight
+   {:language "clojure"}
+   code-str])
+
+;(keys @async-block-results)
+
+(defn hiccup-view [{:keys [id]}]
+  (js/console.log "generating hiccup-view component for id: " (pr-str id))
+  (let [async-result (get-block-result id)]
+    (fn [{:as block :keys [display-src? id] :or {display-src? true}}]
+      (js/console.log "updating hiccup view component for id: " (pr-str id))
+      [:div
+        (when display-src?
+          [:div
+            [src-view block]
+            [:p {:style {:font-size 9}}
+             (if-let [{:keys [compute-time ]} @async-result]
+               (str "Finished (compute-time =" compute-time")")
+               (str "running: " id " ..."))]])
+        (when-let [{:keys [result]} @async-result]
+          (js/console.log "async-result: " (pr-str result))
+          ;[:pre result])])))
+          [core/live-view result])])))
+
+(defn code-view [{:keys [id]}]
+  ;(let [async-result (get-block-result id)])
+  (let [async-result (r/cursor app-state [:async-block-results id])]
+    (fn [{:as block :keys [display-src? id] :or {display-src? true}}]
+      [:div
+       (when display-src?
+         [src-view block])
+       [:p {:style {:font-size 9}} ;:font-style :italic}}
+         (if-let [{:keys [result compute-time id]} @async-result]
+           (str "Finished (compute-time =" compute-time")")
+           (str "running: " id " ..."))]])))
+
+@(r/cursor app-state [:async-block-results #uuid "3687ff30-622b-52fb-b4da-31176341cba5"])
+(get @async-block-results #uuid "3687ff30-622b-52fb-b4da-31176341cba5")
+
+
+(defn async-block-view
+  [{:as block :keys [type hiccup]}]
+  (case type
+    :md-comment hiccup
+    :markdown hiccup
+    :hiccup [hiccup-view block]
+    :code [code-view block] 
+    :code-comment [src-view block]
+    ;; default
+    [:div [:h3 "Unknown block type" type]
+     [:pre (pr-str block)]])) 
+
+(core/register-live-views
+  :oz.doc/async-block async-block-view
+  :oz.doc/code-comment src-view)
+
+
+;; Set up sente router
 
 (def router_ (atom nil))
 
@@ -74,8 +194,10 @@
 
 
 (defn application [app-state]
-  (if-let [spec (:view-spec @app-state)]
-    [core/live-view spec]
+  (if-let [doc (:document @app-state)]
+    (do
+      ;(js/console.log (pr-str doc))
+      [:div [core/live-view doc]])
     [:div
       [:h1 "Waiting for first spec to load..."]
       [:p "This may take a second the first time if you call a plot function, unless you first call " [:code '(oz/start-server!)] "."]]))
@@ -90,8 +212,14 @@
                          [:div
                           [:h2 "Unable to process document!"]
                           [:h3 "Error:"]
-                          [:code (pr-str error)]]
+                          [:code (pr-str error)]
+                          [:h4 "Please check console log for error"]]
                          comp))}))
+
+
+;; Take anything in the data structure that looks like 
+
+;(defn)
 
 (add-watch chsk-state ::chsk-connected?
   (fn [_ _ _ old-value new-value]

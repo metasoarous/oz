@@ -1,4 +1,6 @@
-(ns oz.core
+(ns 
+  ^{:ns-metadata :yes-please}
+  oz.core
   (:refer-clojure :exclude [load compile])
   (:require [oz.server :as server]
             [oz.live :as live]
@@ -11,6 +13,7 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.spec.alpha :as s]
+            [clojure.walk :as walk]
             [cheshire.core :as json]
             [yaml.core :as yaml]
             [markdown-to-hiccup.core :as md->hc]
@@ -24,9 +27,13 @@
             [clojure.spec.gen.alpha :as gen]
             [clojure.core.async :as a]
             [respeced.test :as rt]
+            [oz.next :as next]
             [applied-science.darkstar :as darkstar])
   (:import java.io.File
            java.util.UUID))
+
+;(meta *ns*)
+
 
 (defn- apply-opts
   "utility function for applying kw-args"
@@ -528,7 +535,7 @@
 (defn- compile-tags
   [doc
    compilers]
-  (clojure.walk/prewalk
+  (walk/prewalk
     (fn [form]
       (cond
         ;; If we see a function, call it with the args in form
@@ -1017,7 +1024,7 @@
 (defmethod compile* :default
   ([doc {:as opts :keys [tag-compilers]}]
    (let [[from-format to-format :as key] (compiler-key doc opts)]
-     (println "on:" key)
+     (println "opts " opts)
      (cond-> doc
        (not= :hiccup from-format) (compile* (merge opts {:from-format from-format :to-format :hiccup}))
        tag-compilers              (compile* (merge opts {:from-format :hiccup :to-format :hiccup}))
@@ -1085,7 +1092,7 @@
    ;; Support mode or from-format to `compile`, but require compile* registrations to use `:from-format`
    ;; This is maybe why we _do_ need this function
    (let [[from-format to-format :as key] (compiler-key doc opts)]
-     ;(log/debug "compile key is" (with-out-str (pp/pprint key)))
+     (log/debug "compile key is" (with-out-str (pp/pprint key)))
      (assert (s/valid? ::registered-compiler-key key))
      (cond
        (or (= :hiccup from-format to-format)
@@ -1134,6 +1141,10 @@
 
 (defonce ^:private last-viewed-doc
   (atom nil))
+(defonce ^:private last-viewed-config
+  (atom nil))
+(defonce ^:private last-viewed-file
+  (atom nil))
 
 (defn view!
   "View the given doc in a web browser. Docs for which map? is true are treated as single Vega-Lite/Vega visualizations.
@@ -1142,27 +1153,36 @@
   You may also specify `:host` and `:port`, for server settings, and a `:mode` option, defaulting to `:vega-lite`, with `:vega` the alternate option.
   (Though I will note that Vega-Embed often catches when you pass a vega doc to a vega-lite component, and does the right thing with it.
   However, this is not guaranteed behavior, so best not to depend on it)"
-  [doc & {:keys [host port mode] :as opts}]
+  [doc & {:keys [host port mode] :as config}]
   (let [port (or port (server/get-server-port) server/default-port)
         host (or host "localhost")]
     (try
       (prepare-server-for-view! port host)
-      (let [hiccup-doc (prep-for-live-view doc opts)]
+      (let [hiccup-doc (prep-for-live-view doc config)]
         ;; if we have a map, just try to pass it through as a vega form
         (reset! last-viewed-doc hiccup-doc)
+        (reset! last-viewed-config config)
         (server/send-all! [::view-doc hiccup-doc]))
       (catch Exception e
         (log/error "error sending plot to server:" e)
         (log/error "Try using a different port?")
         (.printStackTrace e)))))
 
+;; We need this here so that 
+(declare handle-block-result)
 
 (defmethod server/-event-msg-handler :oz.app/connection-established
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
+  (log/info "new connection established: " ev-msg)
   (when-let [doc @last-viewed-doc]
     (let [session (:session ring-req)
-          uid (:uid session)]
-      (server/chsk-send! uid [::view-doc doc]))))
+          uid (:uid session)
+          config @last-viewed-config]
+      ;; TODO use the uid here so that we are only resending the doc to the newly connected browser
+      (server/chsk-send! uid [::view-doc doc])
+      (when-let [evaluation (:last-evaluation @next/build-state)]
+        ;; TODO Really need to track the config, since otherwise we don't have ports and such
+        (next/queue-result-callback! evaluation (partial handle-block-result config evaluation))))))
 
 (defn ^:no-doc v!
   "Deprecated version of `view!`, which takes a single vega or vega-lite clojure map `viz`, as well as added `:data`,
@@ -1305,11 +1325,13 @@
 
 ;; For the live-view! function below
 (defn- view-file!
-  [{:keys [host port format from-format]} filename context {:keys [kind file]}]
+  [{:keys [host port format from-format]} {:as event :keys [kind file filename watch-path]}]
   ;; ignore delete (some editors technically delete the file on every save!
   (when (and (#{:modify :create} kind)
-             (not (.isDirectory (io/file filename))))
-    (let [contents (slurp filename)
+             ;; TODO Make sure this shouldn't be the file
+             ;(not (.isDirectory (io/file watch-path)))
+             (not (.isDirectory file)))
+    (let [contents (slurp file)
           from-format (or from-format format (filename-format filename))]
       ;; if there are differences, then do the thing
       (when-not (= contents
@@ -1317,7 +1339,7 @@
         (log/info "Rerendering file:" filename)
         (when-let [result
                    (if (#{:clj :cljc} from-format)
-                     (live/reload-file! filename context {:kind kind :file file})
+                     (live/reload-file! event)
                      (load filename :from-format from-format))]
           (view! result :host host :port port))
         (swap! live/watchers assoc-in [filename :last-contents] contents)))))
@@ -1421,32 +1443,255 @@
     #(-> f io/file .getPath (string/split #"\/") last (->> (re-find %)))
     default-ignore-patterns))
 
+(defn get-template-fn [{:as build-desc :keys [template-fn]}]
+  (or template-fn
+      (fn [blocks]
+        ;; TODO Test if metadata key works without the into
+        (into [:div]
+              (for [[_ {:as block :keys [id]} :as block]
+                    blocks]
+                ^{:key id}
+                block)))))
 
-(defn- build-and-view-file!
+;(defn- build-and-view-file!
+  ;[{:as config :keys [view? host port force-update]}
+   ;{:as build-desc :keys [format from to out-path-fn template-fn as-assets? compile-opts]}
+   ;{:keys [kind file watch-path]}]
+  ;(when (and from (.isDirectory (io/file from)))
+    ;(ensure-out-dir to false))
+  ;(if-let [ext (and file (extension (.getPath file)))]
+    ;(cond
+      ;;; Handle asset case; just copy things over directly
+      ;(or as-assets? (asset-filetypes ext))
+      ;(when (and (not (.isDirectory file)) (#{:modify :create} kind) (not (ignore? file)))
+        ;(let [out-path (compute-out-path (assoc build-desc :out-path-fn identity)
+                                         ;(.getPath file))]
+          ;(ensure-out-dir out-path true)
+          ;(log/info "updating asset:" file)
+          ;(io/copy file (io/file out-path))))
+      ;;; Handle the source file case
+      ;(supported-filetypes ext)
+      ;;; ignore delete (some editors technically delete the file on every save!); also ignore dirs
+      ;(when (and (#{:modify :create} kind) file (not (.isDirectory file)))
+        ;(reset! last-built-file [(live/canonical-path file) build-desc])
+        ;(let [filename (.getPath file)
+              ;ext (extension filename)
+              ;contents (slurp filename)]
+          ;;; if there are differences, then do the thing
+          ;(when-not (= contents
+                       ;(get-in @live/watchers [filename :last-contents]))
+            ;(log/info "Rerendering file:" filename)
+            ;(let [evaluation
+                  ;(cond
+                    ;;; 
+                    ;(#{"clj" "cljc"} ext)
+                    ;(live/reload-file! {:kind kind :file file})
+                    ;;; how do we handle cljs?
+                    ;(#{"cljs"} ext)
+                    ;[:div "CLJS Coming soon!"]
+                    ;;; loading of static files, like md or hiccup
+                    ;:else
+                    ;(load filename :format format))]
+              ;(when evaluation
+                ;(let [;_ (log/info "step 1:" evaluation)
+                      ;evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))
+                      ;;_ (log/info "step 2:" evaluation)
+                      ;out-path (compute-out-path build-desc filename)]
+                  ;(ensure-out-dir out-path true)
+                  ;(when view?
+                    ;(log/info "Updating old live view")
+                    ;(view! evaluation :host host :port port))
+                  ;(export! evaluation out-path)
+                  ;(swap! live/watchers update filename (partial merge {:last-contents contents})))))))))))
+
+
+;; TODO Will modify this and swap out with the above when next is ready
+
+(defn- copy-asset
+  [build-desc kind file]
+  (when (and (not (.isDirectory file)) (#{:modify :create} kind) (not (ignore? file)))
+    (let [out-path (compute-out-path (assoc build-desc :out-path-fn identity)
+                                     (.getPath file))]
+      (ensure-out-dir out-path true)
+      (log/info "updating asset:" file)
+      (io/copy file (io/file out-path)))))
+
+
+(s/def ::result-chans map?)
+(s/def ::block-id-seq sequential?)
+(s/def ::blocks-by-id map?)
+
+(s/def ::evaluation
+  (s/keys :req-un [::result-chans ::blocks-by-id ::block-id-seq]))
+ 
+
+(defn transitable-block [block]
+  (walk/postwalk
+    (fn [x]
+      (cond
+        (var? x) (str x)
+        :else x))
+    block))
+
+(defn- async-doc
+  ([build-desc
+    {:as evaluation :keys [result-chans blocks-by-id]}]
+   (let [template-fn (get-template-fn build-desc)]
+     (template-fn
+       (for [{:as block :keys [type hiccup code]}
+             (next/block-seq evaluation)]
+         (case type
+           (:code :hiccup) [:oz.doc/async-block (transitable-block block)]
+           (:md-comment)   hiccup
+           (:code-comment) [:oz.doc/code-comment (transitable-block block)]
+           (:whitespace)   nil))))))
+
+(defn- view-async-doc!
+  [{:as config :keys [host port]} build-desc evaluation]
+  (view! (async-doc (get-template-fn build-desc) evaluation)
+         :host host :port port))
+
+(defonce block-client-sends (atom #{}))
+
+(defn- send-async-block-results
+  [{:as config :keys [host port]}
+   ;; Should maybe be changed to -> :result :value
+   {:as block-result :keys [id]}]
+  (doseq [uid (:any @server/connected-uids)
+          :let [tracking-key [uid id]]]
+    (when-not (get @block-client-sends tracking-key)
+      (server/chsk-send! uid [::async-block-results block-result])
+      (swap! block-client-sends conj tracking-key))))
+  ;(server/send-all!
+    ;[::async-block-results
+     ;(assoc block-result
+            ;:result
+            ;(prep-for-live-view result config))]))
+
+
+;(defn- paginated-results
+  ;([results {:as page :keys [page per-page] :or {per-page 10 page 0}}]
+   ;(if (or (next/lazy? results)
+           ;(> (count results)
+              ;per-page))
+     ;(->> results
+          ;(drop (* per-page page))
+          ;(take per-page))
+     ;results)))
+
+
+;(defn- send-block-results
+  ;[{:as config :keys [host port]}
+   ;{:as block-results :keys [id result]}]
+  ;(server/send-all!
+    ;[::evaluation-result
+     ;(prep-for-live-view block)]))
+
+(defn handle-block-result
+  [{:as config :keys [host port]}
+   {:as evaluation :keys [blocks-by-id]}
+   {:as block-result :keys [id]}]
+  (when-let [{:as block :keys [type]} (get blocks-by-id id)]
+    (case type
+      :hiccup (send-async-block-results config (update block-result :result prep-for-live-view config))
+      :code (send-async-block-results config (select-keys block-result [:id :compute-time]))
+      nil)))
+
+(defn- complete-doc
+  ([build-desc {:as evaluation :keys [result-chans blocks-by-id]}]
+   (let [template-fn (get-template-fn build-desc)]
+     ;; TODO Need to get metadata from namespaces and from markdown imports
+     (template-fn
+       (for [{:as block :keys [id type hiccup code]}
+             (next/block-seq evaluation)
+             :let [result-chan (get result-chans id)]]
+         (case type
+           (:hiccup)       (:result (a/<!! result-chan))
+           ;; TODO Check if this is right and fix
+           (:code)         [:pre code]
+           (:md-comment)   hiccup
+           (:code-comment) [:oz.doc/code-comment]))))))
+
+(defn export-evaluation-results
+  [{:as build-desc :keys [out-path]}
+   {:as evaluation}]
+  (let [hiccup (complete-doc build-desc evaluation)]
+    (export! hiccup out-path)))
+
+(defn- build-and-view-async-evaluation!
+  [config build-desc evaluation]
+  (view-async-doc! config build-desc evaluation)
+  (next/queue-result-callback! evaluation (partial handle-block-result config evaluation))
+  (next/queue-completion-callback! evaluation (partial export-evaluation-results build-desc)))
+
+(defn- build-and-view-synchronous-evaluation!
+  [{:as config :keys [view?]}
+   {:as build-desc :keys [out-path template-fn]}
+   {:as evaluation :keys [file contents result]}]
+  (let [filename (.getPath file)
+        evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))]
+    (ensure-out-dir out-path true)
+    (when view?
+      (log/info "Updating synchronous live view")
+      (view! evaluation config))
+    (export! evaluation out-path)
+    (swap! live/watchers update filename (partial merge {:last-contents contents}))))
+
+(defn- evaluatable
+  [config build-desc
+   {:as evaluation :keys [kind file contents result]}]
+  (when (and (#{:modify :create} kind) file (not (.isDirectory file)))
+    (reset! last-built-file [(live/canonical-path file) build-desc])
+    (let [filename (.getPath file)
+          contents (slurp filename)]
+      ;; if there are differences, then do the thing
+      ;; TODO Also need to reconsider this decision, since if there are upstream changes to var
+      ;; dependencies, we'll need to update even if no change to code
+      (not= contents
+            (get-in @live/watchers [filename :last-contents])))
+    {:file file}))
+        
+
+(defn- evaluate-file! [file ext format]
+  (cond
+    (#{"clj" "cljc"} ext)
+    ;; Will not return if there's nothing to evaluate
+    (next/reload-file! file)
+    ;; how do we handle cljs?
+    (#{"cljs"} ext)
+    [:div "CLJS Coming soon!"]
+    ;; loading of static files, like md or hiccup
+    :else
+    (load (.getPath file) :format format)))
+
+
+(defn- build-and-view-file-next!
   [{:as config :keys [view? host port force-update]}
-   {:as build-desc :keys [format from to out-path-fn template-fn html-template-fn as-assets? compile-opts]}
-   filename context {:keys [kind file]}]
+   {:as build-desc :keys [format from to out-path-fn template-fn as-assets? compile-opts]}
+   {:keys [kind file]}]
   (when (and from (.isDirectory (io/file from)))
     (ensure-out-dir to false))
+  (println "calling build-and-view-file-next!")
   (if-let [ext (and file (extension (.getPath file)))]
     (cond
       ;; Handle asset case; just copy things over directly
       (or as-assets? (asset-filetypes ext))
-      (when (and (not (.isDirectory file)) (#{:modify :create} kind) (not (ignore? file)))
-        (let [out-path (compute-out-path (assoc build-desc :out-path-fn identity)
-                                         (.getPath file))]
-          (ensure-out-dir out-path true)
-          (log/info "updating asset:" file)
-          (io/copy file (io/file out-path))))
+      (copy-asset build-desc kind file)
       ;; Handle the source file case
       (supported-filetypes ext)
       ;; ignore delete (some editors technically delete the file on every save!); also ignore dirs
+      ;; TODO Consider whether we want to undo this assumption; We could possibly set it up so that if a file
+      ;; is deleted but recreated a short time later, then doesn't delete. Otherwise, does, so that old files
+      ;; can be removed as needed (for renames, etc).
+      ;; Also need to add utilities for cleaning up unused files
       (when (and (#{:modify :create} kind) file (not (.isDirectory file)))
         (reset! last-built-file [(live/canonical-path file) build-desc])
         (let [filename (.getPath file)
               ext (extension filename)
               contents (slurp filename)]
           ;; if there are differences, then do the thing
+          ;; TODO Also need to reconsider this decision, since if there are upstream changes to var
+          ;; dependencies, we'll need to update even if no change to code
           (when-not (= contents
                        (get-in @live/watchers [filename :last-contents]))
             (log/info "Rerendering file:" filename)
@@ -1454,7 +1699,8 @@
                   (cond
                     ;; 
                     (#{"clj" "cljc"} ext)
-                    (live/reload-file! filename context {:kind kind :file file})
+                    ;; Will not return if there's nothing to evaluate
+                    (next/reload-file! file)
                     ;; how do we handle cljs?
                     (#{"cljs"} ext)
                     [:div "CLJS Coming soon!"]
@@ -1462,16 +1708,23 @@
                     :else
                     (load filename :format format))]
               (when evaluation
-                (let [;_ (log/info "step 1:" evaluation)
-                      evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))
-                      ;_ (log/info "step 2:" evaluation)
-                      out-path (compute-out-path build-desc filename)]
-                  (ensure-out-dir out-path true)
-                  (when view?
-                    (log/info "Updating live view")
-                    (view! evaluation :host host :port port))
-                  (export! evaluation out-path)
-                  (swap! live/watchers update filename (partial merge {:last-contents contents})))))))))))
+                (if (#{"clj" "cljc"} ext)
+                  ;; Eventually this case will cover md as well, once we add code block eval there
+                  (build-and-view-async-evaluation! config build-desc evaluation)
+                  (build-and-view-synchronous-evaluation! config build-desc evaluation))))))))))
+
+
+;(build-and-view-file-next!
+  ;{:view? true
+   ;:host "localhost"
+   ;:port 10666}
+  ;{:from "realtest.clj"
+   ;:to "realtest.html"
+   ;:template-fn (fn [& blocks]
+                  ;[:div blocks])}
+  ;{:kind :modify
+   ;:file (io/file "realtest.clj")})
+
 
 
 (def ^:private default-config
@@ -1538,7 +1791,7 @@
    (kill-builds!)
    (if (map? build-descs)
      (apply-opts build! [build-descs] config)
-     (let [{:as full-config :keys [lazy? live? view?]}
+     (let [{:as full-config :keys [lazy? live?]}
            (merge default-config config)]
        (reset! server/current-root-dir (or (:root-dir config) (infer-root-dir build-descs)))
        (doseq [build-desc build-descs]
@@ -1550,16 +1803,18 @@
              (let [config' (assoc full-config :view? false)
                    dest-file (compute-out-path full-spec src-file)]
                (when (or (not lazy?) (not (.exists (io/file dest-file))))
-                 (build-and-view-file! config' full-spec (:from full-spec) nil {:kind :create :file src-file}))))
+                 ;(build-and-view-file! config' full-spec (:from full-spec) {:kind :create :file src-file :watch-path dest-file})
+                 (build-and-view-file-next! config' full-spec {:kind :create :file src-file :watch-path (:from full-spec)}))))
            ;; Start watching files for changes
            (when live?
-             (live/watch! (:from full-spec) (partial build-and-view-file! full-config full-spec)))))
+             (live/watch! (:from full-spec) (partial build-and-view-file-next! full-config full-spec)))))
        ;; If we're running this the second time, we want to immediately rebuild the most recently compiled
        ;; file, so that any new templates or whatever being passed in can be re-evaluated for it.
        (when-let [[file build-desc] @last-built-file]
          (let [new-spec (first (filter #(= (:from %) (:from build-desc)) build-descs))]
            (log/info "Recompiling last viewed file:" file)
-           (build-and-view-file! full-config new-spec (:from build-desc) {} {:kind :create :file (io/file file)})))))))
+           ;(build-and-view-file! full-config new-spec (:from build-desc) {} {:kind :create :file (io/file file)})
+           (build-and-view-file-next! full-config new-spec {:kind :create :file (io/file file) :watch-path (:from build-desc)})))))))
 
 ;; for purpose of examples below
 ;; Or are they?
@@ -1633,19 +1888,20 @@
 
   ;; Run static site generation features
   (build!
-    [{:from "examples/static-site/simple-static-site/src/site/"
-      :to "examples/static-site/simple-static-site/build/"
-      :template-fn site-template}
+    [{:from "resources/oz/examples/static-site/simple-static-site/src/site/"
+      :to "resources/oz/examples/static-site/simple-static-site/build/"
+      :template-fn site-template
+      :omit-styles? true}
      ;; If you have static assets, like datasets or images which need to be simply copied over
-     {:from "examples/static-site/simple-static-site/src/assets/"
-      :to "examples/static-site/simple-static-site/build/"
+     {:from "resources/oz/examples/static-site/simple-static-site/src/assets/"
+      :to "resources/oz/examples/static-site/simple-static-site/build/"
       :as-assets? true}]
     :lazy? false
     :view? true
     :port 10666)
     ;:root-dir "examples/static-site/build")
 
-  (clojure.walk/postwalk
+  (walk/postwalk
     (fn [{:as elmt :keys [tag attrs]}]
       (if tag
         (update elmt :attrs merge attrs)
@@ -1657,21 +1913,4 @@
 
   :end-comment)
 
-
-(def help-message
-  "args: command, &args
-  command options
-  ")
-
-(defn -main
-  [command & args]
-  (case command
-    "help" (println help-message)
-    "build" (let [[build-spec & args'] args
-                  build-spec (edn/read-string build-spec)] 
-              (println "build-spec" (pr-str build-spec))
-              (println "args'" args')
-              (build! build-spec)
-              (println "done calling build"))))
-              ;(a/<!! (a/chan)))))
 
