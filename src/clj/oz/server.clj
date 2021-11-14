@@ -17,6 +17,8 @@
    [cheshire.core :as json]
    [clojure.java.io :as io]
    [oz.live :as live])
+  (:import
+   [java.util UUID])
   (:gen-class))
 
 
@@ -30,7 +32,7 @@
 
 (let [packer (sente-transit/get-transit-packer)
       ;; TODO CSRF token set to nil for now; Need to fix this https://github.com/metasoarous/oz/issues/122
-      chsk-server (sente/make-channel-socket-server! (get-sch-adapter) {:packer packer})
+      chsk-server (sente/make-channel-socket-server! (get-sch-adapter) {:packer packer :user-id-fn (fn [& args] (UUID/randomUUID))})
       {:keys [ch-recv send-fn connected-uids
               ajax-post-fn ajax-get-or-ws-handshake-fn]} chsk-server]
   (def ring-ajax-post ajax-post-fn)
