@@ -769,7 +769,7 @@
 (defn eval-complete?
   [evaluation]
   (all-complete? (result-chan-seq evaluation)))
-                        
+
 
 (defn queue-completion-callback!
   [{:as evaluation :keys [kill-chan block-id-seq blocks-by-id result-chans]}
@@ -847,7 +847,7 @@
         (let [result (<! result-chan)]
           (callback-fn result))))))
 
-    
+
 ;(let [code-str "(def stuff :blah)\n(str stuff \"dude\")"]
    ;(-> code-str parse-code process-blocks infer-dependencies))
 
@@ -913,9 +913,9 @@
 
 ;; goals
 ;;
-;; * [ ] opt to include code in output
+;; * [x] opt to include code in output
 ;;   * [ ] opt between marginalia and inline mode
-;; * [ ] differential transmission of results
+;; * [x] differential transmission of results
 
 ;; sketch for how to solve problem:
 ;; * [x] organize data into blocks
