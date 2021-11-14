@@ -638,8 +638,10 @@
     (if-let [reference-forms (and declares-ns (ns-form-references code-data))]
       ;; We process namespace declarations synchronously, since we always want to evaluate them before the
       ;; code
-      (binding [*ns* (create-ns declares-ns)]
-        (eval (concat '(do) reference-forms)))
+      (let [t0 (System/currentTimeMillis)]
+        (binding [*ns* (create-ns declares-ns)]
+          (eval (concat '(do) reference-forms)))
+        (>!! (:result-chan block-evaluation) {:id id :result nil :compute-time (/ (int (- (System/currentTimeMillis) t0)) 1000.)}))
       ;; Otherwise, we queue up a thread and move on
       (async/thread
         (let [[_ chan] (async/alts!! [kill-chan (all-complete? dependency-chans)])
