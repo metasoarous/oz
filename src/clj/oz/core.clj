@@ -804,10 +804,17 @@
           [[:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega@" vega-version)}]
            [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-lite@" vega-lite-version)}]
            [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-embed@" vega-embed-version)}]])
-        ;; Not allowing this option for now;
-        ;(when-not omit-js-libs?
-        ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
-        [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]]
+        (when-not omit-highlightjs?
+          ;; For embedding
+          [[:style (slurp (io/resource "oz/public/highlight.js/styles/default.min.css"))]
+           [:script (slurp (io/resource "oz/public/highlight.js/highlight.min.js"))]
+           [:script "hljs.highlightAll();"]])
+          ;; for loading from remote location
+          ;[[:link {:rel "stylesheet" :href "http://ozviz.io/highlight.js/styles/default.min.css"}]
+           ;[:script {:type "text/javascript" :src "http://ozviz.io/highlight.js/highlight.min.js"}]])
+        (when-not omit-mathjax?
+          [[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"}]])
+          ;[:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"}]
         header-extras))))
 
 
