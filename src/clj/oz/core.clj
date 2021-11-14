@@ -1183,18 +1183,38 @@
 ;; We need this here so that 
 (declare handle-block-result)
 
+
+;; this no longer does anything; using the :connected-uids-init-data watch below
 (defmethod server/-event-msg-handler :oz.app/connection-established
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
-  (log/info "new connection established: " ev-msg)
-  (when-let [doc @last-viewed-doc]
-    (let [session (:session ring-req)
-          uid (:uid session)
-          config @last-viewed-config]
-      ;; TODO use the uid here so that we are only resending the doc to the newly connected browser
-      (server/chsk-send! uid [::view-doc doc])
-      (when-let [evaluation (:last-evaluation @next/build-state)]
-        ;; TODO Really need to track the config, since otherwise we don't have ports and such
-        (next/queue-result-callback! evaluation (partial handle-block-result config evaluation))))))
+  (log/info "new connection established: " ev-msg)) 
+  ;(when-let [doc @last-viewed-doc]
+    ;(let [session (:session ring-req)
+          ;uid (:uid session)
+          ;config @last-viewed-config]
+      ;;; TODO use the uid here so that we are only resending the doc to the newly connected browser
+      ;(server/chsk-send! uid [::view-doc doc])
+      ;(when-let [evaluation (:last-evaluation (get @next/build-state @last-viewed-file))]
+        ;;; TODO Really need to track the config, since otherwise we don't have ports and such
+        ;(next/queue-result-callback! evaluation (partial handle-block-result config evaluation))))))
+
+(defonce block-client-sends (atom #{}))
+
+(add-watch server/connected-uids :connected-uids-init-data
+  (fn [_ _ old new]
+    (when-let [uids (seq (set/difference (:ws new) (:ws old)))]
+      (doseq [uid uids]
+        (log/info "New connection established for uid:" uid)
+        (when-let [doc @last-viewed-doc]
+          (let [config @last-viewed-config]
+            (log/info "have doc; sending...")
+            ;; TODO use the uid here so that we are only resending the doc to the newly connected browser
+            (server/chsk-send! uid [::view-doc doc])
+            (when-let [evaluation (:last-evaluation (get @next/build-state @last-viewed-file))]
+              (log/info "have evaluation; sending blocks...")
+              ;; TODO Really need to track the config, since otherwise we don't have ports and such
+              (next/queue-result-callback! evaluation (partial handle-block-result config evaluation)))))))))
+
 
 (defn ^:no-doc v!
   "Deprecated version of `view!`, which takes a single vega or vega-lite clojure map `viz`, as well as added `:data`,
@@ -1564,8 +1584,6 @@
   (view! (async-doc (get-template-fn build-desc) evaluation)
          :host host :port port))
 
-(defonce block-client-sends (atom #{}))
-
 (defn- send-async-block-results
   [{:as config :keys [host port]}
    ;; Should maybe be changed to -> :result :value
@@ -1635,7 +1653,8 @@
   [config build-desc evaluation]
   (view-async-doc! config build-desc evaluation)
   (next/queue-result-callback! evaluation (partial handle-block-result config evaluation))
-  (next/queue-completion-callback! evaluation (partial export-evaluation-results build-desc)))
+  (next/queue-completion-callback! evaluation (partial export-evaluation-results build-desc))
+  (reset! last-viewed-file (.getPath (:file evaluation))))
 
 (defn- build-and-view-synchronous-evaluation!
   [{:as config :keys [view?]}
