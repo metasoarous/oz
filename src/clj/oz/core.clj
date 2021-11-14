@@ -1395,7 +1395,8 @@
 (defn- compute-out-path
   [{:as build-desc :keys [from to out-path-fn]} path]
   (let [out-path-fn (or out-path-fn drop-extension)
-        single-file? (= path from)
+        single-file? (= (str (.getAbsolutePath (io/file path)))
+                        (str (.getAbsolutePath (io/file from))))
         to-dir? (or (.isDirectory (io/file to))
                     (= (last (.getPath (io/file path))) (java.io.File/separatorChar)))
         relative-from-path (if single-file? path (live/relative-path path from))]
