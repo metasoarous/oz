@@ -1,7 +1,7 @@
 (ns ^:no-doc ^:figwheel-always oz.app
   (:require [reagent.core :as r]
             [reagent.dom :as rd]
-            [cljs.core.async :as async  :refer (<! >! put! chan)]
+            [cljs.core.async :as async  :refer (go go-loop <! >! chan)]
             [taoensso.encore :as encore :refer-macros (have have?)]
             [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
             [clojure.string :as str]
@@ -24,11 +24,14 @@
 ;; TODO Build in garbage collection, so that results are cleared out after they haven't been used some set
 ;; number of times
 
-(defonce async-block-results (r/cursor app-state [:async-block-results]))
+;(defonce async-block-results (r/cursor app-state [:async-block-results]))
 ;(add-watch async-block-results
            ;:async-block-results-update
            ;(fn [k r o n]
              ;(js/console.log "XXX" n)))
+(def async-block-results
+  (r/reaction
+    (get @app-state :async-block-results)))
 
 @async-block-results
 ;(:document @app-state)
@@ -103,9 +106,15 @@
 (defmethod message-handler :oz.core/async-block-results
   [[_ {:as block :keys [id]}]]
   (js/console.log ":oz.core/async-block-results are in for block id: " (pr-str id))
-  (js/console.log "block:" (pr-str block))
-  (swap! async-block-results assoc id block))
+  ;(js/console.log "block:" (pr-str block))
+  (swap! app-state assoc-in [:async-block-results id ] block))
 
+;; sketch for omit-styles? etc
+(defmethod message-handler :oz.core/update-header-extras
+  [[_ {:as block :keys [id]}]]
+  (js/console.log ":oz.core/async-block-results are in for block id: " (pr-str id))
+  ;(js/console.log "block:" (pr-str block))
+  (swap! app-state assoc-in [:async-block-results id ] block))
 
 ;; build our custom views for code blocks and such
 
@@ -130,35 +139,47 @@
 
 ;(keys @async-block-results)
 
-(defn hiccup-view [{:keys [id]}]
-  (js/console.log "generating hiccup-view component for id: " (pr-str id))
-  (let [async-result (get-block-result id)]
-    (fn [{:as block :keys [display-src? id] :or {display-src? true}}]
-      (js/console.log "updating hiccup view component for id: " (pr-str id))
-      [:div
-        (when display-src?
-          [:div
-            [src-view block]
-            [:p {:style {:font-size 9}}
-             (if-let [{:keys [compute-time ]} @async-result]
-               (str "Finished (compute-time =" compute-time")")
-               (str "running: " id " ..."))]])
-        (when-let [{:keys [result]} @async-result]
-          (js/console.log "async-result: " (pr-str result))
-          ;[:pre result])])))
-          [core/live-view result])])))
+(defn status-message
+  [emoji-str message]
+  [:span [:span {:style {:margin-right 8}} emoji-str] message])
 
-(defn code-view [{:keys [id]}]
-  ;(let [async-result (get-block-result id)])
-  (let [async-result (r/cursor app-state [:async-block-results id])]
-    (fn [{:as block :keys [display-src? id] :or {display-src? true}}]
-      [:div
-       (when display-src?
-         [src-view block])
-       [:p {:style {:font-size 9}} ;:font-style :italic}}
-         (if-let [{:keys [result compute-time id]} @async-result]
-           (str "Finished (compute-time =" compute-time")")
-           (str "running: " id " ..."))]])))
+(defn running-status
+  [async-result]
+  (let [run-time (r/atom 0)]
+    (go-loop []
+      (<! (async/timeout 1000))
+      (when-not @async-result
+        (swap! run-time inc)
+        (recur)))
+    (fn [_]
+      [status-message "⌛" (str "Running... (t = " @run-time "s)")])))
+
+(defn eval-status [id async-result]
+  [:p {:style {:font-size 9 :text-align :right}}
+   (if-let [{:keys [compute-time]} @async-result]
+     [status-message "✅" (str "Finished (t = " compute-time"s)")]
+     [running-status async-result])])
+
+(defn hiccup-view
+  [{:as block :keys [display-src? id] :or {display-src? true}}]
+  (js/console.log "updating hiccup-view component for id: " (pr-str id))
+  (let [async-result (get-block-result id)]
+    [:div
+      (when display-src?
+        [:div
+          [src-view block]
+          [eval-status id async-result]])
+      (when-let [{:keys [result]} @async-result]
+        [core/live-view result])]))
+
+(defn code-view
+  [{:as block :keys [display-src? id] :or {display-src? true}}]
+  (js/console.log "updating code-view component for id: " (pr-str id))
+  (let [async-result (get-block-result id)]
+    [:div
+     (when display-src?
+       [src-view block])
+     [eval-status id async-result]]))
 
 @(r/cursor app-state [:async-block-results #uuid "3687ff30-622b-52fb-b4da-31176341cba5"])
 (get @async-block-results #uuid "3687ff30-622b-52fb-b4da-31176341cba5")
@@ -195,9 +216,7 @@
 
 (defn application [app-state]
   (if-let [doc (:document @app-state)]
-    (do
-      ;(js/console.log (pr-str doc))
-      [:div [core/live-view doc]])
+    [:div [core/live-view doc]]
     [:div
       [:h1 "Waiting for first spec to load..."]
       [:p "This may take a second the first time if you call a plot function, unless you first call " [:code '(oz/start-server!)] "."]]))
@@ -241,6 +260,11 @@
         ;(go
           ;(<! (async/timeout 2000))
           ;(sente/chsk-connect! chsk))))))
+
+(async/go-loop []
+  (<! (async/timeout 2000))
+  (.typeset js/MathJax)
+  (recur))
 
 (defn init []
   (start-router!)
