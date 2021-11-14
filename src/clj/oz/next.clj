@@ -812,7 +812,7 @@
       ;; kill last evaluation
       (kill-evaluation! last-evaluation)
       ;; Start the evaluation
-      (let [evaluation (->> contents analysis (evaluate-blocks! last-evaluation))]
+      (let [evaluation (-> contents analysis (assoc :file file) (->> (evaluate-blocks! last-evaluation)))]
         ;; cache evaluation object in build state
         (log/info (live/color-str live/ANSI_GREEN "Reloading file: " filename))
         (swap! build-state assoc filename {:last-contents contents :last-evaluation evaluation :previous-evaluation last-evaluation})
