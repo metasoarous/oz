@@ -757,10 +757,15 @@
 (s/def ::html-head-opts
   (s/keys :opt-un [::title ::description ::author ::keywords ::shortcut-icon-url ::omit-shortcut-icon? ::omit-styles? ::omit-charset? ::omit-vega-libs? ::head-extras]))
 
+
+
+;; This is where you would look for the omission flags that need to get sent to the live views when they
+;; change
+
 ;; Might be worth exposing this in the future, but uncertain whether this is a good idea for now
 (defn- html-head
   "Construct a header as hiccup, given the html opts and doc metadata"
-  [doc {:as opts :keys [title description author keywords shortcut-icon-url omit-shortcut-icon? omit-styles? omit-charset? omit-vega-libs? header-extras]}]
+  [doc {:as opts :keys [title description author keywords shortcut-icon-url omit-shortcut-icon? omit-styles? omit-charset? omit-vega-libs? omit-highlightjs? omit-mathjax? header-extras]}]
   (let [metadata (or (meta doc) {})
         opts (reduce
                (fn [opts' k]
