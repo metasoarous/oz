@@ -1633,20 +1633,28 @@
    (let [template-fn (get-template-fn build-desc)]
      ;; TODO Need to get metadata from namespaces and from markdown imports
      (template-fn
-       (for [{:as block :keys [id type hiccup code]}
+       (for [{:as block :keys [id type hiccup code code-str]}
              (next/block-seq evaluation)
              :let [result-chan (get result-chans id)]]
          (case type
-           (:hiccup)       (:result (a/<!! result-chan))
+           (:hiccup)       [:div
+                            [:pre [:code.clj code-str]]
+                            (:result (a/<!! result-chan))]
            ;; TODO Check if this is right and fix
-           (:code)         [:pre code]
+           (:code)         [:pre [:code.clj code-str]]
            (:md-comment)   hiccup
-           (:code-comment) [:oz.doc/code-comment]))))))
+           (:code-comment) [:oz.doc/code-comment]
+           (:whitespace)   nil))))))
 
 (defn export-evaluation-results
-  [{:as build-desc :keys [out-path]}
-   {:as evaluation}]
-  (let [hiccup (complete-doc build-desc evaluation)]
+  [{:as build-desc}
+   {:as evaluation :keys [file]}]
+  (log/info "Exporting evaluation results")
+  (let [hiccup (complete-doc build-desc evaluation)
+        filename (.getPath file)
+        out-path (compute-out-path build-desc file)]
+    ;(log/info "XXX" {:fiename filename :out-path out-path})
+    (ensure-out-dir out-path true)
     (export! hiccup out-path)))
 
 (defn- build-and-view-async-evaluation!
