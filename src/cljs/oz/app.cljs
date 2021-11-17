@@ -155,47 +155,76 @@
       [status-message "⌛" (str "Running... (t = " @run-time "s)")])))
 
 (defn eval-status [id async-result]
-  [:p {:style {:font-size 9 :text-align :right}}
+  [:p {:style {:font-size 9 :text-align :right :margin-top -10}}
    (if-let [{:keys [compute-time]} @async-result]
      [status-message "✅" (str "Finished (t = " compute-time"s)")]
      [running-status async-result])])
+
+(def small-annotation-styles
+  {:font-size 9 :color "grey"})
+
+(defn block-id-view
+  [id]
+  [:p {:style (merge small-annotation-styles {:text-align :right :margin-bottom -12})}
+   "block: "
+   [:code {:style small-annotation-styles} (str id)]])
+
+
+(defn dependencies-view
+  [{:keys [dependencies]}]
+  (when (seq dependencies)
+    [:div
+     {:style (merge {:margin-top -18} small-annotation-styles)}
+     "Dependencies:"
+     [:ul
+      {:style {:margin-top 2}}
+      (for [dep dependencies]
+        [:li [:a {:href (str "/#" dep)
+                  :style {:color :grey
+                          :text-decoration :none}}
+               (str dep)]])]]))
+
+(defn code-view
+  [{:as block :keys [display-src? id] :or {display-src? true}}]
+  (js/console.log "updating code-view component for id: " (pr-str id))
+  (let [async-result (get-block-result id)]
+    (when display-src?
+      [:div
+       {:style {:padding-top 4}}
+       [block-id-view id]
+       [src-view block]
+       [eval-status id async-result]
+       [dependencies-view block]])))
+       ;(when)])))
 
 (defn hiccup-view
   [{:as block :keys [display-src? id] :or {display-src? true}}]
   (js/console.log "updating hiccup-view component for id: " (pr-str id))
   (let [async-result (get-block-result id)]
     [:div
+      {:style {:padding-top 4}}
       (when display-src?
-        [:div
-          [src-view block]
-          [eval-status id async-result]])
+        [code-view block])
       (when-let [{:keys [result]} @async-result]
         [core/live-view result])]))
-
-(defn code-view
-  [{:as block :keys [display-src? id] :or {display-src? true}}]
-  (js/console.log "updating code-view component for id: " (pr-str id))
-  (let [async-result (get-block-result id)]
-    [:div
-     (when display-src?
-       [src-view block])
-     [eval-status id async-result]]))
 
 @(r/cursor app-state [:async-block-results #uuid "3687ff30-622b-52fb-b4da-31176341cba5"])
 (get @async-block-results #uuid "3687ff30-622b-52fb-b4da-31176341cba5")
 
 
 (defn async-block-view
-  [{:as block :keys [type hiccup]}]
-  (case type
-    :md-comment hiccup
-    :markdown hiccup
-    :hiccup [hiccup-view block]
-    :code [code-view block] 
-    :code-comment [src-view block]
-    ;; default
-    [:div [:h3 "Unknown block type" type]
-     [:pre (pr-str block)]])) 
+  [{:as block :keys [id type hiccup]}]
+  [:div
+   {:id id}
+   (case type
+     ;:md-comment hiccup
+     ;:markdown hiccup
+     :hiccup [hiccup-view block]
+     :code [code-view block] 
+     :code-comment [src-view block]
+     ;; default
+     [:div [:h3 "Unknown block type" type]
+      [:pre (pr-str block)]])]) 
 
 (core/register-live-views
   :oz.doc/async-block async-block-view
