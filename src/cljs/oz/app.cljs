@@ -180,17 +180,25 @@
 
 (defn dependencies-view
   [{:keys [dependencies]}]
-  (when (seq dependencies)
-    [:div
-     {:style (merge {:margin-top -18} small-annotation-styles)}
-     "Dependencies:"
-     [:ul
-      {:style {:margin-top 2}}
-      (for [dep dependencies]
-        [:li [:a {:href (str "/#" dep)
-                  :style {:color :grey
-                          :text-decoration :none}}
-               (str dep)]])]]))
+  (let [show-dependencies? (atom nil)]
+    (fn [{:keys [dependencies]}]
+      (when (seq dependencies)
+        [:div
+         {:style (merge {:margin-top -18} small-annotation-styles)}
+         [:a
+          {:on-click (fn [& _]
+                       (swap! show-dependencies? not))}
+          "Dependencies: "
+          (if @show-dependencies? "V" ">")]
+         (when @show-dependencies?
+           [:ul
+            {:style {:margin-top 2}}
+            (for [dep dependencies]
+              [:li [:a {:href (str "/#" dep)
+                        :style {:color :grey
+                                :text-decoration :none}}
+                     (str dep)]])])]))))
+
 
 (defn code-view
   [{:as block :keys [display-src? id] :or {display-src? true}}]
