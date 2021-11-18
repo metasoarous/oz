@@ -666,6 +666,25 @@
         (dissoc reference-forms :refer-clojure)))))
 
 
+(defmacro result-with-out-str
+  "Evaluates exprs in a context in which *out* is bound to a fresh
+  StringWriter.  Returns the string created by any nested printing
+  calls."
+  [& body]
+  `(let [out-s# (new java.io.StringWriter)
+         err-s# (new java.io.StringWriter)]
+     (binding [*out* out-s#
+               *err* err-s#]
+       (let [result# (do ~@body)]
+         {:stdout (str out-s#)
+          :stderr (str err-s#)
+          :result result#}))))
+
+;(result-with-out-str
+  ;(println "shit storm")
+  ;(/ 1 2))
+
+
 (defn- evaluate-block!
   [{:as evaluation :keys [code-data result-chans kill-chan]}
    {:as block :keys [id code-str code-data dependencies ns-sym declares-ns]}]
@@ -675,10 +694,13 @@
     (if-let [reference-forms (and declares-ns (ns-form-references code-data))]
       ;; We process namespace declarations synchronously, since we always want to evaluate them before the
       ;; code
-      (let [t0 (System/currentTimeMillis)]
-        (binding [*ns* (create-ns declares-ns)]
-          (eval (concat '(do) reference-forms)))
-        (>!! (:result-chan block-evaluation) {:id id :result nil :compute-time (/ (int (- (System/currentTimeMillis) t0)) 1000.)}))
+      (let [t0 (System/currentTimeMillis)
+            result (result-with-out-str
+                     ;(with-bindings) ; should we be using with-bindings here?
+                     (binding [*ns* (create-ns declares-ns)]
+                       (eval (concat '(do) reference-forms))))]
+        (>!! (:result-chan block-evaluation)
+             (merge result {:id id :compute-time (/ (int (- (System/currentTimeMillis) t0)) 1000.)})))
       ;; Otherwise, we queue up a thread and move on
       (async/thread
         (let [[_ chan] (async/alts!! [kill-chan (all-complete? dependency-chans)])
