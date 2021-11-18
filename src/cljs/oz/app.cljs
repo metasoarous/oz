@@ -220,19 +220,35 @@
 (get @async-block-results #uuid "3687ff30-622b-52fb-b4da-31176341cba5")
 
 
+(defn error-boundary
+  [component]
+  (r/create-class
+    {:component-did-catch (fn [this e info]
+                            (swap! app-state assoc :error e))
+     :reagent-render (fn [comp]
+                       (if-let [error (:error @app-state)]
+                         [:div
+                          [:h2 "Unable to process document!"]
+                          [:h3 "Error:"]
+                          [:code (pr-str error)]
+                          [:h4 "Please check console log for error"]]
+                         comp))}))
+
+
 (defn async-block-view
   [{:as block :keys [id type hiccup]}]
-  [:div
-   {:id id}
-   (case type
-     ;:md-comment hiccup
-     ;:markdown hiccup
-     :hiccup [hiccup-view block]
-     :code [code-view block] 
-     :code-comment [src-view block]
-     ;; default
-     [:div [:h3 "Unknown block type" type]
-      [:pre (pr-str block)]])]) 
+  [error-boundary
+   [:div
+    {:id id}
+    (case type
+      ;:md-comment hiccup
+      ;:markdown hiccup
+      :hiccup [hiccup-view block]
+      :code [code-view block] 
+      :code-comment [src-view block]
+      ;; default
+      [:div [:h3 "Unknown block type" type]
+       [:pre (pr-str block)]])]]) 
 
 (core/register-live-views
   :oz.doc/async-block async-block-view
@@ -257,20 +273,6 @@
     [:div
       [:h1 "Waiting for first spec to load..."]
       [:p "This may take a second the first time if you call a plot function, unless you first call " [:code '(oz/start-server!)] "."]]))
-
-(defn error-boundary
-  [component]
-  (r/create-class
-    {:component-did-catch (fn [this e info]
-                            (swap! app-state assoc :error e))
-     :reagent-render (fn [comp]
-                       (if-let [error (:error @app-state)]
-                         [:div
-                          [:h2 "Unable to process document!"]
-                          [:h3 "Error:"]
-                          [:code (pr-str error)]
-                          [:h4 "Please check console log for error"]]
-                         comp))}))
 
 
 ;; Take anything in the data structure that looks like 
