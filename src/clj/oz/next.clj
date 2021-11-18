@@ -780,18 +780,21 @@
             evaluation)))
       (build-evaluation analysis))))
 
-(def test-evaluation
-  (let [code-str "(ns hip.hop) (def stuff :blah)\n(str stuff \"dude\")"
-        analysis-results (analysis code-str)
-        evaluation (evaluate-blocks! {} analysis-results)]
-    (Thread/sleep 500)
-    evaluation))
 
-(->> (:result-chans test-evaluation)
-     (map #(vector (first %) (-> % second async/poll!))))
+;; Used this test code to write evaluations, but seems to not run now
+(comment
+  (def test-evaluation
+    (let [code-str "(ns hip.hop) (def stuff :blah)\n(str stuff \"dude\")"
+          analysis-results (analysis code-str)
+          evaluation (evaluate-blocks! {} analysis-results)]
+      (Thread/sleep 500)
+      evaluation))
+  (->> (:result-chans test-evaluation)
+       (map #(vector (first %) (-> % second async/poll!))))
+  (async/poll!
+    (second (first (:result-chans test-evaluation))))
+  :end-comment)
 
-(async/poll!
-  (second (first (:result-chans test-evaluation))))
 
 (defn lazy? [x]
   (instance? clojure.lang.LazySeq x))
@@ -1042,9 +1045,6 @@
                  ;(remove nil?)))
     ;(fn [n _] n)
     ;analysis))
-
-
-
 
 
 
