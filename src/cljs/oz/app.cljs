@@ -107,9 +107,17 @@
   [[_ {:as block :keys [id]}]]
   (js/console.log ":oz.core/async-block-results are in for block id: " (pr-str id))
   ;(js/console.log "block:" (pr-str block))
-  (swap! app-state assoc-in [:async-block-results id ] block))
+  (swap! app-state assoc-in [:async-block-results id ] block)
+  ;; Make sure (using timeouts) that if there's a delay in rendering, we're more likely
+  ;; to catch it
+  (async/go
+    (<! (async/timeout 5))
+    (.typeset js/MathJax)
+    (async/go
+      (<! (async/timeout 2500))
+      (.typeset js/MathJax))))
 
-;; sketch for omit-styles? etc
+;; or for omit-styles? etc
 (defmethod message-handler :oz.core/update-header-extras
   [[_ {:as block :keys [id]}]]
   (js/console.log ":oz.core/async-block-results are in for block id: " (pr-str id))
@@ -289,11 +297,6 @@
         ;(go
           ;(<! (async/timeout 2000))
           ;(sente/chsk-connect! chsk))))))
-
-(async/go-loop []
-  (<! (async/timeout 2000))
-  (.typeset js/MathJax)
-  (recur))
 
 (defn init []
   (start-router!)
