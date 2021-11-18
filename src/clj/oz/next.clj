@@ -113,13 +113,30 @@
     :vector :hiccup
     :code))
 
+(defn multiline-whitespace?
+  [[type code-str]]
+  ;; Check for whitespace, and that it's just a single newline
+  (and (= :whitespace type)
+       (< 1 (count (re-seq #"\n" code-str)))))
+
+(multiline-whitespace? [:whitespace " \n \n"])
+(multiline-whitespace? [:whitespace " \n"])
+
+;; FOCUS
 (defn- new-block?
   [{:keys [last-form block-type]} next-form]
   (let [next-form-type (form-type last-form next-form)]
+    ;; For debugging the block processing
+    ;(log/info "new-block? called with types: " [block-type next-form-type])
+    ;(log/info "  next-form " next-form)
+    ;(log/spy :info "  return val:"
     (boolean
       (or
-        ;; always end on a code block
-        (#{:code :hiccup} block-type)
+        ;; always end on a code block, unless it's just a trailing comment
+        ;(and (#{:code :}))
+        (and (#{:code :hiccup} block-type)
+             (or (multiline-whitespace? next-form)))
+                 ;(= :code-comment next-form-type)))
         ;; markdown blocks can only be completed by more markdown blocks or whitespace
         (and (= :md-comment block-type)
              (not (#{:md-comment :whitespace} next-form-type)))
@@ -134,12 +151,21 @@
   [aggr last-form]
   (assoc aggr :last-form last-form))
 
+;; Defines how we add code to a block
 (defn- add-to-current-block
   [{:as aggr :keys [last-form block-type]} next-form]
   (let [next-form-type (form-type last-form next-form)
         ;; whitespace shouldn't change the block type
-        block-type (if (= next-form-type :whitespace)
+        block-type (cond
+                     ;; adding whitespace shouldn't change the type if already set
+                     (= next-form-type :whitespace)
                      (or block-type :whitespace)
+                     ;; we can add code comments to the end of code/hiccup blocks
+                     (and (#{:hiccup :code} block-type)
+                          (= next-form-type :code-comment))
+                     (or block-type :code-comment)
+                     ;; otherwise we take the new form type, assuming prior was deferential
+                     :else
                      next-form-type)]
     (-> aggr
         (update :current-block conj next-form)
@@ -212,6 +238,17 @@
            reconstitute-forms
            (fn [{:as block :keys [forms]}]
              (assoc block :forms-without-whitespace (without-whitespace forms)))))))
+
+;; TODO Write tests
+;(parse-code
+ ;"
+;(ns my.ns)\n \n(defn some-code [x]\n  (impl x))\n \n  ;(other-iml x))\n\n;; Actual markdown comments.\n
+ ;")
+
+;(parse-code
+ ;"
+;(ns my.ns)\n \n(defn some-code [x]\n  (impl x))\n  ;(other-iml x))\n\n;; Actual markdown comments.\n
+ ;")
 
 (deftest parse-code-tests
   (testing "basic functionality"
