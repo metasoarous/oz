@@ -101,17 +101,36 @@
       ;; to handle the edge case of first line in a file being a comment line
       (nil? last-form)))
 
+
+(def comment-metadata-regex
+  ;#"^;; (\^[(:[^\s]+)(\{.*\})])+"
+  #";; \^(:\S+|\{.*\})")
+
+;(re-matches comment-metadata-regex ";; ^:this")
+;(re-find #";; (\^(:\S+|\{.*\})\s+)+" ";; ^{:this :blah} ^{:other :stuff}")
+;(re-matches #";; \^(:\S+|\{.*\})" ";; ^:this")
+;(re-matches #";; \^(:\S+|\{.*\})" ";; ^{:this :that}")
+
+
 (defn form-type
   [last-form form]
   (case (first form)
-    :comment (if (and (re-matches md-comment-regex (second form))
-                      (unindented-newline? last-form))
+    :comment (cond
+               ;; metadata annotations are (for now) only recognized between the 
+               (and (re-matches md-comment-regex (second form))
+                    (unindented-newline? last-form))
                :md-comment
+               :else
                :code-comment)
     :whitespace :whitespace
     ;; Do we do it like this?
     :vector :hiccup
     :code))
+
+(form-type
+  [:whitespace "  \n\n"]
+  [:comment ";; ^:this"])
+  ;(re-matches comment-metadata-regex ";; ^:this"))
 
 (defn multiline-whitespace?
   [[type code-str]]
@@ -126,17 +145,13 @@
 (defn- new-block?
   [{:keys [last-form block-type]} next-form]
   (let [next-form-type (form-type last-form next-form)]
-    ;; For debugging the block processing
-    ;(log/info "new-block? called with types: " [block-type next-form-type])
-    ;(log/info "  next-form " next-form)
-    ;(log/spy :info "  return val:"
     (boolean
       (or
         ;; always end on a code block, unless it's just a trailing comment
         ;(and (#{:code :}))
+        (multiline-whitespace? next-form)
         (and (#{:code :hiccup} block-type)
-             (or (multiline-whitespace? next-form)))
-                 ;(= :code-comment next-form-type)))
+             (= :code-comment next-form-type))
         ;; markdown blocks can only be completed by more markdown blocks or whitespace
         (and (= :md-comment block-type)
              (not (#{:md-comment :whitespace} next-form-type)))
@@ -151,11 +166,22 @@
   [aggr last-form]
   (assoc aggr :last-form last-form))
 
+(defn read-meta-comment
+  [md-string]
+  (let [meta-line (first (string/split md-string #"\n"))]
+    (try
+      (meta
+        (reader/read-string
+          (str (apply str (drop 2 meta-line))
+              " {}")))
+      (catch Throwable t
+        (log/error "Unable to read metadata from: " meta-line)
+        nil))))
+
 ;; Defines how we add code to a block
 (defn- add-to-current-block
   [{:as aggr :keys [last-form block-type]} next-form]
   (let [next-form-type (form-type last-form next-form)
-        ;; whitespace shouldn't change the block type
         block-type (cond
                      ;; adding whitespace shouldn't change the type if already set
                      (= next-form-type :whitespace)
@@ -172,11 +198,12 @@
         (assoc :block-type block-type)
         (set-last-form next-form))))
 
+;; TODO Do we need async vlaues for the metadata for this to work?
+
 (defn- conclude-block
   [{:as aggr :keys [current-block block-type]}]
   (if current-block
-    ;; only conclude a block if one actually exist
-    ;; s
+    ;; only conclude a block if one actually exists
     (-> (dissoc aggr :block-type :current-block)
         (update :blocks conj {:type block-type :forms current-block}))
     aggr))
@@ -192,17 +219,67 @@
   [{:as block :keys [forms]}]
   (assoc block :code-str (parc/code (into [:code] forms))))
 
+(defn- apply-metadata
+  [[tag first-elmnt & rest-elmnts] metadata]
+  ;(log/info "QQQQQQ calling apply-metadata with meta: " meta " and hiccup: " hiccup)
+  (into
+    [tag
+     (if (map? first-elmnt)
+       (merge first-elmnt metadata)
+       metadata)
+     (when-not (map? first-elmnt)
+       first-elmnt)]
+    rest-elmnts))
+
+
+(defn- strip-metadata-if-needed
+  [meta? lines]
+  (if meta?
+    (drop 1 lines)
+    lines))
+
+(defn- unwrap-single-child-div
+  [[tag & forms :as form]]
+  (let [attr-map (when (map? (first forms)) (first forms))
+        non-attr-forms (cond->> forms
+                         attr-map (drop 1))]
+    (if (and (= :div tag)
+             (= 1
+                (count non-attr-forms)))
+      ;; TODO Do we need to merge meta here?
+      (-> (first non-attr-forms)
+          (apply-metadata attr-map))
+      form)))
+
+(defn has-metadata?
+  [code-str]
+  (boolean (re-matches comment-metadata-regex (first (string/split-lines code-str)))))
+
+(has-metadata? ";; ^{:this :that}\n;; more stuff")
 
 (defn- process-md-comments
   [{:as md-block :keys [code-str]}]
-  (let [markdown
+  ;(log/info "code-str" code-str)
+  (log/info (re-matches comment-metadata-regex code-str))
+  (let [meta? (has-metadata? code-str)
+        markdown
         (->> (string/split-lines code-str)
+             (strip-metadata-if-needed meta?)
              (map get-comment-line-md)
              (string/join "\n"))
-        ;; TODO Will need to also deal with metadata
-        {:keys [#_metadata html]}
+        {:keys [metadata html]}
         (md/md-to-html-string-with-meta markdown)
-        hiccup (-> html hickory/parse hickory/as-hiccup first md->hc/component md-decode/decode)]
+        metadata (merge metadata (when meta? (read-meta-comment code-str)))
+        _ (when meta? (log/info "METADATA" metadata))
+        ;; TODO Consider whether this is the right thing to do
+        ;;     parse the html as hiccup
+        hiccup (-> html hickory/parse hickory/as-hiccup first
+                   ;; not sure why we do this actually
+                   md->hc/component md-decode/decode
+                   unwrap-single-child-div
+                   (cond->
+                     ;; we only apply the metadata if there's any to apply
+                     (seq metadata) (apply-metadata metadata)))]
     (assoc md-block
            :markdown markdown
            :html-string html
