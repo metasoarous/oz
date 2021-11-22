@@ -6,42 +6,53 @@
     src: url('http://ozviz.io/fonts/lmroman12-regular.woff');
 }
 
-/* for math fonts? */
-/*@font-face {*/
-    /*font-family: "LatinModernMathWOFF";*/
-    /*src: url('https://www.albany.edu/~hammond/webfonts/latinmodern-math.woff');*/
-    /*font-weight: bold;*/
-/*}*/
-
-
 body {
   padding: 30px;
   line-height: 1.7;
-  font-family: 'Open Sans', sans-serif;
+  font-family: 'Computer Modern Concrete', serif;
 }
 
 div#app {
   margin: 0;
   padding: 0;
-  font-family: 'Open Sans', sans-serif;
 }
 
 blockquote {
   font-style: italic;
+  font-family: 'Computer Modern Serif', serif;
   color: #606060;
 }
 
 h1, h2, h3, h4 {
-  font-family: "LatinModernRomanWOFF", serif;
+  font-family: "Computer Modern Serif", serif;
   line-height: 1.4;
-  /*font-family: 'Open Sans', sans-serif;*/
 }
 
+.bright {
+  font-family: "Computer Modern Bright", sans-serif;
+}
+.concrete {
+  font-family: "Computer Modern Concrete", serif;
+}
+.typewriter {
+  font-family: "Computer Modern Typewriter", monospace;
+}
+.sans {
+  font-family: "Computer Modern Sans", sans-serif;
+}
+.sans-serif {
+  font-family: 'Open Sans', sans-serif;
+}
+.serif {
+  font-family: 'Open Sans', sans-serif;
+}
+
+/* more semantic block styles */
 .fancy {
-  font-family: "LatinModernRomanWOFF", serif;
+  font-family: "Computer Modern Serif", serif;
 }
 .plain {
-  font-family: 'Open Sans', sans-serif;
+  font-family: "Computer Modern Sans", sans-serif;
 }
 
 h1 {
@@ -50,7 +61,7 @@ h1 {
   margin-bottom: 20px;
 }
 
-h2{
+h2 {
   font-size: 30px;
   margin-top: 50px;
   margin-bottom: 15px;
@@ -70,12 +81,14 @@ code {
   color: #606060;
   margin-right: 4px;
   margin-left: 4px;
+  font-family: "Computer Modern Typewriter", monospace;
 }
 
 pre {
   line-height: 1.5;
   font-size: 14.5px;
   color: #606060;
+  font-family: "Computer Modern Typewriter", monospace;
 }
 
 a {
@@ -84,6 +97,10 @@ a {
 
 div.vega-embed div.chart-wrapper {
   height: auto;
+}
+
+a:hover {
+ cursor: pointer;
 }
 
 
