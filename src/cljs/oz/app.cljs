@@ -93,11 +93,22 @@
   (let [[id msg] ?data]
     (message-handler ?data)))
 
+(defn typeset-mathjax! []
+  ;; Make sure (using timeouts) that if there's a delay in rendering, we're more likely
+  ;; to catch it
+  (async/go
+    (<! (async/timeout 5))
+    (.typeset js/MathJax)
+    (async/go
+      (<! (async/timeout 2500))
+      (.typeset js/MathJax))))
+
 
 ;; old view-doc method
 (defmethod message-handler :oz.core/view-doc
   [[_ msg]]
-  (swap! app-state merge {:document msg :error nil}))
+  (swap! app-state merge {:document msg :error nil})
+  (typeset-mathjax!))
 
 ;(defmethod message-handler :oz.core/view-block
   ;[[_ {:keys [id block-eval]}]]
@@ -108,14 +119,7 @@
   (js/console.log ":oz.core/async-block-results are in for block id: " (pr-str id))
   ;(js/console.log "block:" (pr-str block))
   (swap! app-state assoc-in [:async-block-results id ] block)
-  ;; Make sure (using timeouts) that if there's a delay in rendering, we're more likely
-  ;; to catch it
-  (async/go
-    (<! (async/timeout 5))
-    (.typeset js/MathJax)
-    (async/go
-      (<! (async/timeout 2500))
-      (.typeset js/MathJax))))
+  (typeset-mathjax!))
 
 ;; or for omit-styles? etc
 (defmethod message-handler :oz.core/update-header-extras
@@ -141,9 +145,10 @@
     (get @async-block-results id)))
 
 (defn src-view [{:keys [id code-str]}]
-  [highlight/highlight
-   {:language "clojure"}
-   code-str])
+  [:div {:style {:margin-left -10 :margin-right -10}}
+    [highlight/highlight
+     {:language "clojure"}
+     code-str]])
 
 ;(keys @async-block-results)
 
@@ -163,7 +168,7 @@
       [status-message "⌛" (str "Running... (t = " @run-time "s)")])))
 
 (defn eval-status [id async-result]
-  [:p {:style {:font-size 9 :text-align :right :margin-top -10}}
+  [:p {:class :sans :style {:font-size 9 :text-align :right :margin-top 0}}
    (if-let [{:keys [compute-time]} @async-result]
      [status-message "✅" (str "Finished (t = " compute-time"s)")]
      [running-status async-result])])
@@ -173,23 +178,27 @@
 
 (defn block-id-view
   [id]
-  [:p {:style (merge small-annotation-styles {:text-align :right :margin-bottom -12})}
+  [:p {:class "sans" :style (merge small-annotation-styles {:text-align :right :margin-bottom -12})}
    "block: "
    [:code {:style small-annotation-styles} (str id)]])
 
-
 (defn dependencies-view
   [{:keys [dependencies]}]
-  (let [show-dependencies? (atom nil)]
+  (let [show-dependencies? (r/atom false)]
     (fn [{:keys [dependencies]}]
+      @show-dependencies?
       (when (seq dependencies)
         [:div
-         {:style (merge {:margin-top -18} small-annotation-styles)}
+         {:style (merge small-annotation-styles)}
          [:a
-          {:on-click (fn [& _]
+          {:style {:color "grey"}
+           :class :sans
+           :on-click (fn [& _]
                        (swap! show-dependencies? not))}
-          "Dependencies: "
-          (if @show-dependencies? "V" ">")]
+          [:span {:style {:font-size 8 :vertical-align :top}}
+           (if @show-dependencies? "▼" "▶")]
+          ;(if @show-dependencies? "⌄ " "> ")
+          " Dependencies: "]
          (when @show-dependencies?
            [:ul
             {:style {:margin-top 2}}
@@ -209,8 +218,14 @@
        {:style {:padding-top 4}}
        [block-id-view id]
        [src-view block]
-       [eval-status id async-result]
-       [dependencies-view block]])))
+       [:div {:style {:display :flex
+                      :flex-flow "row nowrap"
+                      :justify-content :space-between
+                      :margin-top -10}}
+        [:div {:style {:max-width "40%"}}; :margin :auto}}
+         [dependencies-view block]]
+        [:div {:style {:max-width "40%"}}; :magin :auto}}
+         [eval-status id async-result]]]])))
        ;(when)])))
 
 (defn hiccup-view
@@ -314,3 +329,5 @@
              (. js/document (getElementById "app"))))
 
 (init)
+(typeset-mathjax!)
+
