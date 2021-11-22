@@ -805,9 +805,11 @@
            [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-lite@" vega-lite-version)}]
            [:script {:type "text/javascript" :src (str "https://cdn.jsdelivr.net/npm/vega-embed@" vega-embed-version)}]])
         (when-not omit-highlightjs?
-          ;; For embedding
-          [[:style (slurp (io/resource "oz/public/highlight.js/styles/default.min.css"))]
-           [:script (slurp (io/resource "oz/public/highlight.js/highlight.min.js"))]
+          ;; For embedding directly in (if you've checked out; need to generalize and optionalize this)
+         ;[[:style (slurp (io/resource "oz/public/highlight.js/styles/default.min.css"))]
+           ;[:script (slurp (io/resource "oz/public/highlight.js/highlight.min.js"))]]
+          [[:link {:rel :stylesheet :type "text/css" :href "https://cdn.jsdelivr.net/gh/metasoarous/highlight.js@latest/styles/default.min.css"}]
+           [:script {:id :highlight-js-script :src "https://cdn.jsdelivr.net/gh/metasoarous/highlight.js@latest/highlight.min.js"}]
            [:script "hljs.highlightAll();"]])
           ;; for loading from remote location
           ;[[:link {:rel "stylesheet" :href "http://ozviz.io/highlight.js/styles/default.min.css"}]
