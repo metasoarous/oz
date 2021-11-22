@@ -896,11 +896,11 @@
       (let [result (<! result-chan)]
         (callback-fn result)))))
 
-(queue-result-callback!
-  test-evaluation
-  (fn [result]
-    ;(println "have result for block" block)
-    (println "result" result)))
+;(queue-result-callback!
+  ;test-evaluation
+  ;(fn [result]
+    ;;(println "have result for block" block)
+    ;(println "result" result)))
 
 ;; How do errors propogate?
 
