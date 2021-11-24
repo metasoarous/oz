@@ -583,6 +583,10 @@
   (hasch/uuid
     (select-keys block [:forms-without-whitespace :dependencies])))
 
+
+;; debug the state of a file
+;(get @build-state "/home/csmall/code/oz/realtest.clj")
+
 ;(parse-code (slurp "test.clj"))
 
 ;; Need to make it so thast upstream changes to vars will update the functions in question
@@ -649,6 +653,11 @@
         (is (= '[user my.ns]
                (get-nss "(ns my.ns)\n(def thing :stuff)")))))))
 
+(defn spy-pp
+  ([message xs]
+   (log/info message (with-out-str (pp/pprint xs)))
+   xs)
+  ([xs] (spy-pp "" xs)))
 
 (defn analysis
   [code-str]
@@ -687,23 +696,38 @@
         (log/info (live/color-str live/ANSI_YELLOW "Long running form (" id ") being processed:\n" code-str))
         (async/>! long-running? true)))))
 
+;(try
+  ;(/ 1 0)
+  ;(catch Throwable t
+    ;{:message (str t)
+     ;:stacktrace (with-out-str (clojure.stacktrace/print-stack-trace t))}))
+
+(defn error-data [t]
+  {:message (str t)
+   :stacktrace (with-out-str (clojure.stacktrace/print-stack-trace t))})
+
 (defn handle-error!
-  [{:keys [error-chan]}
+  [{:as evaluation :keys [t0 result-chan error-chan long-running? new-form-evals t0]}
    {:as block :keys [code-str id]}
    t]
-  (log/error (live/color-str live/ANSI_RED "Error processing form (" id "):\n" code-str))
-  (log/error t)
-  (async/>!! error-chan t)
-  (throw t))
+  (let [compute-time (/ (- (System/currentTimeMillis) t0) 1000.0)]
+    (async/>!! result-chan {:id id
+                            :compute-time compute-time
+                            :error (error-data t)
+                            :result t})
+    (log/error (live/color-str live/ANSI_RED "Error processing form (" id "):\n" code-str))
+    (log/error t)
+    (async/>!! error-chan t)
+    (throw t)))
 
 (defn handle-result!
   [{:as evaluation :keys [t0 result-chan long-running? new-form-evals t0]}
    {:as block :keys [id]}
    result]
   (let [compute-time (/ (- (System/currentTimeMillis) t0) 1000.0)]
-    (async/>!! result-chan {:id id
-                            :compute-time compute-time
-                            :result result})
+    (async/>!! result-chan (merge result
+                                  {:id id
+                                   :compute-time compute-time}))
     ;; keep track of successfully run forms, so we don't redo work that completed
     ;; If long running, log out how long it took
     (when (async/poll! long-running?)
@@ -785,10 +809,11 @@
           (when-not (= chan kill-chan)
             (log-long-running-form! block-evaluation block)
             (try
-              (binding [*ns* (create-ns ns-sym)]
-                (let [result (eval code-data)]
-                  (log/info "have a result!" result)
-                  (handle-result! block-evaluation block result)))
+              (let [result
+                    (result-with-out-str
+                      (binding [*ns* (create-ns ns-sym)]
+                        (eval code-data)))]
+                (handle-result! block-evaluation block result))
               (catch Throwable t
                 (log/error "hit a throwable")
                 (handle-error! block-evaluation block t)))))))

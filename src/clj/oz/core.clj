@@ -1627,7 +1627,7 @@
   (when-let [{:as block :keys [type]} (get blocks-by-id id)]
     (case type
       :hiccup (send-async-block-results config (update block-result :result prep-for-live-view config))
-      :code (send-async-block-results config (select-keys block-result [:id :compute-time]))
+      :code (send-async-block-results config (select-keys block-result [:id :compute-time :stdout :stderr :error]))
       nil)))
 
 (defn- complete-doc
