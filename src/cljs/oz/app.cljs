@@ -169,8 +169,11 @@
 
 (defn eval-status [id async-result]
   [:p {:class :sans :style {:font-size 9 :text-align :right :margin-top 0}}
-   (if-let [{:keys [compute-time]} @async-result]
-     [status-message "✅" (str "Finished (t = " compute-time"s)")]
+   (if-let [{:keys [compute-time error]} @async-result]
+     (if error
+       [:span {:style {:color :darkred}}
+        [status-message "❌" (str "Error! (t = " compute-time"s)")]]
+       [status-message "✅" (str "Finished (t = " compute-time"s)")])
      [running-status async-result])])
 
 (def small-annotation-styles
@@ -209,6 +212,51 @@
                      (str dep)]])])]))))
 
 
+(defn stdout-view
+  [async-result]
+  (when-let [stdout (:stdout @async-result)]
+    (when (seq stdout)
+      [:div
+       {:style {:margin-top 0}}
+                ;:margin-right -10
+                ;:margin-left -10}}
+       [:p {:class :sans
+            :style {
+                    :margin 0
+                    :padding 0
+                    :font-size 12}}
+        "stdout:"]
+       [:pre {:style {:margin-top 0}}
+                      ;:background-color "#c6ebd9" #_"lightgreen"}}
+         stdout]])))
+
+(defn stderr-view
+  [async-result]
+  (when-let [stderr (:stderr @async-result)]
+    (when (seq stderr)
+      [:div
+        {:style {:margin-top 0}}
+                 ;:margin-right -10
+                 ;:margin-left -10}}
+        [:div
+         [:p {:class :sans
+              :style {
+                      :margin 0
+                      :padding 0
+                      :font-size 12}}
+          "stderr:"]]
+        [:pre {:style {:margin-top 0}}
+                       ;:background-color " #ffcccc"}} 
+         stderr]])))
+
+(defn error-view
+  [async-result]
+  (when-let [{:keys [message stacktrace]} (:error @async-result)]
+    [:div
+     ;[:pre {:style {:color :red}} message]
+     [:pre {:style {:font-size 12
+                    :color "#cc0000"}} stacktrace]]))
+
 (defn code-view
   [{:as block :keys [display-src? id] :or {display-src? true}}]
   (js/console.log "updating code-view component for id: " (pr-str id))
@@ -218,6 +266,9 @@
        {:style {:padding-top 4}}
        [block-id-view id]
        [src-view block]
+       [stdout-view async-result]
+       [stderr-view async-result]
+       [error-view async-result]
        [:div {:style {:display :flex
                       :flex-flow "row nowrap"
                       :justify-content :space-between
