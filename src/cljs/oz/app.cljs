@@ -169,11 +169,13 @@
 
 (defn eval-status [id async-result]
   [:p {:class :sans :style {:font-size 9 :text-align :right :margin-top 0}}
-   (if-let [{:keys [compute-time error]} @async-result]
-     (if error
-       [:span {:style {:color :darkred}}
-        [status-message "❌" (str "Error! (t = " compute-time"s)")]]
-       [status-message "✅" (str "Finished (t = " compute-time"s)")])
+   (if-let [{:keys [compute-time error aborted]} @async-result]
+     (cond
+       aborted [:span {:style {:color :darkred}}
+                [status-message "❓" (str "Abborted (unmet dependencies)")]]
+       error [:span {:style {:color :darkred}}
+              [status-message "❌" (str "Error! (t = " compute-time"s)")]]
+       :else [status-message "✅" (str "Finished (t = " compute-time"s)")])
      [running-status async-result])])
 
 (def small-annotation-styles
@@ -185,31 +187,45 @@
    "block: "
    [:code {:style small-annotation-styles} (str id)]])
 
+(defn status
+  [id]
+  (r/reaction
+    (get-block-result id)))
+
 (defn dependencies-view
-  [{:keys [dependencies]}]
-  (let [show-dependencies? (r/atom false)]
-    (fn [{:keys [dependencies]}]
-      @show-dependencies?
-      (when (seq dependencies)
-        [:div
-         {:style (merge small-annotation-styles)}
-         [:a
-          {:style {:color "grey"}
-           :class :sans
-           :on-click (fn [& _]
-                       (swap! show-dependencies? not))}
-          [:span {:style {:font-size 8 :vertical-align :top}}
-           (if @show-dependencies? "▼" "▶")]
-          ;(if @show-dependencies? "⌄ " "> ")
-          " Dependencies: "]
-         (when @show-dependencies?
-           [:ul
-            {:style {:margin-top 2}}
-            (for [dep dependencies]
-              [:li [:a {:href (str "/#" dep)
-                        :style {:color :grey
-                                :text-decoration :none}}
-                     (str dep)]])])]))))
+  [{:keys [id dependencies]}]
+  (let [show-dependencies? (r/atom nil)
+        result (get-block-result id)]
+    (fn [{:keys [dependencies aborted]}]
+      (let [{:keys [aborted]} @result
+            show? @show-dependencies?
+            show? (or show? (and (nil? show?)
+                                 aborted))]
+        (when (seq dependencies)
+          [:div
+           {:style (merge small-annotation-styles)}
+           [:a
+            {:style {:color "grey"}
+             :class :sans
+             :on-click (fn [& _]
+                         (swap! show-dependencies? not))}
+            [:span {:style {:font-size 8 :vertical-align :top}}
+             (if show? "▼" "▶")]
+            " Dependencies: "]
+           (when show?
+             [:ul
+              {:style {:margin-top 2}}
+              (for [dep dependencies
+                    :let [{:keys [error aborted]}
+                          @(get-block-result dep)]]
+                ^{:key dep}
+                [:li [:a {:href (str "/#" dep)
+                          :style {:color (if (or error aborted) :darkred :grey)
+                                  :text-decoration :none}}
+                      (str dep)
+                      (cond error " ❌"
+                            aborted " ❓"
+                            :else " ✅")]])])]))))) 
 
 
 (defn stdout-view
