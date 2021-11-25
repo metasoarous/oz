@@ -259,8 +259,6 @@
 
 (defn- process-md-comments
   [{:as md-block :keys [code-str]}]
-  ;(log/info "code-str" code-str)
-  (log/info (re-matches comment-metadata-regex code-str))
   (let [meta? (has-metadata? code-str)
         markdown
         (->> (string/split-lines code-str)
@@ -270,8 +268,6 @@
         {:keys [metadata html]}
         (md/md-to-html-string-with-meta markdown)
         metadata (merge metadata (when meta? (read-meta-comment code-str)))
-        _ (when meta? (log/info "METADATA" metadata))
-        ;; TODO Consider whether this is the right thing to do
         ;;     parse the html as hiccup
         hiccup (-> html hickory/parse hickory/as-hiccup first
                    ;; not sure why we do this actually
@@ -315,6 +311,7 @@
            reconstitute-forms
            (fn [{:as block :keys [forms]}]
              (assoc block :forms-without-whitespace (without-whitespace forms)))))))
+
 
 ;; TODO Write tests
 ;(parse-code
@@ -585,7 +582,13 @@
 
 
 ;; debug the state of a file
-;(get @build-state "/home/csmall/code/oz/realtest.clj")
+;(doseq [[block-id result-chan]
+        ;(:result-chans (:last-evaluation (get @build-state "/home/csmall/code/oz/notebook-demo.clj")))]
+  ;(when-let [{:as result :keys [error aborted]} (<!! result-chan)]
+    ;(when (or error aborted)
+      ;(log/info "block: " block-id)
+      ;(log/info result))))
+      
 
 ;(parse-code (slurp "test.clj"))
 
@@ -715,7 +718,8 @@
                             :compute-time compute-time
                             :error (error-data t)
                             :result t})
-    (log/error (live/color-str live/ANSI_RED "Error processing form (" id "):\n" code-str))
+    ;(log/error (live/color-str live/ANSI_RED "Error processing form (" id "):\n" code-str))
+    (log/error (str "Error processing form (" id "):\n" code-str))
     (log/error t)
     (async/>!! error-chan t)
     (throw t)))
@@ -940,7 +944,6 @@
   (doseq [block-id block-id-seq
           :let [result-chan (get result-chans block-id)]
           :when result-chan]
-    (log/info "result chan" result-chan)
     (go
       (let [result (<! result-chan)]
         (callback-fn result)))))
