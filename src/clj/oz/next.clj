@@ -747,6 +747,17 @@
       (<! c))
     :done))
 
+(defn complete-results
+  [dependency-chans]
+  (async/go-loop [results []
+                  chans dependency-chans]
+    (when-let [chan (first chans)]
+      (let [result (<! chan)
+            results (conj results result)]
+        (if (empty? (rest chans))
+          results
+          (recur results (rest chans)))))))
+
 (defn ns-form-references
   "Separate out all of the 'reference forms' from the rest of the ns declaration; we'll use this in a couple
   different ways later"
@@ -786,6 +797,15 @@
   ;(/ 1 2))
 
 
+
+(defn handle-abortion!
+  [{:as evaluation :keys [t0 result-chan long-running? new-form-evals t0]}
+   {:as block :keys [id]}]
+  (log/info "XXXXXXXXXX calling handle-abortion! for block" id)
+  (async/>!! result-chan {:id id
+                          :aborted true}))
+
+
 (defn- evaluate-block!
   [{:as evaluation :keys [code-data result-chans kill-chan]}
    {:as block :keys [id code-str code-data dependencies ns-sym declares-ns]}]
@@ -804,19 +824,23 @@
              (merge result {:id id :compute-time (/ (int (- (System/currentTimeMillis) t0)) 1000.)})))
       ;; Otherwise, we queue up a thread and move on
       (async/thread
-        (let [[_ chan] (async/alts!! [kill-chan (all-complete? dependency-chans)])
+        (let [[dependency-results chan] (async/alts!! [kill-chan (complete-results dependency-chans)])
               block-evaluation (assoc block-evaluation :t0 (System/currentTimeMillis))]
+          (log/info "dependency-results" dependency-results)
           (when-not (= chan kill-chan)
-            (log-long-running-form! block-evaluation block)
-            (try
-              (let [result
-                    (result-with-out-str
-                      (binding [*ns* (create-ns ns-sym)]
-                        (eval code-data)))]
-                (handle-result! block-evaluation block result))
-              (catch Throwable t
-                (log/error "hit a throwable")
-                (handle-error! block-evaluation block t)))))))
+            (if (log/spy :info (or (some :aborted dependency-results)
+                                   (some :error dependency-results)))
+              (handle-abortion! block-evaluation block)
+              (try
+                (log-long-running-form! block-evaluation block)
+                (let [result
+                      (result-with-out-str
+                        (binding [*ns* (create-ns ns-sym)]
+                          (eval code-data)))]
+                  (handle-result! block-evaluation block result))
+                (catch Throwable t
+                  (log/error "hit a throwable")
+                  (handle-error! block-evaluation block t))))))))
     ;; Note that by the beauty of immutability here, we are avoiding merging in evaluation context specific to
     ;; each block here, and only keeping the result chan from the block-evaluation in :result-chans
     (update evaluation :result-chans assoc id (:result-chan block-evaluation))))
