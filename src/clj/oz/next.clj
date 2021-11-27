@@ -452,12 +452,34 @@
 (defn mutated-atom-var [{:keys [args]}]
   (-> args first :var))
 
+
+(defn -resolve-var-lists
+  [defines]
+  (->> (if (coll? defines)
+         defines
+         [defines])
+       (map
+         #(if (var? %) 
+            %
+            ;; find or declare the var if a symbol
+            (or (find-var %) (eval (list 'declare %)))))))
+
 (defn explicit-mutation [{:keys [op meta]}]
   (when (= :with-meta op)
     (when-let [mutates (:oz.block/mutates meta)]
-      (if (coll? mutates)
-        mutates
-        [mutates]))))
+      (-resolve-var-lists mutates))))
+
+(defn explicit-dependencies [{:keys [op meta]}]
+  (when (= :with-meta op)
+    (when-let [depends (:oz.block/depends-on meta)]
+      (-resolve-var-lists depends))))
+
+(defn explicit-defines [{:keys [op meta]}]
+  (when (= :with-meta op)
+    (when-let [defines (:oz.block/defines meta)]
+      (-resolve-var-lists defines))))
+
+;(let [s `this] (or (find-var s) (eval '(declare ~s))))
 
 (->>
   ;(ana.jvm/analyze '(defmethod shit :stuff [args] (println args)))
@@ -494,6 +516,8 @@
             (addmethod-mutation? node) (update :mutated-vars set-conj (addmethod-var node))))
         (merge
           {:code-data code-data
+           :defined-vars (explicit-defines block)
+           :used-vars (explicit-dependencies block)
            :mutated-vars (explicit-mutation block)}
           (when-let [ns-sym (ns-form-ns code-data)]
             {:declares-ns ns-sym}))
