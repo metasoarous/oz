@@ -1884,18 +1884,27 @@
 ;(.getPath (io/file "README.md"))
 
 (defn initialize-build!
-  [{:as build-spec :keys [from]}
+  [{:as build-specs :keys [from]}
    {:as config :keys [lazy?]}]
   ;; On first build, build out all of the results unless lazy? has been passed or we haven't built it
   ;; yet
   ;; TODO Finish rewriting this
-  (doseq [src-file (file-seq (io/file from))]
-    ;; we don't want to display the file on these initial builds, only for most recent build
-    (let [config' (assoc config :view? false)
-          dest-file (utils/compute-out-path build-spec src-file)]
-      (when (or (not lazy?) (not (.exists (io/file dest-file))))
-        ;(build-and-view-file! config' build-spec from {:kind :create :file src-file :watch-path dest-file})
-        (build-and-view-update-set! config' build-spec {:kind :create :file src-file :watch-path from})))))
+  (let [
+        watch-specs (for [src-file (file-seq (io/file from))
+                          :let [dest-file (utils/compute-out-path build-spec src-file)
+                                skip? (or (not lazy?) (not (.exists (io/file dest-file))))]]
+                      {:kind :create :file src-file :watch-path from :skip? skip?})]
+    (build-and-view-update-set!
+      ;; we don't want to display the file on these initial builds, only for most recent build
+      (assoc config :view? false)
+      watch-specs
+      []
+      (let [config' (assoc config :view? false)]
+          ;(build-and-view-file! config' build-spec from {:kind :create :file src-file :watch-path dest-file})
+          (let [watch-specs (map {:kind :create :file src-file :watch-path from})]
+            (build-and-view-update-set! config' build-spec
+                                       {:kind :create :file src-file :watch-path from}))))))
+
 
 ;; TODO Finish this function
 (defn- async-eval! [build-specs config]

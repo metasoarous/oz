@@ -1308,7 +1308,12 @@
 ;;       
 
 
-
+(defn initialize-build!
+  [build-specs config]
+  (->> build-specs
+       (reduce
+         (fn [{:as build}
+              build-spec]))))
 
 
 (defn reload-file!
