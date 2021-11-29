@@ -6,6 +6,7 @@
             [clojure.pprint :as pprint]
             [clojure.java.io :as io]
             ;[oz.next :as next]
+            [oz.impl.utils :as utils]
             [clojure.core.async :as async]))
 
 
@@ -17,51 +18,6 @@
 
 (defonce watchers (atom {}))
 
-
-;; Some path helpers
-
-(defn canonical-path
-  [path-or-file]
-  (-> (io/file path-or-file)
-      (.getCanonicalFile)
-      (.getPath)))
-
-(defn strip-path-seps
-  [path]
-  (if (= (last path)
-         (java.io.File/separatorChar))
-    (strip-path-seps (apply str (drop-last path)))
-    path))
-
-(defn split-path
-  [path]
-  (string/split path #"\/"))
-
-(defn greatest-common-path
-  [path1 path2]
-  (->>
-    (map vector (split-path path1) (split-path path2))
-    (filter (partial apply =))
-    (map first)
-    (string/join (java.io.File/separatorChar))))
-
-(defn join-paths
-  [path1 path2]
-  (str (strip-path-seps path1)
-       (java.io.File/separatorChar)
-       path2))
-
-(defn relative-path
-  [path base]
-  (string/replace (canonical-path path)
-                  (canonical-path base)
-                  ""))
-
-(defn ext
-  [file]
-  (-> (.getPath (io/file file))
-      (string/split #"\.")
-      (last)))
 
 
 ;; watching process ns form
@@ -107,19 +63,6 @@
          (dissoc reference-forms :refer-clojure)))}))
 
 
-(def ANSI_RED "\u001B[31m")
-(def ANSI_GREEN "\u001B[32m")
-(def ANSI_YELLOW "\u001B[33m")
-(def ANSI_BLUE "\u001B[34m")
-(def ANSI_RESET "\u001B[0m")
-
-(defn color-str
-  [color & ss]
-  (str color
-       (apply str ss)
-       ANSI_RESET))
-
-
 (defn- process-form!
   [ns-sym form new-form-evals]
   (let [t0 (System/currentTimeMillis)
@@ -131,7 +74,7 @@
     (async/go
       (let [[_ chan] (async/alts! [result-chan timeout-chan error-chan])]
         (when (= chan timeout-chan)
-          (log/info (color-str ANSI_YELLOW "Long running form being processed:\n" (ppstr form)))
+          (log/info (utils/color-str utils/ANSI_YELLOW "Long running form being processed:\n" (ppstr form)))
           (async/>! long-running? true))))
     ;; actually run the code
     (try
@@ -143,9 +86,9 @@
           (swap! new-form-evals conj {:form form :eval result})
           ;; If long running, log out how long it took
           (when (async/poll! long-running?)
-            (println (color-str ANSI_YELLOW "Form processed in: " (/ (- (System/currentTimeMillis) t0) 1000.0) "s")))))
+            (println (utils/color-str utils/ANSI_YELLOW "Form processed in: " (/ (- (System/currentTimeMillis) t0) 1000.0) "s")))))
       (catch Throwable t
-        (log/error (color-str ANSI_RED "Error processing form:\n" (ppstr form)))
+        (log/error (utils/color-str utils/ANSI_RED "Error processing form:\n" (ppstr form)))
         (log/error t)
         (async/>!! error-chan t)
         (throw t)))))
@@ -163,7 +106,7 @@
 (defn reload-file! [{:keys [kind file]}]
   ;; ignore delete (some editors technically delete the file on every save!)
   (when (#{:modify :create} kind)
-    (let [filename (canonical-path file)
+    (let [filename (utils/canonical-path file)
           contents (slurp file)
           {:keys [last-contents]} (get @watchers filename)]
       ;; This has a couple purposes, vs just using the (seq diff-forms) below:
@@ -192,7 +135,7 @@
               ;final-form (atom nil)]
           ;; if there are differences, then do the thing
           (when (seq diff-forms)
-            (log/info (color-str ANSI_GREEN "Reloading file: " filename))
+            (log/info (utils/color-str utils/ANSI_GREEN "Reloading file: " filename))
             ;; Evaluate the ns form's reference forms
             (binding [*ns* (create-ns ns-sym)]
               (eval (concat '(do) reference-forms)))
@@ -200,9 +143,9 @@
             (try
               (doseq [form diff-forms]
                 (process-form! ns-sym form new-form-evals))
-              (log/info (color-str ANSI_GREEN "Done reloading file: " filename "\n"))
+              (log/info (utils/color-str utils/ANSI_GREEN "Done reloading file: " filename "\n"))
               (catch Exception _
-                (log/error (color-str ANSI_RED "Unable to process all of file: " filename "\n"))))
+                (log/error (utils/color-str utils/ANSI_RED "Unable to process all of file: " filename "\n"))))
             ;; Update forms in our state atom, only counting those forms which successfully ran
             (let [base-form-evals (take (- (count forms) (count diff-forms) 1) last-form-evals)
                   form-evals (concat base-form-evals @new-form-evals)

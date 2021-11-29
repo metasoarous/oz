@@ -21,6 +21,8 @@
             [markdown.core :as md]
             [hasch.core :as hasch]
             [oz.live :as live]
+            [oz.server :as server]
+            [oz.impl.utils :as utils]
             [clojure.tools.analyzer.jvm :as ana.jvm]
             [clojure.core.async :as async :refer [go go-loop <! >! <!! >!!]]))
 
@@ -602,23 +604,290 @@
   "Computes a hasch using a blocks forms without whitespace, as well as all of its dependencies"
   [block]
   (hasch/uuid
-    (select-keys block [:forms-without-whitespace :dependencies])))
+    (select-keys block [:forms-without-whitespace :dependencies :other-dependencies])))
 
 
 ;; debug the state of a file
 ;(doseq [[block-id result-chan]
-        ;(:result-chans (:last-evaluation (get @build-state "/home/csmall/code/oz/notebook-demo.clj")))]
+        ;(:result-chans (:last-evaluation (get @evaluation-state "/home/csmall/code/oz/notebook-demo.clj")))]
   ;(when-let [{:as result :keys [error aborted]} (<!! result-chan)]
     ;(when (or error aborted)
       ;(log/info "block: " block-id)
       ;(log/info result))))
-      
 
 ;(parse-code (slurp "test.clj"))
 
 ;; Need to make it so thast upstream changes to vars will update the functions in question
-  
 
+;(defn shit []
+  ;:yeah)
+
+;(meta (var shit))
+
+;(clojure.repl/source-fn 'shit)
+
+
+
+;; * go through entire set of vars used
+;; * get all local files referenced that aren't the file in question
+;; * either
+;;   * read these files/vars lazily, as needed
+;;     * this implies that evaluations need to be more unified between different files
+;; * how do you make this interoperable with watching these files explicitly?
+
+;; * what happens when a build file is saved?
+;; * what happens if a dependency file is saved?
+
+
+
+;; ideals:
+;; * q: what happens when a dependency is changed:
+;;   * a: everything downstream updates, and last viewed file is updated & displayed
+;; * q: 
+
+
+;; or
+
+;; just assume that users always explictily watch all the implied directories?
+;;   I don't like this solution; feels like a cop out
+
+
+(meta (the-ns 'clojure.core))
+(meta (the-ns 'clojure.set))
+;(find-ns-definition 'oz.core); (find-ns 'oz.core))
+
+
+(defn- get-other-dependencies
+  [var-list]
+  (mapcat
+    (fn [v]
+      (when-let [m (meta var-list)]
+        (when-let [f (:file m)]
+          (when (local-file? f)
+              [{:file f
+                :var v}]))))))
+
+
+(defn- get-upstream-dependencies
+  [var-list]
+  (->> var-list
+    (mapcat
+      (fn [v]
+        (when-let [m (meta var-list)]
+          (when-let [f (:file m)]
+            (when (local-file? f)
+                [{:file f
+                  :var v}])))))))
+
+
+;; things we know:
+
+;; * we want to be able to save a dependency file and have it run the updates
+;;   * we need to have downstream targets or downstream dependencies attributes on the evaluation
+;;     * 2 evaluations should always be able to reference the previous evaluation from another update
+;;   * meta evaluation
+;;   * need to have a model of how nss relate to eachother
+;; * evaluations refer to other evaluations
+;; * need to have some pause for a series of file updates to stop before we make any decisions
+;;   * queue of incoming
+
+;; the key is in processing batches of file changes with a timeout between signals
+;; * like the 3-seconds popcorn popper rule
+
+;; so we need a go loop that 
+
+;; we take our watch fn and have it spit out updates into a rather massively buffered queue
+;; * we kind of don't want to have builds run with incomplete file sets, since they could lead to inconsistent builds
+;;   * then again... we may not want to allow builds of any size, since it could crap out an attempt to compute the batch, and we could potentially make it batch things, though without bakpressure, this will crumble
+
+;; we start a go loop that watches for changes on the queue, and once a certain amount of time has passed between inbound updates, will initiate a build with the give set of caught files as the focus of the build
+
+;; What do we want to call this set?
+;; * focus-set
+;; * 
+
+;; this set of ids is what anchors our build
+;; they are the things we're primarily watching
+;; primary-watch-set of
+;; primary-watch-file
+
+
+(require '[nextjournal.beholder :as beholder])
+
+;(beholder/stop example-watcher)
+
+;(defn build-log-fn []
+  ;(let [t0 (System/currentTimeMillis)]
+    ;(fn [value]
+      ;(println "value:" value)
+      ;(println "t=" (- (System/currentTimeMillis) t0) "ms"))))
+
+;(def example-watcher (beholder/watch (build-log-fn) "src"))
+
+;(def emacs-swap-regex #"^(\.#.*|#.*)")
+;;(re-matches emacs-swap-regex ".#stuff-file")
+;;; ^ truthy
+
+;(def vim-swap-regex #"^.+?\.sw.?$")
+;(def vim-swap-regex #"^.+?\.sw.?$")
+;(re-matches vim-swap-regex ".stuff-file.clj.swo")
+;;; ^ truthy
+;(re-matches vim-swap-regex "stuff-file.clj.swp"
+;;; ^ not
+;(re-matches
+   ;#"^\d*$"
+   ;"33234398734873")
+   ;;#"^\..*\.sw\wx?$"
+            ;;".stuff-file.clj.swp")
+
+
+(def ^:private default-ignore-patterns
+  [#".*~$"
+   #"^\d*$"
+   #"^(\.#.*|#.*)"
+   #"^\..*\.sw\wx?$"])
+
+(defn- ignore?
+  [ignore-patterns f]
+  (some
+    #(-> f io/file .getPath (string/split #"\/") last (->> (re-find %)))
+    ignore-patterns))
+
+
+;; `watch-files!` starts the watch process and returns an object which specifies the files that need to be watched, and what needs to happen to them
+
+(defonce current-watcher
+  (atom nil))
+
+
+(defn- kill-watcher!
+  [{:keys [watchers update-batch-chan update-chan]}]
+  (async/close! update-batch-chan)
+  (async/close! update-chan)
+  (doseq [[_ ws] watchers]
+    (doseq [w ws]
+      (beholder/stop w))))
+
+(defn build-watch-fn
+  [update-chan {:as build-spec :keys [ignore-file-patterns] :or {ignore-file-patterns default-ignore-patterns}}]
+  (fn [{:as file-update :keys [path]}]
+    (when (not (ignore? ignore-file-patterns (str path)))
+      (>!! update-chan (assoc file-update :build-spec build-spec)))))
+
+(defn batch-updates
+  [{:keys [update-chan update-batch-chan]}]
+  (go-loop [updates-so-far []]
+    (let [timeout-chan (async/timeout 100)
+          [result result-chan] (<! (async/alts! [update-chan timeout-chan]))]
+      (if (not= result-chan timeout-chan)
+        ;; If we're not at the timeout, just keep building
+        (recur (conj updates-so-far result))
+        ;; If we are at the timeout, what we do depends on whether we have a set of file changes or not
+        (if (seq updates-so-far)
+          (do
+            (>! update-batch-chan updates-so-far)
+            (recur updates-so-far))
+          (recur updates-so-far))))))
+
+(defn watch-files!
+  "starts the watch process and returns an object which specifies the files that need to be watched, and what needs to happen to them"
+  [build-specs]
+  (let [watcher
+        (reduce
+          (fn [{:as watcher :keys [update-chan]}
+               {:as build-spec :keys [from]}]
+            (let [watch-handle (beholder/watch
+                                 (build-watch-fn update-chan build-spec)
+                                 from)]
+              (-> watcher
+                  (update :watchers
+                          update from (comp set conj) watch-handle))))
+          {:update-chan (async/chan 10000)
+           :update-batch-chan (async/chan 10)}
+          build-specs)]
+    (swap! current-watcher
+           (fn [last-watcher]
+             (kill-watcher! last-watcher)
+             watcher))))
+
+
+
+(defn compress-updates
+  [update-batch]
+  (->> update-batch
+       (group-by #(select-keys % [:build-spec :path]))
+       (map
+         (fn [[compressor updates]]
+           (reduce
+             (fn [{:as compressor :keys [update-type]}
+                  {:keys [type path]}]
+               ;; This catch cases where an editor deletes a file and then recreates it tens of ms later (stares at vim)
+               (let [update-type (if (and update-type
+                                          (= :create type))
+                                   :modify
+                                   type)]
+                 (assoc compressor :update-type update-type)))
+             compressor
+             updates)))
+       (group-by :path)
+       (map (fn [[path updates]]
+              {:path path
+               ;; This is weird, but we've got the potential for multiple build spec entries matching a particular file
+               ;; (even using the same :from declaration, which we don't properly handle above)
+               :update-type (-> (map :update-type updates)
+                                (set)
+                                ;; if ambiguous, default order of update-type assumption is as below
+                                ;; this could probably be refined/improved, but _shouldn't_ matter as long as we're not hitting timeouts
+                                (some [:modify :create :delete]))
+               :build-specs (->> (map :build-spec updates) set)}))))
+
+;(compress-updates
+  ;[{:type :delete
+    ;:path "this/that.clj"
+    ;:build-spec {}}
+   ;{:type :create
+    ;:path "this/that.clj"
+    ;:build-spec {}}
+   ;{:type :create
+    ;:path "this/that.clj"
+    ;:build-spec {:stuff :yeah}}
+   ;{:type :create
+    ;:path "this/those.clj"
+    ;:build-spec {:stuff :yeah}}])
+
+
+;(defn build-dependency-watch-fn
+  ;[update-chan build-spec primary-watch-file]
+  ;(let []))
+
+
+;(defn add-dependency-watch!
+  ;[build-spec primary-watch-file dependency-watch-file]
+  ;(swap! current-watcher
+         ;(fn [watcher]
+           ;(let [watch-handle (beholder/watch
+                                ;(build-watch-fn update-chan build-spec)
+                                ;from)]
+             ;(update-in watcher [:watchers dependency-watch-file] watch-handle)))))
+
+
+
+
+;(defn file-watcher
+  ;(async/go-loop []))
+
+;; we need to replace the notion of the :evaluation with that of the `:evaluation-set`
+;; an :evaluation corresponds with a single file
+;; an :evaluation-set corresponds with a set of files (and thus :evaluations)
+;; each :evaluation-set has a "head" of files that are being explicitly watched (:explicitly-watched-files ?)
+;; * need to be able to map back towards corresponding build specifications in order to infer this
+;;   * this changes over time
+;;     * means probably need to track this as we're building our :evaluations
+;; 
+
+
+
+; See if we can take this to get the source for dependent vars
 (defn infer-dependencies
   [blocks]
   (->> blocks
@@ -628,8 +897,10 @@
            (let [dependency-vars (set/difference
                                    (set (into used-vars mutated-vars))
                                    defined-vars)
-                 block (assoc block :dependencies (apply set/union
-                                                         (map var-mutation-blocks dependency-vars)))
+                 block (assoc block
+                              :dependencies (apply set/union
+                                                   (map var-mutation-blocks dependency-vars))
+                              :other-dependencies (get-other-dependencies dependency-vars))
                  id (block-hash block)
                  block (assoc block
                               :id id
@@ -720,7 +991,7 @@
   (async/go
     (let [[_ chan] (async/alts! [result-chan timeout-chan error-chan])]
       (when (= chan timeout-chan)
-        (log/info (live/color-str live/ANSI_YELLOW "Long running form (" id ") being processed:\n" code-str))
+        (log/info (utils/color-str utils/ANSI_YELLOW "Long running form (" id ") being processed:\n" code-str))
         (async/>! long-running? true)))))
 
 ;(try
@@ -742,7 +1013,7 @@
                             :compute-time compute-time
                             :error (error-data t)
                             :result t})
-    ;(log/error (live/color-str live/ANSI_RED "Error processing form (" id "):\n" code-str))
+    ;(log/error (utils/color-str utils/ANSI_RED "Error processing form (" id "):\n" code-str))
     (log/error (str "Error processing form (" id "):\n" code-str))
     (log/error t)
     (async/>!! error-chan t)
@@ -759,7 +1030,7 @@
     ;; keep track of successfully run forms, so we don't redo work that completed
     ;; If long running, log out how long it took
     (when (async/poll! long-running?)
-      (println (live/color-str live/ANSI_YELLOW "Form (" id ") processed in: " compute-time "s")))))
+      (println (utils/color-str utils/ANSI_YELLOW "Form (" id ") processed in: " compute-time "s")))))
 
 (defn init-block-evaluation [main-evaluation]
   (merge main-evaluation
@@ -1003,40 +1274,61 @@
 
 ;stuff
 
-(defonce build-state
-  (atom {}))
+;; :evaluations -> list so that conj adds to head, and can take n-1 to clear history
+
+(defonce evaluation-state
+  (atom {:evaluation-sets '()
+         :kill-chan (async/promise-chan)}))
+
+(defn last-evaluation-set
+  [{:as evaluation-state-value :keys [evaluation-sets]}]
+  (first evaluation-sets))
+
+(defn shift-evaluation-set
+  "Replaces the "
+  [{:as evaluation-state-value :keys [history-depth]}
+   new-evaluation-set]
+  (update evaluation-state-value
+          :evaluation-sets
+          #(conj (if (>= (count %) history-depth)
+                   (butlast %)
+                   %)
+                 new-evaluation-set)))
 
 (defn kill-evaluation! [{:keys [kill-chan]}]
   (when kill-chan
     (go (>! kill-chan :kill))))
 
+
+;; evaluation-state
+;;   {:evaluation-sets
+;;     ({:primary-evaluations
+;;       :dependency-evaluations
+;;       :dependent-evaluations})}
+;;       
+
+
+
+
+
 (defn reload-file!
   [file]
   (let [filename (live/canonical-path file)
         contents (slurp file)
-        {:keys [last-contents last-evaluation]} (get @build-state filename)]
-    ;; This has a couple purposes, vs just using the (seq diff-forms) below:
-    ;; * forces at least a check if the file is changed at all before doing all the rest of the work below
-    ;;   (not sure how much perf benefit there is here)
-    ;; * there's sort of a bug and a feature: the (seq diff-forms) bit below ends up not working if
-    ;;   `forms` doesn't have everything, which will be the case if(f?) there was an error running
-    ;;   things. This means changing a ns form (e.g.) will trigger an update on forms that failed
-    ;; * this prevents the weird multiple callback issue with the way vim saves files creating 3/4 change
-    ;;   events
-    (when (not= contents last-contents)
-      ;; kill last evaluation
-      (kill-evaluation! last-evaluation)
-      ;; Start the evaluation
-      (let [evaluation (-> contents analysis (assoc :file file) (->> (evaluate-blocks! last-evaluation)))]
-        ;; cache evaluation object in build state
-        (log/info (live/color-str live/ANSI_GREEN "Reloading file: " filename))
-        (swap! build-state assoc filename {:last-contents contents :last-evaluation evaluation :previous-evaluation last-evaluation})
-        evaluation))))
-        ;(log/info (live/color-str live/ANSI_GREEN "Done reloading file: " filename "\n")
-        ;(catch Exception _
-          ;(log/error (live/color-str live/ANSI_RED "Unable to process all of file: " filename "\n"))
-          ;; Update forms in our state atom, only counting those forms which successfully ran
-            ;(compile-forms-hiccup form-evals)
+        {:keys [last-contents last-evaluation]} (get-in @evaluation-state [:filename])]
+    ;; kill last evaluation
+    (kill-evaluation! last-evaluation)
+    ;; Start the evaluation
+    (let [evaluation (-> contents analysis (assoc :file file) (->> (evaluate-blocks! last-evaluation)))]
+      ;; cache evaluation object in build state
+      (log/info (utils/color-str utils/ANSI_GREEN "Reloading file: " filename))
+      (swap! evaluation-state assoc filename {:last-contents contents :last-evaluation evaluation :previous-evaluation last-evaluation})
+      evaluation)))
+      ;(log/info (utils/color-str utils/ANSI_GREEN "Done reloading file: " filename "\n")
+      ;(catch Exception _
+        ;(log/error (utils/color-str utils/ANSI_RED "Unable to process all of file: " filename "\n"))
+        ;; Update forms in our state atom, only counting those forms which successfully ran
+          ;(compile-forms-hiccup form-evals)
 
 ;; TODO need to be able to attach metadata that says that there's a random process, meaning that new runs will
 ;; have to be mixed with some random key
@@ -1046,7 +1338,7 @@
   "Not entirely sure there won't be race conditions with this"
   [{:keys [id]}]
   (let [{:keys [results-by-id]}
-        (get-in @build-state [:filename :previous-evaluation])]
+        (get-in @evaluation-state [:filename :previous-evaluation])]
     (get results-by-id id)))
        
 (defn queue-new-result-callback!
@@ -1061,6 +1353,40 @@
         (log/info "result chan" result-chan)
         (let [result (<! result-chan)]
           (callback-fn result))))))
+
+
+(defn process-update-batch!
+  [build-specs update-batch]
+  (let [updates (compress-updates update-batch)]
+    ()))
+
+
+
+;;; view! should be like build, but only produce views!
+
+;(def ^:private default-config
+  ;{:live? true
+   ;:view? true
+   ;:lazy? true
+   ;:port 5760
+   ;:host "localhost"})
+
+;(defn- infer-root-dir
+  ;[build-descs]
+  ;;; not correct; mocking
+  ;(->> build-descs
+       ;(map (comp live/canonical-path :to))
+       ;(reduce live/greatest-common-path)))
+
+;(def ^:private default-build-desc
+  ;{:out-path-fn utils/html-extension})
+
+
+(defn kill-build! []
+  (kill-watcher! @current-watcher)
+  ;; TODO make sure to plumb kill-chan through
+  (kill-evaluation! (last-evaluation-set @evaluation-state)))
+
 
 
 ;(let [code-str "(def stuff :blah)\n(str stuff \"dude\")"]

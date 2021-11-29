@@ -31,6 +31,7 @@
         respeced/respeced {:mvn/version "0.0.1"}
         org.clojure/test.check {:mvn/version "0.10.0"}
         hawk/hawk {:mvn/version "0.2.11"}
+        com.nextjournal/beholder {:mvn/version "1.0.0"}
         metasoarous/darkstar {:mvn/version "0.1.0"}
         rewrite-clj/rewrite-clj {:mvn/version "1.0.644-alpha"}
         org.clojure/tools.analyzer {:mvn/version "1.0.0"}

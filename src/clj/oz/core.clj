@@ -28,19 +28,13 @@
             [clojure.core.async :as a]
             [respeced.test :as rt]
             [oz.next :as next]
-            [applied-science.darkstar :as darkstar])
+            [applied-science.darkstar :as darkstar]
+            [oz.impl.utils :as utils])
   (:import java.io.File
            java.util.UUID))
 
 ;(meta *ns*)
 
-
-(defn- apply-opts
-  "utility function for applying kw-args"
-  [f & args]
-  (apply f (concat (butlast args) (flatten (into [] (last args))))))
-
-  
 
 (defn sample
   ([spec]
@@ -1237,7 +1231,7 @@
 (defn- auth-args
   [args]
   (let [the-auth-args (submap args #{:auth :auth-token :client-id :access-token})
-        auth-file (or (:auth-file args) (live/join-paths (System/getProperty "user.home") ".oz/github-creds.edn"))]
+        auth-file (or (:auth-file args) (utils/join-paths (System/getProperty "user.home") ".oz/github-creds.edn"))]
     (if (empty? the-auth-args)
       (try
         (edn/read-string (slurp auth-file))
@@ -1332,7 +1326,7 @@
   [doc & {:as opts
           :keys [mode return-full-gist]
           :or {mode :vega-lite}}]
-  (let [gist (apply-opts gist! doc opts)
+  (let [gist (utils/apply-opts gist! doc opts)
         gist-url (:url gist)]
     (println "Raw gist url:" gist-url)
     (println "Gist url:" (:html_url gist))
@@ -1383,14 +1377,6 @@
   [filename & {:keys [host port format] :as opts}]
   (live/watch! filename (partial view-file! opts)))
 
-(defn- drop-extension
-  [relative-path]
-  (string/replace relative-path #"\.\w*$" ""))
-
-(defn- html-extension
-  [relative-path]
-  (string/replace relative-path #"\.\w*$" ".html"))
-
 
 ;; Building up to defining build
 
@@ -1413,21 +1399,6 @@
   (s/coll-of ::build-desc))
 
 
-
-(defn- compute-out-path
-  [{:as build-desc :keys [from to out-path-fn]} path]
-  (let [out-path-fn (or out-path-fn drop-extension)
-        single-file? (= (str (.getAbsolutePath (io/file path)))
-                        (str (.getAbsolutePath (io/file from))))
-        to-dir? (or (.isDirectory (io/file to))
-                    (= (last (.getPath (io/file path))) (java.io.File/separatorChar)))
-        relative-from-path (if single-file? path (live/relative-path path from))]
-    (if (and single-file? (not to-dir?))
-      ;; then we're just translating a single file with an explicit to path
-      to
-      ;; then we need to assume that we're exporting to a path which has a directory created for it
-      (live/join-paths (or to ".")
-                       (out-path-fn relative-from-path)))))
 
 (defn- file-separator
   "This function returns the platform specific file separator
@@ -1470,8 +1441,10 @@
 (def ^:private default-ignore-patterns
   [#".*~$"
    #"^\d*$"
+   #"^(\.#.*|#.*)"
    #"^\..*\.sw\wx?$"])
 
+;; TODO Remove this once it's fully moved over to next build system
 (defn- ignore?
   [f]
   (some
@@ -1499,7 +1472,7 @@
       ;;; Handle asset case; just copy things over directly
       ;(or as-assets? (asset-filetypes ext))
       ;(when (and (not (.isDirectory file)) (#{:modify :create} kind) (not (ignore? file)))
-        ;(let [out-path (compute-out-path (assoc build-desc :out-path-fn identity)
+        ;(let [out-path (utils/compute-out-path (assoc build-desc :out-path-fn identity)
                                          ;(.getPath file))]
           ;(ensure-out-dir out-path true)
           ;(log/info "updating asset:" file)
@@ -1508,7 +1481,7 @@
       ;(supported-filetypes ext)
       ;;; ignore delete (some editors technically delete the file on every save!); also ignore dirs
       ;(when (and (#{:modify :create} kind) file (not (.isDirectory file)))
-        ;(reset! last-built-file [(live/canonical-path file) build-desc])
+        ;(reset! last-built-file [(utils/canonical-path file) build-desc])
         ;(let [filename (.getPath file)
               ;ext (extension filename)
               ;contents (slurp filename)]
@@ -1531,7 +1504,7 @@
                 ;(let [;_ (log/info "step 1:" evaluation)
                       ;evaluation (with-meta (if template-fn (template-fn evaluation) evaluation) (meta evaluation))
                       ;;_ (log/info "step 2:" evaluation)
-                      ;out-path (compute-out-path build-desc filename)]
+                      ;out-path (utils/compute-out-path build-desc filename)]
                   ;(ensure-out-dir out-path true)
                   ;(when view?
                     ;(log/info "Updating old live view")
@@ -1545,7 +1518,7 @@
 (defn- copy-asset
   [build-desc kind file]
   (when (and (not (.isDirectory file)) (#{:modify :create} kind) (not (ignore? file)))
-    (let [out-path (compute-out-path (assoc build-desc :out-path-fn identity)
+    (let [out-path (utils/compute-out-path (assoc build-desc :out-path-fn identity)
                                      (.getPath file))]
       (ensure-out-dir out-path true)
       (log/info "updating asset:" file)
@@ -1654,7 +1627,7 @@
   (log/info "Exporting evaluation results")
   (let [hiccup (complete-doc build-desc evaluation)
         filename (.getPath file)
-        out-path (compute-out-path build-desc file)]
+        out-path (utils/compute-out-path build-desc file)]
     ;(log/info "XXX" {:fiename filename :out-path out-path})
     (ensure-out-dir out-path true)
     (export! hiccup out-path)))
@@ -1679,11 +1652,14 @@
     (export! evaluation out-path)
     (swap! live/watchers update filename (partial merge {:last-contents contents}))))
 
+
+;; TODO Either finish implementing this as part of the build flow or remove
+
 (defn- evaluatable
   [config build-desc
    {:as evaluation :keys [kind file contents result]}]
   (when (and (#{:modify :create} kind) file (not (.isDirectory file)))
-    (reset! last-built-file [(live/canonical-path file) build-desc])
+    (reset! last-built-file [(utils/canonical-path file) build-desc])
     (let [filename (.getPath file)
           contents (slurp filename)]
       ;; if there are differences, then do the thing
@@ -1714,7 +1690,7 @@
   (when (and from (.isDirectory (io/file from)))
     (ensure-out-dir to false))
   (println "calling build-and-view-file-next!")
-  (if-let [ext (and file (extension (.getPath file)))]
+  (when-let [ext (and file (extension (.getPath file)))]
     (cond
       ;; Handle asset case; just copy things over directly
       (or as-assets? (asset-filetypes ext))
@@ -1727,7 +1703,7 @@
       ;; can be removed as needed (for renames, etc).
       ;; Also need to add utilities for cleaning up unused files
       (when (and (#{:modify :create} kind) file (not (.isDirectory file)))
-        (reset! last-built-file [(live/canonical-path file) build-desc])
+        (reset! last-built-file [(utils/canonical-path file) build-desc])
         (let [filename (.getPath file)
               ext (extension filename)
               contents (slurp filename)]
@@ -1737,23 +1713,50 @@
           (when-not (= contents
                        (get-in @live/watchers [filename :last-contents]))
             (log/info "Rerendering file:" filename)
-            (let [evaluation
-                  (cond
-                    ;; 
-                    (#{"clj" "cljc"} ext)
-                    ;; Will not return if there's nothing to evaluate
-                    (next/reload-file! file)
-                    ;; how do we handle cljs?
-                    (#{"cljs"} ext)
-                    [:div "CLJS Coming soon!"]
-                    ;; loading of static files, like md or hiccup
-                    :else
-                    (load filename :format format))]
+            (let [evaluation (evaluate-file! file ext format)]
               (when evaluation
                 (if (#{"clj" "cljc"} ext)
                   ;; Eventually this case will cover md as well, once we add code block eval there
                   (build-and-view-async-evaluation! config build-desc evaluation)
                   (build-and-view-synchronous-evaluation! config build-desc evaluation))))))))))
+
+(defn- build-and-view-update-set!
+  [{:as config :keys [view? host port force-update]}
+   {:as build-desc :keys [format from to out-path-fn template-fn as-assets? compile-opts]}
+   {:keys [type file]}]
+  (when (and from (.isDirectory (io/file from)))
+    (ensure-out-dir to false))
+  (println "calling build-and-view-update-set!")
+  (when-let [ext (and file (extension (.getPath file)))]
+    (cond
+      ;; Handle asset case; just copy things over directly
+      (or as-assets? (asset-filetypes ext))
+      (copy-asset build-desc kind file)
+      ;; Handle the source file case
+      (supported-filetypes ext)
+      ;; ignore delete (some editors technically delete the file on every save!); also ignore dirs
+      ;; TODO Consider whether we want to undo this assumption; We could possibly set it up so that if a file
+      ;; is deleted but recreated a short time later, then doesn't delete. Otherwise, does, so that old files
+      ;; can be removed as needed (for renames, etc).
+      ;; Also need to add utilities for cleaning up unused files
+      (when (and (#{:modify :create} kind) file (not (.isDirectory file)))
+        (reset! last-built-file [(utils/canonical-path file) build-desc])
+        (let [filename (.getPath file)
+              ext (extension filename)
+              contents (slurp filename)]
+          ;; if there are differences, then do the thing
+          ;; TODO Also need to reconsider this decision, since if there are upstream changes to var
+          ;; dependencies, we'll need to update even if no change to code
+          (when-not (= contents
+                       (get-in @live/watchers [filename :last-contents]))
+            (log/info "Rerendering file:" filename)
+            (let [evaluation (evaluate-file! file ext format)]
+              (when evaluation
+                (if (#{"clj" "cljc"} ext)
+                  ;; Eventually this case will cover md as well, once we add code block eval there
+                  (build-and-view-async-evaluation! config build-desc evaluation)
+                  (build-and-view-synchronous-evaluation! config build-desc evaluation))))))))))
+
 
 
 ;(build-and-view-file-next!
@@ -1767,7 +1770,7 @@
   ;{:kind :modify
    ;:file (io/file "realtest.clj")})
 
-
+;; TODO Remove this from here when fully moved over to the next build implementation
 
 (def ^:private default-config
   {:live? true
@@ -1776,10 +1779,13 @@
    :port 5760
    :host "localhost"})
 
+;; TODO Remove this from here when fully moved over to the next build implementation
+
 (def ^:private default-build-desc
-  {:out-path-fn html-extension})
+  {:out-path-fn utils/html-extension})
 
 
+;; TODO Similarly, remove this once fully moved over to next build namespace
 
 (defn kill-builds!
   "Kills all file watchers"
@@ -1787,13 +1793,14 @@
   ;; for now this should suffice
   (live/kill-watchers!))
 
+;; TODO Similarly, remove this once fully moved over to next build namespace
 
 (defn- infer-root-dir
   [build-descs]
   ;; not correct; mocking
   (->> build-descs
-       (map (comp live/canonical-path :to))
-       (reduce live/greatest-common-path)))
+       (map (comp utils/canonical-path :to))
+       (reduce utils/greatest-common-path)))
 
 
 ;; build config specs
@@ -1832,7 +1839,7 @@
   ([build-descs & {:as config}]
    (kill-builds!)
    (if (map? build-descs)
-     (apply-opts build! [build-descs] config)
+     (utils/apply-opts build! [build-descs] config)
      (let [{:as full-config :keys [lazy? live?]}
            (merge default-config config)]
        (reset! server/current-root-dir (or (:root-dir config) (infer-root-dir build-descs)))
@@ -1843,7 +1850,7 @@
            (doseq [src-file (file-seq (io/file (:from full-spec)))]
              ;; we don't want to display the file on these initial builds, only for most recent build
              (let [config' (assoc full-config :view? false)
-                   dest-file (compute-out-path full-spec src-file)]
+                   dest-file (utils/compute-out-path full-spec src-file)]
                (when (or (not lazy?) (not (.exists (io/file dest-file))))
                  ;(build-and-view-file! config' full-spec (:from full-spec) {:kind :create :file src-file :watch-path dest-file})
                  (build-and-view-file-next! config' full-spec {:kind :create :file src-file :watch-path (:from full-spec)}))))
@@ -1857,6 +1864,79 @@
            (log/info "Recompiling last viewed file:" file)
            ;(build-and-view-file! full-config new-spec (:from build-desc) {} {:kind :create :file (io/file file)})
            (build-and-view-file-next! full-config new-spec {:kind :create :file (io/file file) :watch-path (:from build-desc)})))))))
+
+
+(defn rebuild-last-target!
+  ([build-specs config]
+   ;; If we're running this the second time, we want to immediately rebuild the most recently compiled
+   ;; file, so that any new templates or whatever being passed in can be re-evaluated for it.
+   (when-let [[file build-desc] @last-built-file]
+     (let [{:keys [from]} build-desc
+           new-spec (first (filter #(= (:from %) (:from build-desc)) build-specs))
+           file (io/file file)]
+       (log/info "Recompiling last viewed file:" file)
+       ;(build-and-view-file! config new-spec (:from build-desc) {} {:kind :create :file (io/file file)})
+       (build-and-view-update-set! config new-spec [{:update-type :modify
+                                                     :file file
+                                                     :path (.getPath file)
+                                                     :watch-path (:from build-desc)}])))))
+
+;(.getPath (io/file "README.md"))
+
+(defn initialize-build!
+  [{:as build-spec :keys [from]}
+   {:as config :keys [lazy?]}]
+  ;; On first build, build out all of the results unless lazy? has been passed or we haven't built it
+  ;; yet
+  ;; TODO Finish rewriting this
+  (doseq [src-file (file-seq (io/file from))]
+    ;; we don't want to display the file on these initial builds, only for most recent build
+    (let [config' (assoc config :view? false)
+          dest-file (utils/compute-out-path build-spec src-file)]
+      (when (or (not lazy?) (not (.exists (io/file dest-file))))
+        ;(build-and-view-file! config' build-spec from {:kind :create :file src-file :watch-path dest-file})
+        (build-and-view-update-set! config' build-spec {:kind :create :file src-file :watch-path from})))))
+
+;; TODO Finish this function
+(defn- async-eval! [build-specs config]
+  (next/async-eval!))
+
+(defn build-next!
+  "Builds a static web site based on the content specified in specs. Each build-desc should be a mapping of paths, with additional
+  details about how to build data from one path to the other. Available build-desc keys are:
+    * `:from` - (required) Path from which to build
+    * `:to` - (required) Compiled files go here
+    * `:template-fn` - Function which takes Oz hiccup content and returns some new hiccup, presumably placing the content in question in some 
+    * `:out-path-fn` - Function used for naming compilation output
+    * `:to-format` - Literal format to use for export!
+    * `:to-format-fn` - Function of input filename to format
+    * `:as-assets?` - Pass through as a static assets (for images, css, json or edn data, etc)
+      - Note: by default, images, css, etc will pass through anyway
+
+  Additional options pertinent to the entire build process may be passed in:
+    * `:live?` - Watch the file files 
+    * `:lazy?` - If true, don't build anything until it changes; this is best for interactive/incremental updates and focused work.
+                 Set to false if you want to rebuild from scratch. (default true)
+    * `:view?` - Build with live view of most recently changed file (default true)
+    * `:root-dir` - Static assets will be served relative to this directory (defaults to greatest-common-path between all paths)
+  "
+  ;; lazy? - (This is one that it would be nice to merge in at the build-desc level)
+  ;; future: middleware?
+  ([build-descs & {:as config}]
+   (next/kill-build!)
+   (if (map? build-descs)
+     (utils/apply-opts build! [build-descs] config)
+     (let [{:as full-config :keys [live?]}
+           (merge default-config config)
+           build-descs
+           (map (partial merge default-build-desc) build-descs)]
+       ;; this is in server, because that's where static files are being served from
+       (reset! server/current-root-dir (or (:root-dir config) (infer-root-dir build-descs)))
+       ;; TODO Write this function
+       (initialize-build! build-descs full-config)
+       (when live?
+         (async-eval! build-descs full-config))
+       (rebuild-last-target! build-descs full-config)))))
 
 ;; for purpose of examples below
 ;; Or are they?
