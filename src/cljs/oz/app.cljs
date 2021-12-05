@@ -1,6 +1,8 @@
 (ns ^:no-doc ^:figwheel-always oz.app
   (:require [reagent.core :as r]
             [reagent.dom :as rd]
+            [goog.dom :as dom]
+            [goog.events.KeyCodes :as keycodes]
             [cljs.core.async :as async  :refer (go go-loop <! >! chan)]
             [taoensso.encore :as encore :refer-macros (have have?)]
             [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
@@ -98,10 +100,10 @@
   ;; to catch it
   (async/go
     (<! (async/timeout 5))
-    (.typeset js/MathJax)
-    (async/go
-      (<! (async/timeout 2500))
-      (.typeset js/MathJax))))
+    (.typeset js/MathJax)))
+    ;(async/go
+      ;(<! (async/timeout 2500))
+      ;(.typeset js/MathJax))))
 
 
 ;; old view-doc method
@@ -340,9 +342,65 @@
       [:div [:h3 "Unknown block type" type]
        [:pre (pr-str block)]])]]) 
 
+
+(defn slideshow-page-view
+  [page-blocks]
+  [:div {:style {:width "100%"
+                 :height "100%"}}
+   (for [[i block] (map vector (range) page-blocks)]
+     ^{:key i}
+     block)])
+
+(def slideshow-state
+  (r/atom {:page 0}))
+           ;:}))
+
+(defn slideshow-view
+  [blocks]
+  (let [
+        pages (reduce
+                (fn [{:as aggr :keys [pages current-page]}
+                     block]
+                  (if (= :h1 (first block))
+                    {:pages (conj pages current-page)
+                     :current-page [block]}
+                    (update aggr :current-page conj block)))
+                {:pages []
+                 :current-page []}
+                blocks)
+        pages (remove empty? (conj (:pages pages)
+                                   (:current-page pages)))]
+    ()
+    [:div
+      [slideshow-page-view (nth pages (min (dec (count pages))
+                                           @(r/cursor slideshow-state [:page])))]]))
+
+(defn dec-page
+  [page]
+  (if (> page 0)
+    (dec page)
+    page))
+
+;(defn inc-page)
+
+(defn inc-page
+  [page]
+  (inc page))
+
+(js/window.addEventListener "keydown"
+           (fn [event]
+             (let [key (.-key event)]
+               (js/console.log "key-press" key)
+               (js/console.log "page" (:page @slideshow-state))
+               (case key
+                 ("k" "ArrowUp") (swap! slideshow-state update :page dec-page)
+                 ("j" "ArrowDown") (swap! slideshow-state update :page inc-page)
+                 nil))))
+
 (core/register-live-views
   :oz.doc/async-block async-block-view
-  :oz.doc/code-comment src-view)
+  :oz.doc/code-comment src-view
+  :oz.doc/slideshow slideshow-view)
 
 
 ;; Set up sente router
@@ -356,10 +414,12 @@
   (stop-router!)
   (reset! router_ (sente/start-client-chsk-router! ch-chsk event-msg-handler)))
 
+;; need to get query param
 
 (defn application [app-state]
   (if-let [doc (:document @app-state)]
     [:div [core/live-view doc]]
+    ;[:div [slideshow-view (-> doc second rest)]]
     [:div
       [:h1 "Waiting for first spec to load..."]
       [:p "This may take a second the first time if you call a plot function, unless you first call " [:code '(oz/start-server!)] "."]]))
