@@ -222,14 +222,15 @@
 (defn- apply-metadata
   [[tag first-elmnt & rest-elmnts] metadata]
   ;(log/info "QQQQQQ calling apply-metadata with meta: " meta " and hiccup: " hiccup)
-  (into
-    [tag
-     (if (map? first-elmnt)
-       (merge first-elmnt metadata)
-       metadata)
-     (when-not (map? first-elmnt)
-       first-elmnt)]
-    rest-elmnts))
+  (->>
+    rest-elmnts
+    (into
+      [tag
+       (if (map? first-elmnt)
+         (merge first-elmnt metadata)
+         metadata)
+       (when-not (map? first-elmnt)
+         first-elmnt)])))
 
 
 (defn- strip-metadata-if-needed
@@ -241,7 +242,7 @@
 (defn- unwrap-single-child-div
   [[tag & forms :as form]]
   (let [attr-map (when (map? (first forms)) (first forms))
-        non-attr-forms (cond->> forms
+        non-attr-forms (cond->> (remove nil? forms)
                          attr-map (drop 1))]
     (if (and (= :div tag)
              (= 1
@@ -249,6 +250,32 @@
       ;; TODO Do we need to merge meta here?
       (-> (first non-attr-forms)
           (apply-metadata attr-map))
+      form)))
+
+(defn- unwrap-single-child-p
+  [[tag & forms :as form]]
+  (let [attr-map (when (map? (first forms)) (first forms))
+        non-attr-forms (cond->> (remove nil? forms)
+                         (or attr-map (nil? (first forms)))
+                         (drop 1))]
+    (when attr-map
+      (log/info "has attr-map"))
+    (when (= :p tag)
+      (log/info "getting here?" (vec form)))
+    (if (and (= :p tag)
+             (= 1
+                (count non-attr-forms))
+             (#{:img} (ffirst non-attr-forms)))
+      ;; TODO Do we need to merge meta here?
+      (do
+        (log/info " XXXX" attr-map)
+        (log/info " XXXX"
+          (-> (first non-attr-forms)
+              (apply-metadata attr-map)
+              (vec)))
+        (-> (first non-attr-forms)
+            (apply-metadata attr-map)
+            (->> (remove nil?))))
       form)))
 
 (defn has-metadata?
@@ -266,16 +293,21 @@
              (map get-comment-line-md)
              (string/join "\n"))
         {:keys [metadata html]}
-        (md/md-to-html-string-with-meta markdown)
+        (try
+          (md/md-to-html-string-with-meta markdown)
+          (catch Throwable t
+            (log/error "Unable to process markdown" t)))
         metadata (merge metadata (when meta? (read-meta-comment code-str)))
         ;;     parse the html as hiccup
-        hiccup (-> html hickory/parse hickory/as-hiccup first
+        hiccup (when html
+                 (-> html hickory/parse hickory/as-hiccup first
                    ;; not sure why we do this actually
                    md->hc/component md-decode/decode
                    unwrap-single-child-div
+                   unwrap-single-child-p
                    (cond->
                      ;; we only apply the metadata if there's any to apply
-                     (seq metadata) (apply-metadata metadata)))]
+                     (seq metadata) (apply-metadata metadata))))]
     (assoc md-block
            :markdown markdown
            :html-string html
