@@ -22,3 +22,7 @@ resources/oz/public/js/cljs-runtime/
 node_modules
 resources/oz/public/js/devcards.js
 resources/oz/public/js/manifest.edn
+.clj-kondo
+.lh
+.lsp
+.portal
