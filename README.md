@@ -480,6 +480,9 @@ When you're done, one of the easiest ways to deploy is with the excellent `surge
 You can also use GitHub Pages or S3 or really whatever if you prefer.
 The great thing about static sites is that they are easy and cheap to deploy and scale, so you have plenty of options at your disposal.
 
+## Styling options
+
+[Styling options](doc/styling-options.md)
 
 ## Local CLJS development
 
