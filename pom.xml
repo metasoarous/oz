@@ -3,7 +3,7 @@
   <groupId>metasoarous</groupId>
   <artifactId>oz</artifactId>
   <packaging>jar</packaging>
-  <version>2.0.0-alpha2</version>
+  <version>2.0.0-alpha3</version>
   <name>oz</name>
   <description>Great and powerful data visualizations and scientific documents in Clojure using Vega and Vega-lite</description>
   <url>http://github.com/metasoarous/oz</url>
