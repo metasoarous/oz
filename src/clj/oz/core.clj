@@ -793,10 +793,10 @@
         ;; QUESTION Possible to embed these directly?
         (when-not omit-styles?
           [
+           [:link {:rel "stylesheet" :type "text/css"
+                   :href "https://cdn.jsdelivr.net/gh/metasoarous/cm-web-fonts@latest/fonts.css"}]
            ;[:link {:rel "stylesheet" :href "http://ozviz.io/css/style.css" :type "text/css"}]
-           [:style (slurp (io/resource "oz/public/css/style.css"))]
-           [:link {:rel "stylesheet" :href "http://ozviz.io/fonts/lmroman12-regular.woff"}]
-           [:link {:rel "stylesheet" :href "https://fonts.googleapis.com/css?family=Open+Sans"}]]) 
+           [:style (slurp (io/resource "oz/public/css/style.css"))]])
         ;; TODO Ideally we wouldn't need these, and inclusion of the compiled oz target should be enough; However,
         ;; we're not currently actually included that in html export, so this is necessary for now.
         ;; Everntually though...
