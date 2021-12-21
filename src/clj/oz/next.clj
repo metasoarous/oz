@@ -258,24 +258,13 @@
         non-attr-forms (cond->> (remove nil? forms)
                          (or attr-map (nil? (first forms)))
                          (drop 1))]
-    (when attr-map
-      (log/info "has attr-map"))
-    (when (= :p tag)
-      (log/info "getting here?" (vec form)))
     (if (and (= :p tag)
              (= 1
                 (count non-attr-forms))
              (#{:img} (ffirst non-attr-forms)))
-      ;; TODO Do we need to merge meta here?
-      (do
-        (log/info " XXXX" attr-map)
-        (log/info " XXXX"
-          (-> (first non-attr-forms)
-              (apply-metadata attr-map)
-              (vec)))
-        (-> (first non-attr-forms)
-            (apply-metadata attr-map)
-            (->> (remove nil?))))
+      (-> (first non-attr-forms)
+          (apply-metadata attr-map)
+          (->> (remove nil?)))
       form)))
 
 (defn has-metadata?
@@ -409,9 +398,9 @@
        (map zip/node)))
 
 (defn analysis-nodes
-  [form]
-  (->> form ana.jvm/analyze analysis-zipper zipper-nodes))
-
+  [ns-sym form]
+  ;; ensure ns-sym exists
+  (-> form (ana.jvm/analyze {:ns (or ns-sym 'user)}) analysis-zipper zipper-nodes))
 
 ;(comment
   ;(->>
@@ -458,7 +447,7 @@
 
 (declare shit)
 (deftest var-def-analysis-test
-  (let [anal-node (first (analysis-nodes '(def shit "yo")))]
+  (let [anal-node (first (analysis-nodes 'oz.next '(def shit "yo")))]
     (is (= true (var-def-form? anal-node)))
     (is (= (var oz.next/shit) (:var anal-node)))))
 
@@ -472,7 +461,7 @@
 
 (deftest defmethod-analysis-test
   (let [anal-node
-        (first (analysis-nodes '(defmethod shit :stuff [args] (println args))))]
+        (first (analysis-nodes 'oz.next '(defmethod shit :stuff [args] (println args))))]
     (is (= true (addmethod-mutation? anal-node)))
     (is (= (var oz.next/shit) (addmethod-var anal-node)))))
 
@@ -516,7 +505,7 @@
 (->>
   ;(ana.jvm/analyze '(defmethod shit :stuff [args] (println args)))
   ;(ana.jvm/analyze '(let [v (def shit "yo")] (println "defined" v)))
-  (analysis-nodes '(def shit "yo"))
+  (analysis-nodes 'oz.next '(def shit "yo"))
   (first))
   ;(map addmethod-mutation?))
 
@@ -532,12 +521,23 @@
        (second code-data)))
 
 
+(defn defmulti-var
+  [{:as code-data :keys [raw-forms]}]
+  ;(log/info :raw-forms raw-forms)
+  ;(log/info :anal-form (:form code-data))
+  (let [form (first raw-forms)]
+    (and (list? form)
+         (= 'defmulti (first form))
+         (symbol? (second form))
+         (second form))))
+
+
 (ns-form-ns '(ns this.that))
 
 (defn analyze-block
-  [{:as block :keys [code-str]}]
+  [{:as block :keys [code-str ns-sym forms] :or {ns-sym 'user}}]
   (let [code-data (reader/read-string code-str)
-        anal-nodes (analysis-nodes code-data)] 
+        anal-nodes (analysis-nodes ns-sym code-data)] 
     (merge block
       (reduce
         (fn [anal-results node]
@@ -550,12 +550,12 @@
           {:code-data code-data
            :defined-vars (explicit-defines block)
            :used-vars (explicit-dependencies block)
-           :mutated-vars (explicit-mutation block)}
-          (when-let [ns-sym (ns-form-ns code-data)]
-            {:declares-ns ns-sym}))
+           :mutated-vars (explicit-mutation block)})
          ;:analysis (first anal-nodes)}
         anal-nodes))))
 
+(:defmulti-vars (analyze-block {:code-str "(let [f first] (defmulti shitterz f))"}))
+;(analyze-block {:ns-sym 'user :code-str "(defmulti shitterz first)"})
 
 
 ;(nth
@@ -568,26 +568,25 @@
   ;;(analyze-block {:code-str '(do (def shit "dawg") (println shit))})
   ;(catch Throwable t
     ;(.printStackTrace t)))
-;(map :meta (:defined-vars (analyze-block {:code-data '(defmulti shitterz first)})))
 
 (deftest analyze-block-test
   (testing "simple def"
-    (let [anal (analyze-block {:code-str (str '(def shit "yo"))})]
+    (let [anal (analyze-block {:ns-sym 'oz.next :code-str (str '(def shit "yo"))})]
       (is (= #{(var oz.next/shit)}
              (:defined-vars anal)))))
   (testing "nested def"
-    (let [anal (analyze-block {:code-str (str '(do (def shit "yo") (println shit)))})]
+    (let [anal (analyze-block {:ns-sym 'oz.next :code-str (str '(do (def shit "yo") (println shit)))})]
       (is (= #{(var oz.next/shit)}
              (:defined-vars anal))))
-    (let [anal (analyze-block {:code-str (str '(let [v (def shit "yo")] (println v)))})]
+    (let [anal (analyze-block {:ns-sym 'oz.next :code-str (str '(let [v (def shit "yo")] (println v)))})]
       (is (= #{(var oz.next/shit)}
              (:defined-vars anal)))))
   (testing "defmulti"
-    (let [anal (analyze-block {:code-str (str '(defmulti shit first))})]
+    (let [anal (analyze-block {:ns-sym 'oz.next :code-str (str '(defmulti shit first))})]
       (is (= #{(var oz.next/shit)}
              (:defined-vars anal)))))
   (testing "var usage"
-    (let [anal (analyze-block {:code-str (str '(str shit "dude"))})]
+    (let [anal (analyze-block {:ns-sym 'oz.next :code-str (str '(str shit "dude"))})]
       (is (= true (contains? (:used-vars anal)
                              (var oz.next/shit)))))))
 
@@ -683,20 +682,77 @@
           :var-mutation-blocks {}
           :blocks-by-id {}})))
 
+
+(def code-block-types #{:code :hiccup})
+(def code-block? (comp code-block-types :type))
+
+
+(defn ns-form-references
+  "Separate out all of the 'reference forms' from the rest of the ns declaration; we'll use this in a couple
+  different ways later"
+  [ns-form]
+  (let [reference-forms (->> ns-form (filter seq?) (map #(vector (first %) (rest %))) (into {}))]
+    (concat
+      ;; We need to use explicit namespacing here for refer-clojure, since hasn't been
+      ;; referenced yet, and always include this form as the very first to execute, regardless of whether it shows
+      ;; up in the ns-form, otherwise refer, def, defn etc won't work
+      [(concat (list 'clojure.core/refer-clojure)
+               (:refer-clojure reference-forms))]
+      ;; All other forms aside from :refer-clojure can be handled by changing keyword to symbol and quoting
+      ;; arguments, since this is the corresponding call pattern from outside the ns-form
+      (map
+        (fn [[k v]]
+          (concat (list (-> k name symbol))
+                  (map #(list 'quote %) v)))
+        (dissoc reference-forms :refer-clojure)))))
+
+
 (defn process-blocks
   [blocks]
   (->> blocks
-       (map (fn [{:as block :keys [type]}]
-              (case type
-                :md-comment (process-md-comments block)
-                (:code :hiccup) (analyze-block block)
-                (:whitespace :code-comment) block)))))
+       (reduce
+         (fn [{:as aggr :keys [ns-sym blocks] :or {ns-sym 'user}}
+              {:as block :keys [type code-str]}]
+           (if (code-block? block)
+             (let [ns-sym (or ns-sym 'user)
+                   code-data (reader/read-string code-str)
+                   block (assoc block :code-data code-data)
+                   declares-ns-sym (ns-form-ns code-data)
+                   next-ns-sym (or declares-ns-sym ns-sym)]
+               ;; need to run the namespace declarations syncronously
+               (when declares-ns-sym
+                 ;; For code blocks, we have to analyze the code, and track current ns symbol
+                 (let [reference-forms (ns-form-references code-data)]
+                   ;; Process namespace declarations synchronously, since we need to evaluate them before code
+                   (log/info :NS-SYM-CREATION declares-ns-sym)
+                   (let [result (binding [*ns* (create-ns declares-ns-sym)]
+                                  (eval (concat '(do) reference-forms)))])))
+               ;; analyze block
+               (let [code-block (cond-> (analyze-block (assoc block :ns-sym ns-sym))
+                                  declares-ns-sym (merge {:declares-ns declares-ns-sym}))]
+                 (merge
+                   {:ns-sym next-ns-sym
+                    :blocks (conj blocks code-block)})))
+             ;; for everything else, just make sure we've processed any markdown
+             (let [new-block
+                   (case type
+                     :md-comment (process-md-comments block)
+                     (:whitespace :code-comment) block)]
+               (update aggr :blocks conj new-block))))
+         {:blocks []})
+       ;; We ust need the blocks out of this
+       :blocks))
 
 (defn block-seq
   [{:keys [block-id-seq blocks-by-id]}]
   (->> block-id-seq
        (map (fn [id] (get blocks-by-id id)))))
 
+(defn spy-pp
+  ([message xs]
+   (log/info message (with-out-str (pp/pprint xs)))
+   xs)
+  ([xs] (spy-pp "" xs)))
 
 (deftest infer-dependencies-tests
   (testing "returns a ns-symbol, which will be the first such in the file"
@@ -712,15 +768,14 @@
         (is (= '[user my.ns]
                (get-nss "(ns my.ns)\n(def thing :stuff)")))))))
 
-(defn spy-pp
-  ([message xs]
-   (log/info message (with-out-str (pp/pprint xs)))
-   xs)
-  ([xs] (spy-pp "" xs)))
 
 (defn analysis
   [code-str]
   (->> (parse-code code-str) process-blocks infer-dependencies))
+
+(try
+  (analysis "(defmulti f first)")
+  (catch Throwable t (def error t)))
 
 
 (deftest dependency-test
@@ -818,26 +873,6 @@
           results
           (recur results (rest chans)))))))
 
-(defn ns-form-references
-  "Separate out all of the 'reference forms' from the rest of the ns declaration; we'll use this in a couple
-  different ways later"
-  [ns-form]
-  (let [reference-forms (->> ns-form (filter seq?) (map #(vector (first %) (rest %))) (into {}))]
-    (concat
-      ;; We need to use explicit namespacing here for refer-clojure, since hasn't been
-      ;; referenced yet, and always include this form as the very first to execute, regardless of whether it shows
-      ;; up in the ns-form, otherwise refer, def, defn etc won't work
-      [(concat (list 'clojure.core/refer-clojure)
-               (:refer-clojure reference-forms))]
-      ;; All other forms aside from :refer-clojure can be handled by changing keyword to symbol and quoting
-      ;; arguments, since this is the corresponding call pattern from outside the ns-form
-      (map
-        (fn [[k v]]
-          (concat (list (-> k name symbol))
-                  (map #(list 'quote %) v)))
-        (dissoc reference-forms :refer-clojure)))))
-
-
 (defmacro result-with-out-str
   "Evaluates exprs in a context in which *out* is bound to a fresh
   StringWriter.  Returns the string created by any nested printing
@@ -866,6 +901,21 @@
                           :aborted true}))
 
 
+(defn defmulti-vars2
+  [{:as block :keys [defined-vars]}]
+  (->> defined-vars
+       ;(spy-pp :defined-vars)
+       (filter (comp (partial instance? clojure.lang.MultiFn) deref))
+       ;(map (comp (partial instance? clojure.lang.MultiFn) deref) #{#'defmulti-test/f})
+       ;(spy-pp :post-filter)
+       (map symbol)))
+
+(defn handle-defmulti-redefs2
+  [{:as block :keys [ns-sym]}]
+  (let [the-ns (create-ns ns-sym)]
+    (doseq [v (defmulti-vars2 block)]
+      (ns-unmap the-ns (symbol (name v))))))
+
 (defn- evaluate-block!
   [{:as evaluation :keys [code-data result-chans kill-chan]}
    {:as block :keys [id code-str code-data dependencies ns-sym declares-ns]}]
@@ -893,6 +943,7 @@
               (handle-abortion! block-evaluation block)
               (try
                 (log-long-running-form! block-evaluation block)
+                (handle-defmulti-redefs2 block)
                 (let [result
                       (result-with-out-str
                         (binding [*ns* (create-ns ns-sym)]
@@ -1037,6 +1088,11 @@
 
 (defonce build-state
   (atom {}))
+
+
+(defn reset-build-state! []
+  (reset! build-state {}))
+
 
 (defn kill-evaluation! [{:keys [kill-chan]}]
   (when kill-chan
