@@ -148,7 +148,8 @@
     (boolean
       (or
         ;; always end on a code block, unless it's just a trailing comment
-        ;(and (#{:code :}))
+        (and (#{:code :hiccup} block-type)
+             (#{:code :hiccup} next-form-type))
         (multiline-whitespace? next-form)
         (and (#{:code :hiccup} block-type)
              (= :code-comment next-form-type))
@@ -546,12 +547,10 @@
             (var-form? node)           (update :used-vars set-conj (:var node))
             (mutated-atom-var? node)   (update :mutated-vars set-conj (mutated-atom-var node))
             (addmethod-mutation? node) (update :mutated-vars set-conj (addmethod-var node))))
-        (merge
-          {:code-data code-data
-           :defined-vars (explicit-defines block)
-           :used-vars (explicit-dependencies block)
-           :mutated-vars (explicit-mutation block)})
-         ;:analysis (first anal-nodes)}
+        {:code-data code-data
+         :defined-vars (explicit-defines block)
+         :used-vars (explicit-dependencies block)
+         :mutated-vars (explicit-mutation block)}
         anal-nodes))))
 
 (:defmulti-vars (analyze-block {:code-str "(let [f first] (defmulti shitterz f))"}))
@@ -724,7 +723,6 @@
                  ;; For code blocks, we have to analyze the code, and track current ns symbol
                  (let [reference-forms (ns-form-references code-data)]
                    ;; Process namespace declarations synchronously, since we need to evaluate them before code
-                   (log/info :NS-SYM-CREATION declares-ns-sym)
                    (let [result (binding [*ns* (create-ns declares-ns-sym)]
                                   (eval (concat '(do) reference-forms)))])))
                ;; analyze block
@@ -766,8 +764,9 @@
                          (map :ns-sym)))]
       (testing "basic functionality"
         (is (= '[user my.ns]
-               (get-nss "(ns my.ns)\n(def thing :stuff)")))))))
-
+               (get-nss "(ns my.ns)\n\n(def thing :stuff)")))
+        (is (= '[user my.ns]
+               (get-nss "(ns my.ns)(def thing :stuff)")))))))
 
 (defn analysis
   [code-str]
@@ -780,7 +779,7 @@
 
 (deftest dependency-test
   (testing "simple dependency"
-    (let [code-str "(def stuff :blah)\n(str stuff \"dude\")"
+    (let [code-str "(def stuff :blah)\n\n(str stuff \"dude\")"
           analysis-results (analysis code-str)
           code-blocks (->> (block-seq analysis-results)
                            (filter #(= :code (:type %))))]
@@ -896,25 +895,27 @@
 (defn handle-abortion!
   [{:as evaluation :keys [t0 result-chan long-running? new-form-evals t0]}
    {:as block :keys [id]}]
-  (log/info "XXXXXXXXXX calling handle-abortion! for block" id)
+  (log/info "Aborting block" id)
   (async/>!! result-chan {:id id
                           :aborted true}))
 
 
-(defn defmulti-vars2
+(defn defmulti-vars
   [{:as block :keys [defined-vars]}]
   (->> defined-vars
-       ;(spy-pp :defined-vars)
        (filter (comp (partial instance? clojure.lang.MultiFn) deref))
-       ;(map (comp (partial instance? clojure.lang.MultiFn) deref) #{#'defmulti-test/f})
-       ;(spy-pp :post-filter)
        (map symbol)))
 
-(defn handle-defmulti-redefs2
+(defn handle-defmulti-redefs
   [{:as block :keys [ns-sym]}]
   (let [the-ns (create-ns ns-sym)]
-    (doseq [v (defmulti-vars2 block)]
+    (doseq [v (defmulti-vars block)]
+      (log/info "Unmapping multimethod var:" the-ns v)
       (ns-unmap the-ns (symbol (name v))))))
+
+;(handle-defmulti-redefs
+  ;{:ns-sym 'oz.next :defmulti-vars '[shit]})
+
 
 (defn- evaluate-block!
   [{:as evaluation :keys [code-data result-chans kill-chan]}
@@ -943,7 +944,7 @@
               (handle-abortion! block-evaluation block)
               (try
                 (log-long-running-form! block-evaluation block)
-                (handle-defmulti-redefs2 block)
+                (handle-defmulti-redefs block)
                 (let [result
                       (result-with-out-str
                         (binding [*ns* (create-ns ns-sym)]
