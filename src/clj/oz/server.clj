@@ -16,7 +16,8 @@
    [taoensso.sente.packers.transit :as sente-transit]
    [cheshire.core :as json]
    [clojure.java.io :as io]
-   [oz.live :as live])
+   [oz.live :as live]
+   [oz.impl.utils :as utils])
   (:import
    [java.util UUID])
   (:gen-class))
@@ -85,10 +86,10 @@
         (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
   (route/resources "/" {:root "oz/public"})
-  (GET "*" req (let [reqpath (live/join-paths @current-root-dir (-> req :params :*))
+  (GET "*" req (let [reqpath (utils/join-paths @current-root-dir (-> req :params :*))
                      reqfile (io/file reqpath)
                      altpath (str reqpath ".html")
-                     dirpath (live/join-paths reqpath "index.html")]
+                     dirpath (utils/join-paths reqpath "index.html")]
                  (cond
                    ;; If the path exists, use that
                    (and (.exists reqfile) (not (.isDirectory reqfile)))
