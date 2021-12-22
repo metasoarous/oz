@@ -96,6 +96,20 @@
   (oz/kill-watchers!)
   (oz/live-view! "resources/oz/examples/clj/clj_test.clj")
 
+
+  (oz/build! [{:from "notebook-demo.clj"
+               :to "notebook-demo.html"}]
+     :port 9988)
+               ;:template-fn (fn [& blocks] [:div {:style {:max-width 200
+                                                          ;:margin :auto
+                                                          ;:color :blue}}
+                                            ;[:h1 "hello stever"]
+                                            ;blocks])
+               ;:header-extras [[:style "h1 {color: \"red\";}"]]}])
+              ;{:from "src/clj/oz/next.clj"
+               ;:to "oz-next.clj"}])
+
+
   :end-examples)
 
 

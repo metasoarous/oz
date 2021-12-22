@@ -3,7 +3,7 @@
   <groupId>metasoarous</groupId>
   <artifactId>oz</artifactId>
   <packaging>jar</packaging>
-  <version>1.6.0-alpha35-SNAPSHOT</version>
+  <version>2.0.0-alpha5</version>
   <name>oz</name>
   <description>Great and powerful data visualizations and scientific documents in Clojure using Vega and Vega-lite</description>
   <url>http://github.com/metasoarous/oz</url>
@@ -61,10 +61,6 @@
       <id>clojars</id>
       <url>https://repo.clojars.org/</url>
     </repository>
-    <repository>
-      <id>datomic-cloud</id>
-      <url>s3://datomic-releases-1fc2183a/maven/releases</url>
-    </repository>
   </repositories>
   <dependencyManagement>
     <dependencies/>
@@ -76,9 +72,29 @@
       <version>1.10.1</version>
     </dependency>
     <dependency>
+      <groupId>weavejester</groupId>
+      <artifactId>dependency</artifactId>
+      <version>0.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>tools.analyzer</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>spec.alpha</artifactId>
       <version>0.2.176</version>
+    </dependency>
+    <dependency>
+      <groupId>org.antlr</groupId>
+      <artifactId>antlr4-runtime</artifactId>
+      <version>4.7.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.replikativ</groupId>
+      <artifactId>hasch</artifactId>
+      <version>0.3.7</version>
     </dependency>
     <dependency>
       <groupId>compojure</groupId>
@@ -96,6 +112,11 @@
       <version>0.6.2</version>
     </dependency>
     <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>tools.analyzer.jvm</artifactId>
+      <version>1.1.0</version>
+    </dependency>
+    <dependency>
       <groupId>ring</groupId>
       <artifactId>ring-defaults</artifactId>
       <version>0.3.2</version>
@@ -104,6 +125,11 @@
       <groupId>com.cognitect</groupId>
       <artifactId>transit-cljs</artifactId>
       <version>0.8.256</version>
+    </dependency>
+    <dependency>
+      <groupId>rewrite-clj</groupId>
+      <artifactId>rewrite-clj</artifactId>
+      <version>1.0.644-alpha</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -119,6 +145,16 @@
       <groupId>org.flatland</groupId>
       <artifactId>ordered</artifactId>
       <version>1.5.7</version>
+    </dependency>
+    <dependency>
+      <groupId>superstructor</groupId>
+      <artifactId>re-highlight</artifactId>
+      <version>1.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.nextjournal</groupId>
+      <artifactId>beholder</artifactId>
+      <version>1.0.0</version>
     </dependency>
     <dependency>
       <groupId>markdown-clj</groupId>
@@ -158,7 +194,7 @@
     <dependency>
       <groupId>reagent</groupId>
       <artifactId>reagent</artifactId>
-      <version>0.10.0</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>com.taoensso</groupId>
@@ -221,9 +257,14 @@
       <version>0.3.0</version>
     </dependency>
     <dependency>
+      <groupId>carocad</groupId>
+      <artifactId>parcera</artifactId>
+      <version>0.11.6</version>
+    </dependency>
+    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>core.async</artifactId>
-      <version>0.4.490</version>
+      <version>1.4.627</version>
     </dependency>
   <dependency><groupId>clojupyter</groupId><artifactId>clojupyter</artifactId><version>0.3.2</version><scope>provided</scope></dependency></dependencies>
 </project>
