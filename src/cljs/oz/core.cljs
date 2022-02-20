@@ -8,6 +8,8 @@
             [reagent.core :as r]
             [reagent.dom :as rd]))
 
+; See https://github.com/thheller/shadow-cljs/issues/988#issuecomment-1046175204
+(def vegaEmbed* (if (fn? vegaEmbed) vegaEmbed vegaEmbed/default))
 
 
 (enable-console-print!)
@@ -38,7 +40,7 @@
            opts (merge {:renderer :canvas}
                         ;; Have to think about how we want the defaults here to behave
                        opts)]
-       (-> (vegaEmbed elem doc (clj->js opts))
+       (-> (vegaEmbed* elem doc (clj->js opts))
            (.then (fn [res]
                     (when view-callback
                       (view-callback (.-view res)))))
