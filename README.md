@@ -7,6 +7,10 @@ Great and powerful scientific documents & data visualizations
 
 <br/>
 
+Please use `1.6.0-alpha36` for the most recent stable version of Oz.
+
+For the latest notebook and async data & document processing capabilities, please try out the `2.0.0-alpha5`, but note that it may have some bugs still.
+
 
 ## Overview
 
