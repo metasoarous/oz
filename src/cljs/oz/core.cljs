@@ -29,7 +29,7 @@
 
 (defn ^:no-doc embed-vega
   ([elem doc] (embed-vega elem doc {}))
-  ([elem doc {:as opts :keys [view-callback]}]
+  ([elem doc {:as opts :keys [view-callback locale]}]
    (when doc
      (let [doc (clj->js doc)
            opts (-> opts
@@ -40,6 +40,8 @@
            opts (merge {:renderer :canvas}
                         ;; Have to think about how we want the defaults here to behave
                        opts)]
+       (when locale
+         (. vega formatLocale (clj->js locale)))
        (-> (vegaEmbed* elem doc (clj->js opts))
            (.then (fn [res]
                     (when view-callback
