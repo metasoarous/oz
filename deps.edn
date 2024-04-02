@@ -11,7 +11,7 @@
         com.taoensso/timbre {:mvn/version "5.1.2"}
         com.taoensso/encore {:mvn/version "3.19.0"}
         devcards/devcards {:mvn/version "0.2.6"}
-        reagent/reagent {:mvn/version "0.10.0"}
+        reagent/reagent {:mvn/version "1.2.0"}
         clojupyter/clojupyter {:mvn/version "0.3.3-alpha2"
                                :exclusions [hiccup/hiccup]
                                :optional true}

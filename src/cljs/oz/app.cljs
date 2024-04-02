@@ -1,6 +1,6 @@
 (ns ^:no-doc ^:figwheel-always oz.app
   (:require [reagent.core :as r]
-            [reagent.dom :as rd]
+            [reagent.dom.client :as rdom-client]
             [cljs.core.async :as async  :refer (<! >! put! chan)]
             [taoensso.encore :as encore :refer-macros (have have?)]
             [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
@@ -131,9 +131,11 @@
   (.typeset js/MathJax)
   (recur))
 
+
+(defonce root (rdom-client/create-root (. js/document (getElementById "app"))))
+
 (defn init []
   (start-router!)
-  (rd/render [error-boundary [application app-state]]
-             (. js/document (getElementById "app"))))
+  (rdom-client/render root [error-boundary [application app-state]]))
 
 (init)

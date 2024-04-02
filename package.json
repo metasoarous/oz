@@ -7,8 +7,8 @@
   "license": "ISC",
   "dependencies": {
     "marked": "1.2.5",
-    "react": "16.13.1",
-    "react-dom": "16.13.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
     "vega": "5.20.0",
     "vega-canvas": "1.2.6",
     "vega-embed": "6.12.2",

@@ -5,8 +5,7 @@
             ;["leaflet" :as leaflet]
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
-            [reagent.core :as r]
-            [reagent.dom :as rd]))
+            [reagent.core :as r]))
 
 ; See https://github.com/thheller/shadow-cljs/issues/988#issuecomment-1046175204
 (def vegaEmbed* (if (fn? vegaEmbed) vegaEmbed vegaEmbed/default))
@@ -76,19 +75,20 @@
   ([doc] (vega doc {}))
   ([doc opts]
    ;; Is this the right way to do this? So vega component behaves abstractly like a vega-lite potentially?
-   (let [opts (merge {:mode "vega"} opts)]
+   (let [opts (merge {:mode "vega"} opts)
+         ref  (atom nil)]
      (r/create-class
       {:display-name "vega"
-       :component-did-mount (fn [this]
-                              (embed-vega (rd/dom-node this) doc opts))
+       :component-did-mount (fn [_this]
+                              (embed-vega @ref doc opts))
        ;; Need to look into this further to see how these args even work; may not be doing new-opts right here?
        ;; (http://reagent-project.github.io/docs/master/reagent.core.html)
        ;; (https://reactjs.org/docs/react-component.html#unsafe_componentwillupdate)
-       :component-will-update (fn [this [_ new-doc new-opts]]
-                                ;(update-vega (rd/dom-node this) doc new-doc opts new-opts)
-                                (embed-vega (rd/dom-node this) new-doc new-opts))
+       :component-will-update (fn [_this [_ new-doc new-opts]]
+                                ;(update-vega @ref doc new-doc opts new-opts)
+                                (embed-vega @ref new-doc new-opts))
        :reagent-render (fn [doc]
-                         [:div.viz])}))))
+                         [:div.viz {:ref #(reset! ref %)}])}))))
 
 (defn vega-lite
   "Reagent component that renders vega-lite."
@@ -240,5 +240,3 @@
                                ;(render-leaflet-vega (rd/dom-node this)))
        ;:reagent-render (fn []
                          ;[:div#map])})))
-
-
